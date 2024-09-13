@@ -1,0 +1,62 @@
+
+//
+// Copyright(C) Advanced Micro Devices, Inc. All rights reserved.
+//
+// You may not use this software and documentation (if any) (collectively,
+// the "Materials") except in compliance with the terms and conditions of
+// the Software License Agreement included with the Materials or otherwise as
+// set forth in writing and signed by you and an authorized signatory of AMD.
+// If you do not have a copy of the Software License Agreement, contact your
+// AMD representative for a copy.
+//
+// You agree that you will not reverse engineer or decompile the Materials,
+// in whole or in part, except as allowed by applicable law.
+//
+// THE MATERIALS ARE DISTRIBUTED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OR
+// REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+//
+
+
+//----------------------------------------------------------------------------
+///
+/// \file
+/// protobuf specification for common types
+///
+//----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+package types;
+option go_package="gen/amdgpu";
+
+// empty message
+message Empty {}
+
+// API return codes (more descriptive than protobuf enums)
+enum ApiStatus {
+  API_STATUS_OK                      = 0;  // success
+  API_STATUS_ERR                     = 1;  // catch-all error
+  API_STATUS_INVALID_ARG             = 2;  // invalid parameter
+  API_STATUS_EXISTS_ALREADY          = 3;  // object exists already
+  API_STATUS_OUT_OF_MEM              = 4;  // out of memory
+  API_STATUS_NOT_FOUND               = 5;  // object not found
+  API_STATUS_OPERATION_NOT_ALLOWED   = 6;  // operation not allowed on object
+  API_STATUS_OPERATION_NOT_SUPPORTED = 7;  // operation not supported
+  API_STATUS_IN_USE                  = 8;  // object in use
+}
+
+// API error codes (set in cases where ApiStatus is not API_STATUS_OK
+enum ErrorCode {
+  ERR_CODE_NONE                                     = 0;
+
+  // GPU specific error codes
+  ERR_CODE_GPU_CLOCK_FREQUENCY_RANGE_INVALID        = 4096;
+  ERR_CODE_GPU_MEMORY_CLOCK_FREQUENCY_RANGE_INVALID = 4097;
+  ERR_CODE_GPU_OVERDRIVE_OUT_OF_RANGE               = 4098;
+
+  // smi layer object specific error codes
+  ERR_CODE_SMI_GPU_POWER_CAP_OUT_OF_RANGE           = 65536;
+
+  // catch all error code
+  ERR_CODE_UNKNOWN                                  = 0x1FFFFFFF;
+}

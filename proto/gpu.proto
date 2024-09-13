@@ -1,0 +1,460 @@
+
+//
+// Copyright(C) Advanced Micro Devices, Inc. All rights reserved.
+//
+// You may not use this software and documentation (if any) (collectively,
+// the "Materials") except in compliance with the terms and conditions of
+// the Software License Agreement included with the Materials or otherwise as
+// set forth in writing and signed by you and an authorized signatory of AMD.
+// If you do not have a copy of the Software License Agreement, contact your
+// AMD representative for a copy.
+//
+// You agree that you will not reverse engineer or decompile the Materials,
+// in whole or in part, except as allowed by applicable law.
+//
+// THE MATERIALS ARE DISTRIBUTED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OR
+// REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+//
+
+
+//----------------------------------------------------------------------------
+///
+/// \file
+/// GPU object protobuf APIs
+///
+//----------------------------------------------------------------------------
+
+syntax = "proto3";
+package amdgpu;
+option go_package="gen/amdgpu";
+
+import "types.proto";
+
+// gRPC APIs to manage & monitor GPU resources on the compute node
+service GPUSvc {
+  // GPU get API
+  rpc GPUGet(GPUGetRequest) returns (GPUGetResponse) {}
+  // GPU update API
+  rpc GPUUpdate(GPUUpdateRequest) returns (GPUUpdateResponse) {}
+
+  // operational APIs or tasks
+  // GPU reset API
+  rpc GPUReset(GPUResetRequest) returns (GPUResetResponse) {}
+}
+
+// admin state of GPU
+enum GPUAdminState {
+  // invalid admin state
+  GPU_ADMIN_STATE_NONE = 0;
+  // GPU is administratively up
+  GPU_ADMIN_STATE_UP   = 1;
+  // GPU is administratively down
+  GPU_ADMIN_STATE_DOWN = 2;
+}
+
+// GPU clock types
+enum GPUClockType {
+  // invalid clock type
+  GPU_CLOCK_TYPE_NONE   = 0;
+  // fabric clock (aka. fclk)
+  GPU_CLOCK_TYPE_FABRIC = 1;
+  // memory clock (aka. mclk)
+  GPU_CLOCK_TYPE_MEMORY = 2;
+  // system clock (aka. sclk)
+  GPU_CLOCK_TYPE_SYSTEM = 3;
+  // SoC clock (aka. socclk)
+  GPU_CLOCK_TYPE_SOC    = 4;
+}
+
+// powerplay performance levels
+enum GPUPerformanceLevel {
+  GPU_PERF_LEVEL_NONE            = 0;
+  // performance level auto
+  GPU_PERF_LEVEL_AUTO            = 1;
+  // performance level low
+  GPU_PERF_LEVEL_LOW             = 2;
+  // performance level high
+  GPU_PERF_LEVEL_HIGH            = 3;
+  // minimum performance variation
+  GPU_PERF_LEVEL_DETERMINISTIC   = 4;
+  // stable power state with minimum memory clock
+  GPU_PERF_LEVEL_STABLE_MIN_MCLK = 5;
+  // stable power state with minimum system clock
+  GPU_PERF_LEVEL_STABLE_MIN_SCLK = 6;
+  // manual performance level
+  GPU_PERF_LEVEL_MANUAL          = 7;
+}
+
+// clock frequency range
+// NOTE:
+// values are in MHz
+message ClockFrequencyRange {
+  // low frequency value
+  uint32 LowFrequency  = 1;
+  // high frequency value
+  uint32 HighFrequency = 2;
+}
+
+// RAS configuration per block
+// TODO: fill this !!
+message GPURASSpec {
+}
+
+// config specification of physical GPU
+message GPUSpec {
+  // uuid identifying the GPU
+  // this uuid is generated and will be unique across the GPU cluster
+  bytes                 Id                   = 1;
+  // admin state of the GPU device
+  GPUAdminState         AdminState           = 2;
+  // virtual pod GPU is associated with
+  // NOTE:
+  // 1. to disassociate GPU from a vPod, vPod uuid must be empty/nil
+  // 2. to change the association of GPU from one pod to another, controller
+  //    has to ensure no workload is actively using the GPU during that
+  //    transition
+  bytes                 vPod                 = 3;
+  // GPU clock overdrive level (as percentage)
+  float                 OverDriveLevel       = 4;
+  // GPU memory clock overdrive level (as percentage)
+  float                 MemoryOverDriveLevel = 5;
+  // max package power (in Watts) GPU can consume (i.e power cap)
+  uint64                GPUPowerCap          = 6;
+  // GPU performance level
+  GPUPerformanceLevel   PerformanceLevel     = 7;
+  // GPU clock speed/frequency setting
+  ClockFrequencyRange   GPUClockFrequency    = 8;
+  // GPU memory clock speed/frequency setting
+  ClockFrequencyRange   MemoryClockFrequency = 9;
+  // fan speed (TODO: what is the unit ? level or percentage or do we need to support both ?)
+  float                 FanSpeed             = 10;
+  // RAS configuration
+  GPURASSpec            RASSpec              = 11;
+}
+
+// operational status of GPU
+enum GPUOperStatus {
+  GPU_OPER_STATUS_NONE = 0;
+  // GPU is operationally up
+  GPU_OPER_STATUS_UP   = 1;
+  // GPU is operationally down
+  GPU_OPER_STATUS_DOWN = 2;
+}
+
+// XGMI status of GPU
+enum GPUXGMIStatus {
+  GPU_XGMI_STATUS_NONE           = 0;
+  // no errors since last read
+  GPU_XGMI_STATUS_NO_ERROR       = 1;
+  // one error detected since last read
+  GPU_XGMI_STATUS_ONE_ERROR      = 2;
+  // multiple errors detected since last read
+  GPU_XGMI_STATUS_MULTIPLE_ERROR = 3;
+}
+
+// clock information
+message GPUClockStatus {
+  // clock type
+  GPUClockType Type      = 1;
+  // clock level
+  uint32       Level     = 2;
+  // clock frequency in MHz
+  uint32       Frequency = 3;
+}
+
+// voltage curve point
+message GPUVoltageCurvePoint {
+  // curve point
+  uint32 Point     = 1;
+  // frequency in MHz
+  uint32 Frequency = 2;
+  // voltage
+  uint32 Voltage   = 3;
+}
+
+// RAS information per block
+message GPURASStatus {
+  // TODO: fill this later
+}
+
+// firmware version information
+message GPUFirmwareVersion {
+  // name of the component
+  string Firmware = 1;
+  // firmware version of the component
+  string Version  = 2;
+}
+
+// operational information of a physical GPU
+message GPUStatus {
+  // assigned GPU index local to the compute node
+  uint32                        Index             = 1;
+  // assigned GPU unique id local to the compute node
+  uint64                        UniqueId          = 2;
+  // serial number of the GPU
+  string                        SerialNum         = 3;
+  // product series of the GPU
+  string                        CardSeries        = 4;
+  // model of the GPU
+  string                        CardModel         = 5;
+  // GPU vendor
+  string                        CardVendor        = 6;
+  // SKU of the GPU card
+  string                        CardSKU           = 7;
+  // PCIe bus id of the GPU
+  string                        PCIeBusId         = 8;
+  // operational status of the device
+  GPUOperStatus                 Status            = 9;
+  // driver version
+  string                        DriverVersion     = 10;
+  // VBIOS version
+  string                        VBIOSVersion      = 11;
+  // firmware versions of various components
+  repeated GPUFirmwareVersion   FirmwareVersion   = 12;
+  // memory component vendor
+  string                        MemoryVendor      = 13;
+  // supported fclk frequencies
+  repeated uint32               FClockFrequency   = 14;
+  // supported mclk frequencies
+  repeated uint32               MClockFrequency   = 15;
+  // supported sclk frequencies
+  repeated uint32               SClockFrequency   = 16;
+  // supported SoC clk frequencies
+  repeated uint32               SoCClockFrequency = 17;
+  // GPU clock status
+  repeated GPUClockStatus       ClockStatus       = 18;
+  // Kernel Fusion Driver (KFD) process ids using the GPU
+  repeated uint32               KFDProcessId      = 19;
+  // RAS (Reliability, Availability & Serviceability) information
+  GPURASStatus                  RASStatus         = 20;
+  // XGMI error status
+  GPUXGMIStatus                 XGMIErrorStatus   = 21;
+  // total VRAM memory of the GPU (in MB)
+  uint64                        TotalMemory       = 22;
+}
+
+// GPU temperature information
+// NOTE:
+// all temperatures are in centigrade
+message GPUTemperatureStats {
+  // edge temperature
+  float          EdgeTemperature     = 1;
+  // junction/hotspot temperature
+  float          JunctionTemperature = 2;
+  // VRAM temperature
+  float          MemoryTemperature   = 3;
+  // HBM temperatures
+  repeated float HBMTemperature      = 4;
+}
+
+// GPU usage as percentage of time GPU is busy
+message GPUUSage {
+  float Usage       = 1;
+  float GFXActivity = 2;
+}
+
+// GPU current memory usage
+message GPUMemoryUsage {
+  // percentage of available memory in use
+  float MemoryUsage = 1;
+  // TODO: describe this field
+  float Activity    = 2;
+}
+
+// GPU statistics
+message GPUStats {
+  // current fan speed (TODO: what is the unit ?)
+  float               FanSpeed                    = 1;
+  // avg. graphics package power (in Watts)
+  float               AvgPackagePower             = 2;
+  // current temperature
+  GPUTemperatureStats Temperature                 = 3;
+  // current GPU usage
+  GPUUSage             Usage                      = 4;
+  // current memory usage
+  GPUMemoryUsage       MemoryUsage                = 5;
+  // current voltage in milli volts (mV)
+  uint64              Voltage                     = 6;
+  // estimated maximum PCIe bandwidth over the last second (in MB/s)
+  float               PCIeBandwidth               = 7;
+  // accumulated energy consumed (in uJ)
+  double              EnergyConsumed              = 8;
+  // PCIe replay count
+  uint32              PCIeReplayCount             = 9;
+  // current GPU clock frequency (in MHz)
+  uint32              GPUClock                    = 10;
+  // current memory clock frequency (in MHz)
+  uint32              MemoryClock                 = 11;
+  // PCIe Tx utilization (TODO: what is the unit % ?)
+  float               PCIeTxUsage                 = 12;
+  // PCIe Rx utilization (TODO: what is the unit % ?)
+  float               PCIeRxUsage                 = 13;
+  // total correctable errors
+  uint64              TotalCorrectableErrors      = 14;
+  // total uncorrectable errors
+  uint64              TotalUncorrectableErrors    = 15;
+  // SDMA correctable errors
+  uint64              SDMACorrectableErrors       = 16;
+  // SDMA uncorrectable errors
+  uint64              SDMAUncorrectableErrors     = 17;
+  // GFX correctable errors
+  uint64              GFXCorrectableErrors        = 18;
+  // GFX uncorrectable errors
+  uint64              GFXUncorrectableErrors      = 19;
+  // MMHUB correctable errors
+  uint64              MMHUBCorrectableErrors      = 20;
+  // MMHUB uncorrectable errors
+  uint64              MMHUBUncorrectableErrors    = 21;
+  // ATHUB correctable errors
+  uint64              ATHUBCorrectableErrors      = 22;
+  // ATHUB uncorrectable errors
+  uint64              ATHUBUncorrectableErrors    = 23;
+  // BIF correctable errors
+  uint64              BIFCorrectableErrors        = 24;
+  // BIF uncorrectable errors
+  uint64              BIFUncorrectableErrors      = 25;
+  // HDP correctable errors
+  uint64              HDPCorrectableErrors        = 26;
+  // HDP uncorrectable errors
+  uint64              HDPUncorrectableErrors      = 27;
+  // XGMI WAFL correctable errors
+  uint64              XGMIWAFLCorrectableErrors   = 28;
+  // XGMI WAFL uncorrectable errors
+  uint64              XGMIWAFLUncorrectableErrors = 29;
+  // DF correctable errors
+  uint64              DFCorrectableErrors         = 30;
+  // DF uncorrectable errors
+  uint64              DFUncorrectableErrors       = 31;
+  // SMN correctable errors
+  uint64              SMNCorrectableErrors        = 32;
+  // SMN uncorrectable errors
+  uint64              SMNUncorrectableErrors      = 33;
+  // SEM correctable errors
+  uint64              SEMCorrectableErrors        = 34;
+  // SEM uncorrectable errors
+  uint64              SEMUncorrectableErrors      = 35;
+  // MP0 correctable errors
+  uint64              MP0CorrectableErrors        = 36;
+  // MP0 uncorrectable errors
+  uint64              MP0UncorrectableErrors      = 37;
+  // MP1 correctable errors
+  uint64              MP1CorrectableErrors        = 38;
+  // MP1 uncorrectable errors
+  uint64              MP1UncorrectableErrors      = 39;
+  // FUSE correctable errors
+  uint64              FUSECorrectableErrors       = 40;
+  // FUSE uncorrectable errors
+  uint64              FUSEUncorrectableErrors     = 41;
+  // UMC correctable errors
+  uint64              UMCCorrectableErrors        = 42;
+  // UMC uncorrectable errors
+  uint64              UMCUncorrectableErrors      = 43;
+  // XGMI counters
+  // NOPs sent to neighbor0
+  uint64              XGMINeighbor0TxNOPs         = 44;
+  // outgoing requests to neighbor0
+  uint64              XGMINeighbor0TxRequests     = 45;
+  // outgoing responses to neighbor0
+  uint64              XGMINeighbor0TxResponses    = 46;
+  // data beats sent to neighbor0 (each beat = 32 Bytes)
+  uint64              XGMINeighbor0TXBeats        = 47;
+  // NOPs sent to neighbor1
+  uint64              XGMINeighbor1TxNOPs         = 48;
+  // outgoing requests to neighbor1
+  uint64              XGMINeighbor1TxRequests     = 49;
+  // outgoing responses to neighbor1
+  uint64              XGMINeighbor1TxResponses    = 50;
+  // data beats sent to neighbor1 (each beat = 32 Bytes)
+  uint64              XGMINeighbor1TXBeats        = 51;
+  // TODO: are there be above like stats for Neighbors 2,3,4 and 5?
+  // transmit throughput to XGMI neighbor 0 (in Bytes per second)
+  uint64              XGMINeighbor0TxThroughput   = 52;
+  // transmit throughput to XGMI neighbor 1 (in Bytes per second)
+  uint64              XGMINeighbor1TxThroughput   = 53;
+  // transmit throughput to XGMI neighbor 2 (in Bytes per second)
+  uint64              XGMINeighbor2TxThroughput   = 54;
+  // transmit throughput to XGMI neighbor 3 (in Bytes per second)
+  uint64              XGMINeighbor3TxThroughput   = 55;
+  // transmit throughput to XGMI neighbor 4 (in Bytes per second)
+  uint64              XGMINeighbor4TxThroughput   = 56;
+  // transmit throughput to XGMI neighbor 5 (in Bytes per second)
+  uint64              XGMINeighbor5TxThroughput   = 57;
+  // power usage (in Watts)
+  uint64              PowerUsage                  = 58;
+}
+
+// GPU captures config, operational status and stat of GPU object
+message GPU {
+  // GPU config specification
+  GPUSpec   Spec   = 1;
+  // GPU operational status
+  GPUStatus Status = 2;
+  // GPU statistics
+  GPUStats  Stats  = 3;
+}
+
+// GPU get request message
+message GPUGetRequest {
+  // list of GPU uuids
+  repeated bytes Id = 1;
+}
+
+// response to GPU get request
+message GPUGetResponse {
+  // result of the API processing
+  types.ApiStatus ApiStatus = 1;
+  // list of per GPU information
+  repeated GPU    Response  = 2;
+  // specific error code, if any
+  types.ErrorCode ErrorCode = 3;
+}
+
+// GPU update request message
+message GPUUpdateRequest {
+  // list of config specs to update the GPUs to
+  repeated GPUSpec Spec = 1;
+}
+
+// GPU update response message
+message GPUUpdateResponse {
+  // result of the API processing
+  types.ApiStatus ApiStatus = 1;
+  // specific error code, if any
+  types.ErrorCode ErrorCode = 2;
+}
+
+// GPU reset request message
+message GPUResetRequest {
+  // list of GPU uuids
+  repeated bytes Id            = 1;
+  // reset information
+  // NOTE:
+  // one of the following options must be provided, GPU device
+  // reset is not supported yet
+  oneof reset {
+    // reset clocks and overdrive to default
+    bool ResetClocks           = 2;
+    // reset fans to automatic control
+    bool ResetFans             = 3;
+    // reset power profile to default
+    bool ResetPowerProfile     = 4;
+    // set the maximum GPU power back to the device deafult state
+    bool ResetPowerOverDrive   = 5;
+    // reset XGMI error status/count
+    bool ResetXGMIError        = 6;
+    // disable performance determinism
+    bool ResetPerfDeterminism  = 7;
+    // resets to boot compute partition state
+    bool ResetComputePartition = 8;
+    // reset to boot NPS mode state
+    bool ResetNPSMode          = 9;
+  }
+}
+
+// GPU reset response message
+message GPUResetResponse {
+  // result of the API processing
+  types.ApiStatus ApiStatus = 1;
+  // specific error code, if any
+  types.ErrorCode ErrorCode = 2;
+}
