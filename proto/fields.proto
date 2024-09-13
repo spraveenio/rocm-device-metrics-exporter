@@ -29,10 +29,31 @@ syntax = "proto3";
 option go_package = "gen/gpumetrics"; 
 package gpumetrics;
 
-enum GPUMetricFields {
-	GPU_NODES_TOTAL 			= 0;
-	GPU_FAN_SPEED 				= 1;
-	GPU_AVERAGE_PACKAGE_POWER 	= 2;
-	GPU_EDGE_TEMPERATURE 		= 3;
-	GPU_JUNCTION_TEMPERATURE 	= 4;
+enum GPUMetricField {
+    GPU_NODES_TOTAL             = 0;
+    GPU_FAN_SPEED               = 1;
+    GPU_AVERAGE_PACKAGE_POWER   = 2;
+    GPU_EDGE_TEMPERATURE        = 3;
+    GPU_JUNCTION_TEMPERATURE    = 4;
+    GPU_MEMORY_TEMPERATURE      = 5;
+    GPU_HBM_TEMPERATURE         = 6;
+    GPU_USAGE                   = 7;
+    GPU_GFX_ACTIVITY            = 8;
+    GPU_MEMORY_USAGE            = 9;
+    GPU_MEMORY_ACTIVITY         = 10;
+    GPU_VOLTAGE                 = 11;
+    PCIE_BANDWIDTH              = 12;
+    GPU_ENERGY_CONSUMED         = 13;
+    PCIE_REPLAY_COUNT           = 14;
+    GPU_CLOCK                   = 15;
+    GPU_MEMORY_CLOCK            = 16;
+    PCIE_TX                     = 17;
+    PCIE_RX                     = 18;
+    GPU_POWER_USAGE             = 19;
+    GPU_TOTAL_MEMORY            = 20;
+}
+
+message MonitorFields {
+    // list of all GPUMetricField to be exported
+    repeated string Field = 1;
 }
