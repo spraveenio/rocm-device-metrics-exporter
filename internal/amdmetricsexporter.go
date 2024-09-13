@@ -19,9 +19,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"log"
 
@@ -31,7 +34,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 
-	amdgpu "github.com/pensando/device-metrics-exporter/gen/amdgpu"
+	"github.com/pensando/device-metrics-exporter/gen/amdgpu"
+	"github.com/pensando/device-metrics-exporter/gen/gpumetrics"
 )
 
 type metrics struct {
@@ -62,8 +66,9 @@ type metrics struct {
 }
 
 const (
-	amdListenPort = "5000"
-	gpuagentAddr  = "0.0.0.0:50061"
+	amdListenPort  = "5000"
+	amdMetricsFile = "export_configs.json"
+	gpuagentAddr   = "0.0.0.0:50061"
 )
 
 var (
@@ -72,7 +77,31 @@ var (
 	gpuClient amdgpu.GPUSvcClient
 )
 
-func initMetrics(reg prometheus.Registerer) *metrics {
+func initFieldConfig(config *gpumetrics.MonitorFields) map[string]bool {
+	exportFieldMap := make(map[string]bool)
+	// setup metric fields in map to be monitored
+	// init the map with all supported strings from enum
+	enable_default := (config == nil)
+	for _, name := range gpumetrics.GPUMetricField_name {
+		log.Printf("%v set to %v", name, enable_default)
+		exportFieldMap[name] = enable_default
+	}
+	if config == nil {
+		return exportFieldMap
+	}
+	for _, fieldName := range config.Field {
+		fieldName = strings.ToUpper(fieldName)
+		if _, ok := exportFieldMap[fieldName]; ok {
+			log.Printf("%v enabled", fieldName)
+			exportFieldMap[fieldName] = true
+		} else {
+			log.Printf("Unsupported field is ignored: %v", fieldName)
+		}
+	}
+	return exportFieldMap
+}
+
+func initMetrics(reg prometheus.Registerer, config *gpumetrics.MonitorFields) *metrics {
 	m := &metrics{
 		gpuNodesTotal: prometheus.NewGauge(
 			prometheus.GaugeOpts{
@@ -182,27 +211,60 @@ func initMetrics(reg prometheus.Registerer) *metrics {
 			[]string{"gpu_index", "serial_number", "card_series",
 				"card_model", "card_vendor", "driver_version", "vbios_version"}),
 	}
-	reg.MustRegister(m.gpuNodesTotal)
-	reg.MustRegister(m.gpuFanSpeed)
-	reg.MustRegister(m.gpuAvgPkgPower)
-	reg.MustRegister(m.gpuEdgeTemp)
-	reg.MustRegister(m.gpuJunctionTemp)
-	reg.MustRegister(m.gpuMemoryTemp)
-	reg.MustRegister(m.gpuHBMTemp)
-	reg.MustRegister(m.gpuUsage)
-	reg.MustRegister(m.gpuGFXActivity)
-	reg.MustRegister(m.gpuMemUsage)
-	reg.MustRegister(m.gpuMemActivity)
-	reg.MustRegister(m.gpuVoltage)
-	reg.MustRegister(m.gpuPCIeBandwidth)
-	reg.MustRegister(m.gpuEnergeyConsumed)
-	reg.MustRegister(m.gpuPCIeReplayCount)
-	reg.MustRegister(m.gpuClock)
-	reg.MustRegister(m.gpuMemoryClock)
-	reg.MustRegister(m.gpuPCIeTxUsage)
-	reg.MustRegister(m.gpuPCIeRxUsage)
-	reg.MustRegister(m.gpuPowerUsage)
-	reg.MustRegister(m.gpuTotalMemory)
+	metricMap := initFieldConfig(config)
+
+	for field, enabled := range metricMap {
+		if !enabled {
+			continue
+		}
+		switch field {
+		case "GPU_NODES_TOTAL":
+			reg.MustRegister(m.gpuNodesTotal)
+		case "GPU_FAN_SPEED":
+			reg.MustRegister(m.gpuFanSpeed)
+		case "GPU_AVERAGE_PACKAGE_POWER":
+			reg.MustRegister(m.gpuAvgPkgPower)
+		case "GPU_EDGE_TEMPERATURE":
+			reg.MustRegister(m.gpuEdgeTemp)
+		case "GPU_JUNCTION_TEMPERATURE":
+			reg.MustRegister(m.gpuJunctionTemp)
+		case "GPU_MEMORY_TEMPERATURE":
+			reg.MustRegister(m.gpuMemoryTemp)
+		case "GPU_HBM_TEMPERATURE":
+			reg.MustRegister(m.gpuHBMTemp)
+		case "GPU_USAGE":
+			reg.MustRegister(m.gpuUsage)
+		case "GPU_GFX_ACTIVITY":
+			reg.MustRegister(m.gpuGFXActivity)
+		case "GPU_MEMORY_USAGE":
+			reg.MustRegister(m.gpuMemUsage)
+		case "GPU_MEMORY_ACTIVITY":
+			reg.MustRegister(m.gpuMemActivity)
+		case "GPU_VOLTAGE":
+			reg.MustRegister(m.gpuVoltage)
+		case "PCIE_BANDWIDTH":
+			reg.MustRegister(m.gpuPCIeBandwidth)
+		case "GPU_ENERGY_CONSUMED":
+			reg.MustRegister(m.gpuEnergeyConsumed)
+		case "PCIE_REPLAY_COUNT":
+			reg.MustRegister(m.gpuPCIeReplayCount)
+		case "GPU_CLOCK":
+			reg.MustRegister(m.gpuClock)
+		case "GPU_MEMORY_CLOCK":
+			reg.MustRegister(m.gpuMemoryClock)
+		case "PCIE_TX":
+			reg.MustRegister(m.gpuPCIeTxUsage)
+		case "PCIE_RX":
+			reg.MustRegister(m.gpuPCIeRxUsage)
+		case "GPU_POWER_USAGE":
+			reg.MustRegister(m.gpuPowerUsage)
+		case "GPU_TOTAL_MEMORY":
+			reg.MustRegister(m.gpuTotalMemory)
+		default:
+			log.Printf("Invalid field encountered %v", field)
+		}
+	}
+
 	return m
 }
 
@@ -313,9 +375,19 @@ func getMetricsHandle() (*metrics, error) {
 	return lmetrics, nil
 }
 
-func start_metrics_server(serverPort string) {
+func start_metrics_server(serverPort string, configPath string) {
+	var config_fields gpumetrics.MonitorFields
+	pconfig_fields := &config_fields
+	fields, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		pconfig_fields = nil
+	} else {
+		_ = json.Unmarshal(fields, pconfig_fields)
+		log.Printf("fields : %+v", pconfig_fields)
+	}
+
 	reg = prometheus.NewRegistry()
-	lmetrics = initMetrics(reg)
+	lmetrics = initMetrics(reg, pconfig_fields)
 	conn, err := grpc.Dial(gpuagentAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Printf("err :%v", err)
@@ -345,9 +417,10 @@ func start_metrics_server(serverPort string) {
 
 func main() {
 	var (
-		serverPort = flag.String("amd-listen-port", amdListenPort, "AMD listener port")
+		serverPort    = flag.String("amd-listen-port", amdListenPort, "AMD listener port")
+		metricsConfig = flag.String("amd-metrics-config", amdMetricsFile, "AMD metrics exporter config file")
 	)
 	flag.Parse()
 
-	start_metrics_server(*serverPort)
+	start_metrics_server(*serverPort, *metricsConfig)
 }
