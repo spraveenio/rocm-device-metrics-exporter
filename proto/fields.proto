@@ -53,7 +53,22 @@ enum GPUMetricField {
     GPU_TOTAL_MEMORY            = 20;
 }
 
-message MonitorFields {
+enum GPUMetricLabel {
+    // mandatory field GPU_UUID cannot be disabled
+    GPU_UUID        = 0;
+    // mandatory SERIAL_NUMBER cannot be disabled
+    SERIAL_NUMBER   = 1;
+    CARD_SERIES     = 2;
+    CARD_MODEL      = 3;
+    CARD_VENDOR     = 4;
+    DRIVER_VERSION  = 5;
+    VBIOS_VERSION   = 6;
+}
+
+message MetricConfig {
     // list of all GPUMetricField to be exported
     repeated string Field = 1;
+
+    // list of labels to be exported
+    repeated string Label = 2;
 }
