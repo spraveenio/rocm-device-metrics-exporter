@@ -18,6 +18,10 @@ clean:
 amdexporter:
 	${MAKE} -C internal
 
+.PHONY: docker
+docker:
+	${MAKE} -C docker TOP_DIR=$(CURDIR)
+
 .PHONY: all
 all:
 	${MAKE} gen amdexporter
