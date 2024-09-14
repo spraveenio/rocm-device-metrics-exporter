@@ -128,6 +128,10 @@ docker-compile:
 		$(BUILD_CONTAINER) \
 		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make all"
 
+.PHONY: docker
+docker:
+	${MAKE} -C docker TOP_DIR=$(CURDIR)
+
 .PHONY: all
 all:
 	${MAKE} gen amdexporter metricutil amdtestrunner
