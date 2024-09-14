@@ -72,21 +72,29 @@ const (
 )
 
 var (
-	reg       *prometheus.Registry
-	lmetrics  *metrics
-	gpuClient amdgpu.GPUSvcClient
+	reg             *prometheus.Registry
+	lmetrics        *metrics
+	gpuClient       amdgpu.GPUSvcClient
+	mandatoryLables = []string{
+		gpumetrics.GPUMetricLabel_GPU_UUID.String(),
+		gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String(),
+	}
+	exportLables map[string]bool
 )
 
-func initFieldConfig(config *gpumetrics.MonitorFields) map[string]bool {
+func initFieldConfig(config *gpumetrics.MetricConfig) map[string]bool {
 	exportFieldMap := make(map[string]bool)
 	// setup metric fields in map to be monitored
 	// init the map with all supported strings from enum
-	enable_default := (config == nil)
+	enable_default := true
+	if config != nil && len(config.Field) != 0 {
+		enable_default = false
+	}
 	for _, name := range gpumetrics.GPUMetricField_name {
 		log.Printf("%v set to %v", name, enable_default)
 		exportFieldMap[name] = enable_default
 	}
-	if config == nil {
+	if config != nil && len(config.Field) != 0 {
 		return exportFieldMap
 	}
 	for _, fieldName := range config.Field {
@@ -101,7 +109,43 @@ func initFieldConfig(config *gpumetrics.MonitorFields) map[string]bool {
 	return exportFieldMap
 }
 
-func initMetrics(reg prometheus.Registerer, config *gpumetrics.MonitorFields) *metrics {
+func getExportLableList() []string {
+	labelList := []string{}
+	for key, enabled := range exportLables {
+		if !enabled {
+			continue
+		}
+		labelList = append(labelList, key)
+	}
+	return labelList
+}
+
+func initLableConfigs(config *gpumetrics.MetricConfig) {
+	// list of mandatory labels
+	exportLables = make(map[string]bool)
+	for _, name := range gpumetrics.GPUMetricLabel_name {
+		exportLables[name] = false
+	}
+	// only mandatory labels are set for default
+	for _, name := range mandatoryLables {
+		exportLables[name] = true
+	}
+
+	if config != nil {
+		for _, name := range config.Label {
+			name = strings.ToUpper(name)
+			if _, ok := exportLables[name]; ok {
+				log.Printf("label %v enabled", name)
+				exportLables[name] = true
+			}
+		}
+	}
+}
+
+func initMetrics(reg prometheus.Registerer, config *gpumetrics.MetricConfig) *metrics {
+	initLableConfigs(config)
+	labels := getExportLableList()
+	labelsWithIndex := append(labels, "hbm_index")
 	m := &metrics{
 		gpuNodesTotal: prometheus.NewGauge(
 			prometheus.GaugeOpts{
@@ -113,103 +157,102 @@ func initMetrics(reg prometheus.Registerer, config *gpumetrics.MonitorFields) *m
 			Name: "gpu_fan_speed",
 			Help: "Current fan speed",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuAvgPkgPower: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_average_package_power",
 			Help: "Average package power in Watts",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuEdgeTemp: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_edge_temperature",
 			Help: "Current edge temperature in celsius",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuJunctionTemp: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_junction_temperature",
 			Help: "Current junction/hotspot temperature in celsius",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuMemoryTemp: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_memory_temperature",
 			Help: "Current memory temperature in celsius",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuHBMTemp: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_hbm_temperature",
 			Help: "Current HBM temperature in celsius",
 		},
-			[]string{"gpu_index", "hbm_index"}),
+			labelsWithIndex),
 		gpuUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_usage",
 			Help: "Current usage as percentage of time the GPU is busy.",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuGFXActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_gfx_activity",
 			Help: "Current GFX activity",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuMemUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_memory_usage",
 			Help: "Current memory usage as percentage of available memory in use",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuMemActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_memory_activity",
 			Help: "Current memory usage activity",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuVoltage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_voltage",
 			Help: "Current voltage draw in mV",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuPCIeBandwidth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_bandwidth",
 			Help: "estimated maximum PCIe bandwidth over the last second in MB/s",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuEnergeyConsumed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_energy_consumed",
 			Help: "accumulated energy consumed in uJ",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuPCIeReplayCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_replay_count",
 			Help: "PCIe replay count",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuClock: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_clock",
 			Help: "current GPU clock frequency in MHz",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuMemoryClock: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_memory_clock",
 			Help: "current memory clock frequency in MHz",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuPCIeTxUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_tx",
 			Help: "PCIe Tx utilization",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuPCIeRxUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_rx",
 			Help: "PCIe Rx utilization",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuPowerUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_power_usage",
 			Help: "power usage in Watts",
 		},
-			[]string{"gpu_index"}),
+			labels),
 		gpuTotalMemory: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_total_memory",
 			Help: "total VRAM memory of the GPU (in MB)",
 		},
-			[]string{"gpu_index", "serial_number", "card_series",
-				"card_model", "card_vendor", "driver_version", "vbios_version"}),
+			labels),
 	}
 	metricMap := initFieldConfig(config)
 
@@ -218,47 +261,47 @@ func initMetrics(reg prometheus.Registerer, config *gpumetrics.MonitorFields) *m
 			continue
 		}
 		switch field {
-		case "GPU_NODES_TOTAL":
+		case gpumetrics.GPUMetricField_GPU_NODES_TOTAL.String():
 			reg.MustRegister(m.gpuNodesTotal)
-		case "GPU_FAN_SPEED":
+		case gpumetrics.GPUMetricField_GPU_FAN_SPEED.String():
 			reg.MustRegister(m.gpuFanSpeed)
-		case "GPU_AVERAGE_PACKAGE_POWER":
+		case gpumetrics.GPUMetricField_GPU_AVERAGE_PACKAGE_POWER.String():
 			reg.MustRegister(m.gpuAvgPkgPower)
-		case "GPU_EDGE_TEMPERATURE":
+		case gpumetrics.GPUMetricField_GPU_EDGE_TEMPERATURE.String():
 			reg.MustRegister(m.gpuEdgeTemp)
-		case "GPU_JUNCTION_TEMPERATURE":
+		case gpumetrics.GPUMetricField_GPU_JUNCTION_TEMPERATURE.String():
 			reg.MustRegister(m.gpuJunctionTemp)
-		case "GPU_MEMORY_TEMPERATURE":
+		case gpumetrics.GPUMetricField_GPU_MEMORY_TEMPERATURE.String():
 			reg.MustRegister(m.gpuMemoryTemp)
-		case "GPU_HBM_TEMPERATURE":
+		case gpumetrics.GPUMetricField_GPU_HBM_TEMPERATURE.String():
 			reg.MustRegister(m.gpuHBMTemp)
-		case "GPU_USAGE":
+		case gpumetrics.GPUMetricField_GPU_USAGE.String():
 			reg.MustRegister(m.gpuUsage)
-		case "GPU_GFX_ACTIVITY":
+		case gpumetrics.GPUMetricField_GPU_GFX_ACTIVITY.String():
 			reg.MustRegister(m.gpuGFXActivity)
-		case "GPU_MEMORY_USAGE":
+		case gpumetrics.GPUMetricField_GPU_MEMORY_USAGE.String():
 			reg.MustRegister(m.gpuMemUsage)
-		case "GPU_MEMORY_ACTIVITY":
+		case gpumetrics.GPUMetricField_GPU_MEMORY_ACTIVITY.String():
 			reg.MustRegister(m.gpuMemActivity)
-		case "GPU_VOLTAGE":
+		case gpumetrics.GPUMetricField_GPU_VOLTAGE.String():
 			reg.MustRegister(m.gpuVoltage)
-		case "PCIE_BANDWIDTH":
+		case gpumetrics.GPUMetricField_PCIE_BANDWIDTH.String():
 			reg.MustRegister(m.gpuPCIeBandwidth)
-		case "GPU_ENERGY_CONSUMED":
+		case gpumetrics.GPUMetricField_GPU_ENERGY_CONSUMED.String():
 			reg.MustRegister(m.gpuEnergeyConsumed)
-		case "PCIE_REPLAY_COUNT":
+		case gpumetrics.GPUMetricField_PCIE_REPLAY_COUNT.String():
 			reg.MustRegister(m.gpuPCIeReplayCount)
-		case "GPU_CLOCK":
+		case gpumetrics.GPUMetricField_GPU_CLOCK.String():
 			reg.MustRegister(m.gpuClock)
-		case "GPU_MEMORY_CLOCK":
+		case gpumetrics.GPUMetricField_GPU_MEMORY_CLOCK.String():
 			reg.MustRegister(m.gpuMemoryClock)
-		case "PCIE_TX":
+		case gpumetrics.GPUMetricField_PCIE_TX.String():
 			reg.MustRegister(m.gpuPCIeTxUsage)
-		case "PCIE_RX":
+		case gpumetrics.GPUMetricField_PCIE_RX.String():
 			reg.MustRegister(m.gpuPCIeRxUsage)
-		case "GPU_POWER_USAGE":
+		case gpumetrics.GPUMetricField_GPU_POWER_USAGE.String():
 			reg.MustRegister(m.gpuPowerUsage)
-		case "GPU_TOTAL_MEMORY":
+		case gpumetrics.GPUMetricField_GPU_TOTAL_MEMORY.String():
 			reg.MustRegister(m.gpuTotalMemory)
 		default:
 			log.Printf("Invalid field encountered %v", field)
@@ -268,66 +311,85 @@ func initMetrics(reg prometheus.Registerer, config *gpumetrics.MonitorFields) *m
 	return m
 }
 
+func populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]string {
+	labels := make(map[string]string)
+	for key, enabled := range exportLables {
+		if !enabled {
+			continue
+		}
+		switch key {
+		case gpumetrics.GPUMetricLabel_GPU_UUID.String():
+			uuid, _ := uuid.FromBytes(gpu.Spec.Id)
+			labels[key] = uuid.String()
+		case gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String():
+			labels[key] = gpu.Status.SerialNum
+		case gpumetrics.GPUMetricLabel_CARD_SERIES.String():
+			labels[key] = gpu.Status.CardSeries
+		case gpumetrics.GPUMetricLabel_CARD_MODEL.String():
+			labels[key] = gpu.Status.CardModel
+		case gpumetrics.GPUMetricLabel_CARD_VENDOR.String():
+			labels[key] = gpu.Status.CardVendor
+		case gpumetrics.GPUMetricLabel_DRIVER_VERSION.String():
+			labels[key] = gpu.Status.DriverVersion
+		case gpumetrics.GPUMetricLabel_VBIOS_VERSION.String():
+			labels[key] = gpu.Status.VBIOSVersion
+		default:
+			log.Printf("Invalid label is ignored %v", key)
+		}
+	}
+	return labels
+}
+
 func initStaticMetrics(resp *amdgpu.GPUGetResponse, m *metrics) {
 	m.gpuNodesTotal.Set(float64(len(resp.Response)))
 	for _, gpu := range resp.Response {
 		status := gpu.Status
-		uuid, _ := uuid.FromBytes(gpu.Spec.Id)
-		gpu_index := uuid.String()
-		labels := map[string]string{
-			"gpu_index":      gpu_index,
-			"serial_number":  status.SerialNum,
-			"card_series":    status.CardSeries,
-			"card_model":     status.CardModel,
-			"card_vendor":    status.CardVendor,
-			"driver_version": status.DriverVersion,
-			"vbios_version":  status.VBIOSVersion,
-		}
+		labels := populateLabelsFromGPU(gpu)
 		m.gpuTotalMemory.With(labels).Set(float64(status.TotalMemory))
 	}
 }
 
 func convertGPUInfoToMetrics(resp *amdgpu.GPUGetResponse, m *metrics) {
 	for _, gpu := range resp.Response {
+		labels := populateLabelsFromGPU(gpu)
+		labelsWithIndex := populateLabelsFromGPU(gpu)
 		stats := gpu.Stats
-		uuid, _ := uuid.FromBytes(gpu.Spec.Id)
-		gpu_index := uuid.String()
-		m.gpuFanSpeed.WithLabelValues(gpu_index).Set(float64(stats.FanSpeed))
-		m.gpuAvgPkgPower.WithLabelValues(gpu_index).Set(float64(stats.AvgPackagePower))
+		m.gpuFanSpeed.With(labels).Set(float64(stats.FanSpeed))
+		m.gpuAvgPkgPower.With(labels).Set(float64(stats.AvgPackagePower))
 
 		// gpu temp stats
 		tempStats := stats.Temperature
-		m.gpuEdgeTemp.WithLabelValues(gpu_index).Set(float64(tempStats.EdgeTemperature))
-		m.gpuJunctionTemp.WithLabelValues(gpu_index).Set(float64(tempStats.JunctionTemperature))
-		m.gpuMemoryTemp.WithLabelValues(gpu_index).Set(float64(tempStats.MemoryTemperature))
+		m.gpuEdgeTemp.With(labels).Set(float64(tempStats.EdgeTemperature))
+		m.gpuJunctionTemp.With(labels).Set(float64(tempStats.JunctionTemperature))
+		m.gpuMemoryTemp.With(labels).Set(float64(tempStats.MemoryTemperature))
 		for j, temp := range tempStats.HBMTemperature {
-			hbm_index := fmt.Sprintf("%v", j)
-			m.gpuHBMTemp.WithLabelValues(gpu_index, hbm_index).Set(float64(temp))
+			labelsWithIndex["hbm_index"] = fmt.Sprintf("%v", j)
+			m.gpuHBMTemp.With(labelsWithIndex).Set(float64(temp))
 		}
 		// gpu usage
-		m.gpuUsage.WithLabelValues(gpu_index).Set(float64(stats.Usage.Usage))
-		m.gpuGFXActivity.WithLabelValues(gpu_index).Set(float64(stats.Usage.GFXActivity))
+		m.gpuUsage.With(labels).Set(float64(stats.Usage.Usage))
+		m.gpuGFXActivity.With(labels).Set(float64(stats.Usage.GFXActivity))
 
 		// gpu memory usage
-		m.gpuMemUsage.WithLabelValues(gpu_index).Set(float64(stats.MemoryUsage.MemoryUsage))
-		m.gpuMemActivity.WithLabelValues(gpu_index).Set(float64(stats.MemoryUsage.Activity))
+		m.gpuMemUsage.With(labels).Set(float64(stats.MemoryUsage.MemoryUsage))
+		m.gpuMemActivity.With(labels).Set(float64(stats.MemoryUsage.Activity))
 
-		m.gpuVoltage.WithLabelValues(gpu_index).Set(float64(stats.Voltage))
+		m.gpuVoltage.With(labels).Set(float64(stats.Voltage))
 
 		// pcie stats
-		m.gpuPCIeBandwidth.WithLabelValues(gpu_index).Set(float64(stats.PCIeBandwidth))
-		m.gpuEnergeyConsumed.WithLabelValues(gpu_index).Set(float64(stats.EnergyConsumed))
-		m.gpuPCIeReplayCount.WithLabelValues(gpu_index).Set(float64(stats.PCIeReplayCount))
+		m.gpuPCIeBandwidth.With(labels).Set(float64(stats.PCIeBandwidth))
+		m.gpuEnergeyConsumed.With(labels).Set(float64(stats.EnergyConsumed))
+		m.gpuPCIeReplayCount.With(labels).Set(float64(stats.PCIeReplayCount))
 
 		// clock stats
-		m.gpuClock.WithLabelValues(gpu_index).Set(float64(stats.GPUClock))
-		m.gpuMemoryClock.WithLabelValues(gpu_index).Set(float64(stats.MemoryClock))
+		m.gpuClock.With(labels).Set(float64(stats.GPUClock))
+		m.gpuMemoryClock.With(labels).Set(float64(stats.MemoryClock))
 
 		// pcie usage
-		m.gpuPCIeTxUsage.WithLabelValues(gpu_index).Set(float64(stats.PCIeTxUsage))
-		m.gpuPCIeRxUsage.WithLabelValues(gpu_index).Set(float64(stats.PCIeRxUsage))
+		m.gpuPCIeTxUsage.With(labels).Set(float64(stats.PCIeTxUsage))
+		m.gpuPCIeRxUsage.With(labels).Set(float64(stats.PCIeRxUsage))
 
-		m.gpuPowerUsage.WithLabelValues(gpu_index).Set(float64(stats.PowerUsage))
+		m.gpuPowerUsage.With(labels).Set(float64(stats.PowerUsage))
 	}
 }
 
@@ -376,7 +438,7 @@ func getMetricsHandle() (*metrics, error) {
 }
 
 func start_metrics_server(serverPort string, configPath string) {
-	var config_fields gpumetrics.MonitorFields
+	var config_fields gpumetrics.MetricConfig
 	pconfig_fields := &config_fields
 	fields, err := ioutil.ReadFile(configPath)
 	if err != nil {

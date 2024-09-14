@@ -2,5 +2,9 @@
     "Field" : [
         "GPU_NODES_TOTAL",
         "GPU_FAN_SPEED"
+    ],
+    "Label": [
+    	"CARD_MODEL",
+    	"DRIVER_VERSION"
     ]
 }
