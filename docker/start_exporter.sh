@@ -21,17 +21,17 @@
 
 
 #
-# script to be run on the x86 host server to start a node management container
+# script to be run on the x86 host server to start a exporter container
 
 # function to print help string
 print_help () {
-    echo "This script can be used to start a nodemgmt container"
+    echo "This script can be used to start a exporter container"
     echo
     echo "Syntax: $0 -d <docker-image-tarball-location> | -s [-n <docker-image-name>]"
     echo "options:"
     echo "-h    print help"
-    echo "-d    path for node mgmt docker image tarball"
-    echo "-s    skip loading of node mgmt docker image tarball"
+    echo "-d    path for exporter docker image tarball"
+    echo "-s    skip loading of exporter docker image tarball"
     echo "-n    name to be used for docker instance"
 }
 
@@ -39,8 +39,8 @@ VER=v1
 LOAD_IMAGE=1
 GPUAGENT_GRPC_PORT=50061
 NODE_MGMT_RUN_DIR=$PWD
-DOCKER_IMAGE_NAME="nodemgmt:$VER"
-DOCKER_INSTANCE_NAME="nodemgmt"
+DOCKER_IMAGE_NAME="exporter:$VER"
+DOCKER_INSTANCE_NAME="exporter"
 
 while getopts ":hd:sn:" option; do
     case $option in
@@ -61,7 +61,7 @@ done
 
 if [ "$LOAD_IMAGE" == 1 ]; then
     if test -z "$DOCKER_IMAGE"; then
-        echo "Error: Unable to load node management docker image, path not specified"
+        echo "Error: Unable to load exporter docker image, path not specified"
         exit
     fi
     echo "Cleaning up docker image from registry..."
@@ -71,7 +71,7 @@ if [ "$LOAD_IMAGE" == 1 ]; then
 fi
 
 # directory on host that is mounted to the container
-HOST_DIR=$NODE_MGMT_RUN_DIR/nodemgmt/
+HOST_DIR=$NODE_MGMT_RUN_DIR/exporter/
 # create a dir to hold gpuagent logs
 mkdir -p $HOST_DIR/var/run
 # mount options to mount the host dir to the container

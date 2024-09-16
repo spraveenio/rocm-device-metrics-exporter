@@ -21,11 +21,11 @@
 
 
 #
-# script to generate tarball with node management docker, entrypoint script
+# script to generate tarball with exporter docker, entrypoint script
 # and docker_run script to create the docker container
 
 print_help () {
-    echo "This script can be used to build a nodemgmt container"
+    echo "This script can be used to build a exporter container"
     echo
     echo "Syntax: $0 [-s -n]"
     echo "options:"
@@ -35,7 +35,7 @@ print_help () {
 }
 
 VER=v1
-DOCKER_IMAGE_NAME="amd/nodemgmt:$VER"
+DOCKER_IMAGE_NAME="amd/exporter:$VER"
 SAVE_IMAGE=0
 
 while getopts ":hsn:" option; do
@@ -60,17 +60,17 @@ mkdir -p $IMAGE_DIR
 
 # create symlinks for gpuagent and gpuctl binaries and librocm_smi64.so.2 in the
 # docker directory so that they can be added to the container
-gunzip -c $TOP_DIR/asset/gpuagent_static.bin.gz > $TOP_DIR/docker/gpuagent
-ln -f $TOP_DIR/asset/gpuctl.gobin $TOP_DIR/docker/gpuctl
+gunzip -c $TOP_DIR/assets/gpuagent_static.bin.gz > $TOP_DIR/docker/gpuagent
+ln -f $TOP_DIR/assets/gpuctl.gobin $TOP_DIR/docker/gpuctl
 ln -f $TOP_DIR/internal/bin/amd-metrics-exporter $TOP_DIR/docker/amd-metrics-exporter
 
 # build docker image tarball from the docker file
 cd $TOP_DIR/docker
-rm -rf nodemgmt-docker*.tgz
-docker build -t $DOCKER_IMAGE_NAME . -f Dockerfile.nodemgmt-release && docker save -o nodemgmt-docker-$VER.tar $DOCKER_IMAGE_NAME
+rm -rf exporter-docker*.tgz
+docker build -t $DOCKER_IMAGE_NAME . -f Dockerfile.exporter-release && docker save -o exporter-docker-$VER.tar $DOCKER_IMAGE_NAME
 if [ $? -eq 0 ]; then
-    gzip nodemgmt-docker-$VER.tar
-    mv nodemgmt-docker-$VER.tar.gz nodemgmt-docker-$VER.tgz
+    gzip exporter-docker-$VER.tar
+    mv exporter-docker-$VER.tar.gz exporter-docker-$VER.tgz
 else
     echo "Failed to build docker image"
     exit $?
@@ -79,7 +79,7 @@ fi
 # prepare the final tar ball now
 if [ "$SAVE_IMAGE" == 1 ]; then
     echo "Preparing final image ..."
-    tar cvzf $IMAGE_DIR/nodemgmt-release-$VER.tgz nodemgmt-docker-$VER.tgz start_nodemgmt.sh
+    tar cvzf $IMAGE_DIR/exporter-release-$VER.tgz exporter-docker-$VER.tgz start_exporter.sh
     echo "Image ready in $IMAGE_DIR"
 fi
 

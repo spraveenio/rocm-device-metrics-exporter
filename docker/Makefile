@@ -1,5 +1,5 @@
 .PHONY:
 docker:
-	@echo "building amd nodemgmt container"
-	TOP_DIR=$(TOP_DIR) ./build_nodemgmt_release_docker.sh
+	@echo "building amd exporter container"
+	TOP_DIR=$(TOP_DIR) ./build_exporter_release_docker.sh
 
