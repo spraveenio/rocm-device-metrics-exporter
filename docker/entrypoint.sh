@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -euo pipefail
 #
 # Copyright(C) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -28,6 +29,6 @@ LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib /home/amd/bin/gpuagent >/dev/null 2>/dev/nul
 # sleep before starting promethesu server
 sleep 10
 # start prometheus server
-LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib /home/amd/bin/server >/dev/null 2>/dev/null &
+LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib /home/amd/bin/server >/dev/null 2>/dev/null
 
-/usr/bin/env bash
+
