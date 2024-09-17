@@ -31,22 +31,35 @@ print_help () {
     echo "options:"
     echo "-h    print help"
     echo "-s    prepare a release tarball image"
+    echo "-p    publish to registry"
     echo "-n    docker image name"
 }
 
 VER=v1
 DOCKER_IMAGE_NAME="amd/exporter:$VER"
 SAVE_IMAGE=0
+PUBLISH_IMAGE=0
+DOCKER_REGISTRY="registry.test.pensando.io:5000/device-metrics-exporter/"
+#TODO : rename to official exporter later
+EXPORTER_IMAGE="rocm-metrics-exporter"
 
-while getopts ":hsn:" option; do
+IMAGE_URL="${DOCKER_REGISTRY}${EXPORTER_IMAGE}:${VER}"
+
+while getopts ":h:sn:p" option; do
     case $option in
         h)
             print_help
             exit ;;
         s)
-            SAVE_IMAGE=1 ;;
+            echo "saving image option set"
+            SAVE_IMAGE=1
+            ;;
         n)
             DOCKER_IMAGE_NAME=$OPTARG ;;
+        p)
+            echo "publish image option set"
+            PUBLISH_IMAGE=1
+            ;;
         \?)
             echo "Error: Invalid argument"
             exit ;;
@@ -61,19 +74,32 @@ mkdir -p $IMAGE_DIR
 # create symlinks for gpuagent and gpuctl binaries and librocm_smi64.so.2 in the
 # docker directory so that they can be added to the container
 gunzip -c $TOP_DIR/assets/gpuagent_static.bin.gz > $TOP_DIR/docker/gpuagent
+chmod +x $TOP_DIR/docker/gpuagent
 ln -f $TOP_DIR/assets/gpuctl.gobin $TOP_DIR/docker/gpuctl
-ln -f $TOP_DIR/internal/bin/amd-metrics-exporter $TOP_DIR/docker/amd-metrics-exporter
+ln -f $TOP_DIR/bin/amd-metrics-exporter $TOP_DIR/docker/amd-metrics-exporter
 
 # build docker image tarball from the docker file
 cd $TOP_DIR/docker
 rm -rf exporter-docker*.tgz
-docker build -t $DOCKER_IMAGE_NAME . -f Dockerfile.exporter-release && docker save -o exporter-docker-$VER.tar $DOCKER_IMAGE_NAME
-if [ $? -eq 0 ]; then
-    gzip exporter-docker-$VER.tar
-    mv exporter-docker-$VER.tar.gz exporter-docker-$VER.tgz
+if [ $PUBLISH_IMAGE == 1 ]; then
+    echo "publishing exporter image to $IMAGE_URL"
+    docker build -t $IMAGE_URL . -f Dockerfile.exporter-release && docker push $IMAGE_URL
+    if [ $? -eq 0 ]; then
+        echo "Successfully published image $IMAGE_URL"
+    else
+        echo "Failed to publish docker image"
+        exit $?
+    fi
 else
-    echo "Failed to build docker image"
-    exit $?
+    echo "building exporter image to $DOCKER_IMAGE_NAME"
+    docker build -t $DOCKER_IMAGE_NAME . -f Dockerfile.exporter-release && docker save -o exporter-docker-$VER.tar $DOCKER_IMAGE_NAME
+    if [ $? -eq 0 ]; then
+        gzip exporter-docker-$VER.tar
+        mv exporter-docker-$VER.tar.gz exporter-docker-$VER.tgz
+    else
+        echo "Failed to build docker image"
+        exit $?
+    fi
 fi
 
 # prepare the final tar ball now

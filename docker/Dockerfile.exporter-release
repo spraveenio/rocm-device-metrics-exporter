@@ -32,6 +32,7 @@ RUN mkdir -p /home/amd/lib/
 RUN mkdir -p /home/amd/tools/
 ADD ./gpuagent /home/amd/bin/gpuagent
 ADD ./gpuctl /home/amd/bin/gpuctl
+RUN ln -sf /opt/rocm-6.2.0/lib/librocm_smi64.so.7 /opt/rocm-6.2.0/lib/librocm_smi64.so.2
 ADD ./amd-metrics-exporter /home/amd/bin/server
 ADD ./entrypoint.sh /home/amd/tools/entrypoint.sh
 RUN chmod +x /home/amd/tools/entrypoint.sh
