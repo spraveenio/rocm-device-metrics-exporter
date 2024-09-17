@@ -1,2 +1,4 @@
 gen
+bin
 internal/bin
+internal/amdgpu/gen

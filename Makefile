@@ -1,10 +1,13 @@
-TO_GEN := proto
+TO_GEN := internal/amdgpu/proto
 OUT_DIR := bin
-
 
 export ${GOROOT}
 export ${GOPATH}
 export ${OUT_DIR}
+
+.PHONY: all
+all:
+	${MAKE} gen amdexporter
 
 .PHONY: gen
 gen:
@@ -12,17 +15,19 @@ gen:
 
 .PHONY:clean
 clean:
-	rm -rf gen
-	rm -rf internal/bin
+	rm -rf internal/amdgpu/gen
+	rm -rf bin
 
 amdexporter:
-	${MAKE} -C internal
+	@echo "buildign amd metrics exporter"
+	go build -C cmd/exporter -o $(CURDIR)/bin/amd-metrics-exporter
 
 .PHONY: docker
 docker:
 	${MAKE} -C docker TOP_DIR=$(CURDIR)
 
-.PHONY: all
-all:
-	${MAKE} gen amdexporter
+.PHONY: docker-publish
+docker-publish:
+	${MAKE} -C docker docker-publish TOP_DIR=$(CURDIR)
+
 

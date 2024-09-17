@@ -34,8 +34,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 
-	"github.com/pensando/device-metrics-exporter/gen/amdgpu"
-	"github.com/pensando/device-metrics-exporter/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/gpumetrics"
 )
 
 type metrics struct {
@@ -67,7 +67,7 @@ type metrics struct {
 
 const (
 	amdListenPort  = "5000"
-	amdMetricsFile = "export_configs.json"
+	amdMetricsFile = "/etc/metrics/config.json"
 	gpuagentAddr   = "0.0.0.0:50061"
 )
 
@@ -94,7 +94,7 @@ func initFieldConfig(config *gpumetrics.MetricConfig) map[string]bool {
 		log.Printf("%v set to %v", name, enable_default)
 		exportFieldMap[name] = enable_default
 	}
-	if config != nil && len(config.Field) != 0 {
+	if config == nil || len(config.Field) == 0 {
 		return exportFieldMap
 	}
 	for _, fieldName := range config.Field {

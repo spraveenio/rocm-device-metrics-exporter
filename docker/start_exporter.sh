@@ -38,6 +38,7 @@ print_help () {
 VER=v1
 LOAD_IMAGE=1
 GPUAGENT_GRPC_PORT=50061
+EXPORTER_LISTENER_PORT=5000
 NODE_MGMT_RUN_DIR=$PWD
 DOCKER_IMAGE_NAME="exporter:$VER"
 DOCKER_INSTANCE_NAME="exporter"
@@ -77,7 +78,7 @@ mkdir -p $HOST_DIR/var/run
 # mount options to mount the host dir to the container
 MOUNT_OPTS=" --mount type=bind,source=$HOST_DIR/var/run,target=/var/run"
 # bind gpuagent grpc ports to the container
-PORT_OPTS=" -p $GPUAGENT_GRPC_PORT:$GPUAGENT_GRPC_PORT"
+PORT_OPTS=" -p $GPUAGENT_GRPC_PORT:$GPUAGENT_GRPC_PORT -p $EXPORTER_LISTENER_PORT:$EXPORTER_LISTENER_PORT"
 echo "Creating docker container..."
 docker run --rm -itd --privileged --name $DOCKER_INSTANCE_NAME $PORT_OPTS $MOUNT_OPTS -e PATH=$PATH:/home/amd/bin/ amd/$DOCKER_IMAGE_NAME
 exit 0
