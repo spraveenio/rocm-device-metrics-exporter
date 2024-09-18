@@ -190,9 +190,9 @@ pkg: pkg-clean
 
 pkg-clean:
 	rm -rf pkg/usr
-pkg:
+
+pkg:pkg-clean
 	${MAKE} gen amdexporter-lite
-	${MAKE} pkg-clean
 	#copy and strip files
 	mkdir -p ${PKG_PATH}
 	gunzip -c ${ASSETS_PATH}/gpuagent_static.bin.gz > ${PKG_PATH}/gpuagent
