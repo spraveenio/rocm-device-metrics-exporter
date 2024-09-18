@@ -21,9 +21,9 @@ gen:
 
 pkg-clean:
 	rm -rf pkg/usr
-pkg:
+
+pkg:pkg-clean
 	${MAKE} gen amdexporter-lite
-	${MAKE} pkg-clean
 	#copy and strip files
 	mkdir -p ${PKG_PATH}
 	gunzip -c ${ASSETS_PATH}/gpuagent_static.bin.gz > ${PKG_PATH}/gpuagent
@@ -49,7 +49,7 @@ amdexporter:
 	go build -C cmd/exporter -o $(CURDIR)/bin/amd-metrics-exporter
 
 .PHONY: docker
-docker:
+docker: amdexporter
 	${MAKE} -C docker TOP_DIR=$(CURDIR)
 
 .PHONY: docker-publish

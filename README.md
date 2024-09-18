@@ -43,3 +43,28 @@ Build and Run Instructions
         GPU_UUID and SERIAL_NUMBER are always set and cannot be removed 
         array of optional label info can be specified in
         internal/amdgpu/proto/fields.proto:GPUMetricLabel
+
+6. Run prometheus (Testing)
+   ```
+	docker run -p 9090:9090 -v ./example/prometheus.yml:/etc/prometheus/prometheus.yml -v prometheus-data:/prometheus prom/prometheus
+
+7. Install Grafana (Testing)
+    - installation
+    ```
+    https://grafana.com/docs/grafana/latest/setup-grafana/installation/debian/
+    #sudo apt-get install -y apt-transport-https software-properties-common wget
+    #sudo mkdir -p /etc/apt/keyrings/
+    #wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
+    #echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+    #sudo apt-get update
+    #sudo apt-get install grafana
+
+    ```
+    - running
+    ```
+    sudo systemctl daemon-reload
+    sudo systemctl start grafana-server
+    sudo systemctl status grafana-server
+    ```
+
+	```
