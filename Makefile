@@ -51,6 +51,8 @@ GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
 VERSION ?=$(RELEASE)
 KUBECONFIG ?= ~/.kube/config
 
+TOP_DIR := $(PWD)
+
 export ${GOROOT}
 export ${GOPATH}
 export ${OUT_DIR}
@@ -183,6 +185,23 @@ pkg: pkg-clean
 	git checkout $(DEBIAN_CONTROL)
 	# rename for internal build
 	mv -vf ${TOP_DIR}/bin/amdgpu-exporter_*~${UBUNTU_VERSION_NUMBER}_amd64.deb ${TOP_DIR}/bin/amdgpu-exporter_${UBUNTU_VERSION_NUMBER}_amd64.deb
+
+.PHONY: pkg pkg-clean
+
+pkg-clean:
+	rm -rf pkg/usr
+pkg:
+	${MAKE} gen amdexporter-lite
+	${MAKE} pkg-clean
+	#copy and strip files
+	mkdir -p ${PKG_PATH}
+	gunzip -c ${ASSETS_PATH}/gpuagent_static.bin.gz > ${PKG_PATH}/gpuagent
+	chmod +x ${PKG_PATH}/gpuagent
+	cd ${PKG_PATH} && strip ${PKG_PATH}/gpuagent
+	cp -vf ${ASSETS_PATH}/gpuctl.gobin ${PKG_PATH}/
+	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
+	cd ${TOP_DIR}
+	dpkg-deb --build pkg ${TOP_DIR}/bin
 
 .PHONY:clean
 clean: pkg-clean
