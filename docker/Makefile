@@ -1,7 +1,7 @@
 .PHONY:
 docker:
 	@echo "building amd exporter container"
-	TOP_DIR=$(TOP_DIR) ./build_exporter_release_docker.sh -s
+	TOP_DIR=$(TOP_DIR) MOCK=$(MOCK) ./build_exporter_release_docker.sh -s
 
 docker-publish:
 	@echo "publishing amd exporter container"

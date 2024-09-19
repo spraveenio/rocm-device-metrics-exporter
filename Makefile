@@ -50,7 +50,11 @@ amdexporter:
 
 .PHONY: docker
 docker: amdexporter
-	${MAKE} -C docker TOP_DIR=$(CURDIR)
+	${MAKE} -C docker TOP_DIR=$(CURDIR) MOCK=$(MOCK)
+
+.PHONY: docker-mock
+docker-mock:
+	${MAKE} docker MOCK=1
 
 .PHONY: docker-publish
 docker-publish:
