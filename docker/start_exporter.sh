@@ -27,22 +27,24 @@
 print_help () {
     echo "This script can be used to start a exporter container"
     echo
-    echo "Syntax: $0 -d <docker-image-tarball-location> | -s [-n <docker-image-name>]"
+    echo "Syntax: $0 -d <docker-image-tarball-location> | -s [-n <docker-image-name>] [-p <external-port>]"
     echo "options:"
     echo "-h    print help"
     echo "-d    path for exporter docker image tarball"
     echo "-s    skip loading of exporter docker image tarball"
     echo "-n    name to be used for docker instance"
+    echo "-p    external port to map to the exporter's internal port (default: 5000)"
 }
 
 VER=v1
 LOAD_IMAGE=1
-EXPORTER_LISTENER_PORT=5000
+EXPORTER_EXTERNAL_LISTENER_PORT=5000
+EXPORTER_INTERNAL_LISTENER_PORT=5000
 NODE_MGMT_RUN_DIR=$PWD
 DOCKER_IMAGE_NAME="exporter:$VER"
 DOCKER_INSTANCE_NAME="exporter"
 
-while getopts ":hd:sn:" option; do
+while getopts ":hd:p:sn:" option; do
     case $option in
         h)
             print_help
@@ -53,6 +55,8 @@ while getopts ":hd:sn:" option; do
             LOAD_IMAGE=0 ;;
         n)
             DOCKER_INSTANCE_NAME=$OPTARG ;;
+        p)
+            EXPORTER_EXTERNAL_LISTENER_PORT=$OPTARG ;;
         \?)
             echo "Error: Invalid argument"
             exit ;;
@@ -77,7 +81,7 @@ mkdir -p $HOST_DIR/var/run
 # mount options to mount the host dir to the container
 MOUNT_OPTS=" --mount type=bind,source=$HOST_DIR/var/run,target=/var/run"
 # bind gpuagent grpc ports to the container
-PORT_OPTS=" -p $EXPORTER_LISTENER_PORT:$EXPORTER_LISTENER_PORT"
+PORT_OPTS=" -p $EXPORTER_EXTERNAL_LISTENER_PORT:$EXPORTER_INTERNAL_LISTENER_PORT"
 echo "Creating docker container..."
 docker run --rm -itd --privileged --name $DOCKER_INSTANCE_NAME $PORT_OPTS $MOUNT_OPTS -e PATH=$PATH:/home/amd/bin/ amd/$DOCKER_IMAGE_NAME
 exit 0
