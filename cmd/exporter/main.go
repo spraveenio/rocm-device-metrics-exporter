@@ -87,6 +87,7 @@ func start_metrics_server(serverPort string, configPath string) {
 		logger.Log.Printf("GPU[%v].Status :%+v", i, gpu.Status)
 	}
 	mh.InitStaticMetrics(res)
+	mh.UpdateGPUInfoToMetrics(res)
 
 	router := mux.NewRouter()
 	router.Use(prometheusMiddleware)

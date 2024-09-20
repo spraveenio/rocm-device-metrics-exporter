@@ -39,6 +39,8 @@ clean:
 	rm -rf pkg/usr
 	rm -rf internal/amdgpu/gen
 	rm -rf bin
+	rm -rf docker/obj
+	rm -rf docker/*.tgz
 
 amdexporter-lite:
 	@echo "building lite version of metrics exporter"
