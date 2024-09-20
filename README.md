@@ -27,7 +27,8 @@ Build and Run Instructions
   exporter container 
 	- create log directories
    ```
-	#mkdir -p  exporter/var/run
+	# mkdir -p  exporter/var/run
+   	# mkdir -p exporter/configs
    ```
 	- create your config in exporter/configs/config.json
 	- start docker container
