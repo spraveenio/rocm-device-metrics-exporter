@@ -55,8 +55,11 @@ func (ga *GPUAgentClient) GPUGet() (*amdgpu.GPUGetResponse, error) {
 		return nil, fmt.Errorf("client closed")
 	}
 
+    ctx, cancel := context.WithCancel(context.Background())
+    defer cancel()
+
 	req := &amdgpu.GPUGetRequest{}
-	return ga.client.GPUGet(context.Background(), req)
+	return ga.client.GPUGet(ctx, req)
 }
 
 func (ga *GPUAgentClient) Close() {

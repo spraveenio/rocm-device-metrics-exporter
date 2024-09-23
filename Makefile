@@ -52,6 +52,8 @@ VERSION ?=$(RELEASE)
 KUBECONFIG ?= ~/.kube/config
 
 TOP_DIR := $(PWD)
+GEN_DIR := $(TOP_DIR)/internal/amdgpu/gen
+MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
 
 export ${GOROOT}
 export ${GOPATH}
