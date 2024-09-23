@@ -1,11 +1,18 @@
 TO_GEN := internal/amdgpu/proto
+TO_MOCK := internal/amdgpu/mock
 OUT_DIR := bin
 
 TOP_DIR := $(PWD)
+GEN_DIR := $(TOP_DIR)/internal/amdgpu/gen
+MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
 
 export ${GOROOT}
 export ${GOPATH}
 export ${OUT_DIR}
+export ${TOP_DIR}
+
+UT_TEST := internal/amdgpu/gpuagent
+
 ASSETS_PATH :=${TOP_DIR}/assets
 PKG_PATH := ${TOP_DIR}/pkg/usr/local/bin
 
@@ -15,7 +22,8 @@ all:
 
 .PHONY: gen
 gen:
-	@for c in ${TO_GEN}; do printf "\n+++++++++++++++++ Generating $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} || exit 1; done
+	@for c in ${TO_GEN}; do printf "\n+++++++++++++++++ Generating $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} GEN_DIR=$(GEN_DIR) || exit 1; done
+	@for c in ${TO_MOCK}; do printf "\n+++++++++++++++++ Generating mock $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} MOCK_DIR=$(MOCK_DIR) GEN_DIR=$(GEN_DIR) || exit 1; done
 
 .PHONY: pkg pkg-clean
 
@@ -62,4 +70,9 @@ docker-mock:
 docker-publish:
 	${MAKE} -C docker docker-publish TOP_DIR=$(CURDIR)
 
+ut: gen
+	@for c in ${UT_TEST}; do printf "\n+++++++++++++++++ Testing $${c} +++++++++++++++++\n"; PATH=$$PATH go test -v -mod=vendor github.com/pensando/device-metrics-exporter/$${c} || exit 1; done
+
+loadgpu:
+	sudo modprobe amdgpu
 

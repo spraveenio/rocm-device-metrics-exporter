@@ -7,6 +7,19 @@ github.com/cespare/xxhash/v2
 # github.com/gofrs/uuid v4.4.0+incompatible
 ## explicit
 github.com/gofrs/uuid
+# github.com/golang/mock v1.6.0
+## explicit; go 1.11
+github.com/golang/mock/gomock
+# github.com/google/go-cmp v0.6.0
+## explicit; go 1.13
+github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/internal/diff
+github.com/google/go-cmp/cmp/internal/flags
+github.com/google/go-cmp/cmp/internal/function
+github.com/google/go-cmp/cmp/internal/value
+# github.com/google/uuid v1.6.0
+## explicit
+github.com/google/uuid
 # github.com/gorilla/mux v1.8.1
 ## explicit; go 1.20
 github.com/gorilla/mux
@@ -22,6 +35,9 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
+# github.com/pkg/errors v0.9.1
+## explicit
+github.com/pkg/errors
 # github.com/prometheus/client_golang v1.20.3
 ## explicit; go 1.20
 github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil
@@ -154,3 +170,10 @@ google.golang.org/protobuf/runtime/protoimpl
 google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
+# gotest.tools v2.2.0+incompatible
+## explicit
+gotest.tools/assert
+gotest.tools/assert/cmp
+gotest.tools/internal/difflib
+gotest.tools/internal/format
+gotest.tools/internal/source
