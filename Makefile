@@ -3,7 +3,7 @@ TO_MOCK := internal/amdgpu/mock
 OUT_DIR := bin
 
 TOP_DIR := $(PWD)
-GEN_DIR := $(TOP_DIR)/internal/amdgpu/gen
+GEN_DIR := $(TOP_DIR)/internal/amdgpu/
 MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
 
 export ${GOROOT}
@@ -76,3 +76,7 @@ ut: gen
 loadgpu:
 	sudo modprobe amdgpu
 
+mod:
+	@echo "setting up go mod packages"
+	@go mod tidy
+	@go mod vendor
