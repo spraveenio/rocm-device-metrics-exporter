@@ -2,7 +2,7 @@
 mock_gen:
 	@echo "building mock gen"
 	@mkdir -p ${MOCK_DIR}
-	mockgen --destination=${MOCK_DIR}/mock_gpu.go -package=mock_gen --source=$(GEN_DIR)/amdgpu/gpu_grpc.pb.go
+	mockgen --destination=${MOCK_DIR}/mock_gpu.go -package=mock_gen --source=$(GEN_DIR)/gen/amdgpu/gpu_grpc.pb.go
 	goimports -local "github.com/pensando/device-metrics-exporter" -w ${MOCK_DIR}/mock_gpu.go
 
 .PHONY: all

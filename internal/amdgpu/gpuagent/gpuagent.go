@@ -20,6 +20,7 @@ package gpuagent
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
@@ -33,6 +34,7 @@ const (
 type GPUAgentClient struct {
 	conn   *grpc.ClientConn
 	client amdgpu.GPUSvcClient
+	sync.Mutex
 }
 
 func NewAgent() (*GPUAgentClient, error) {
@@ -51,19 +53,24 @@ func NewAgent() (*GPUAgentClient, error) {
 }
 
 func (ga *GPUAgentClient) GPUGet() (*amdgpu.GPUGetResponse, error) {
+	ga.Lock()
+	defer ga.Unlock()
 	if ga.client == nil {
 		return nil, fmt.Errorf("client closed")
 	}
 
-    ctx, cancel := context.WithCancel(context.Background())
-    defer cancel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	req := &amdgpu.GPUGetRequest{}
 	return ga.client.GPUGet(ctx, req)
 }
 
 func (ga *GPUAgentClient) Close() {
+	ga.Lock()
+	defer ga.Unlock()
 	if ga.conn != nil {
 		ga.conn.Close()
+		ga.client = nil
 	}
 }
