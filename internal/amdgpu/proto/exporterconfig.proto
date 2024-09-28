@@ -20,7 +20,7 @@
 //----------------------------------------------------------------------------
 ///
 /// \file
-/// AMD Metrics Exporter fields
+/// AMD Metrics Exporter configs
 ///
 //----------------------------------------------------------------------------
 
@@ -109,10 +109,23 @@ enum GPUMetricLabel {
     VBIOS_VERSION   = 6;
 }
 
-message MetricConfig {
+message GPUMetricConfig {
+    // instance selector can include comma or range indices of format 0,2-3,7
+    string Selector        = 1;
+
     // list of all GPUMetricField to be exported
-    repeated string Field = 1;
+    repeated string Fields = 2;
 
     // list of labels to be exported
-    repeated string Label = 2;
+    repeated string Labels = 3;
+
+}
+
+message MetricConfig {
+    // server config port
+    uint32 ServerPort         = 1;
+
+    // GPU Metric config for export
+    GPUMetricConfig GPUConfig = 2;
+
 }

@@ -1,10 +1,13 @@
 {
-    "Field" : [
-        "GPU_NODES_TOTAL",
-        "GPU_FAN_SPEED"
-    ],
-    "Label": [
-    	"CARD_MODEL",
-    	"DRIVER_VERSION"
-    ]
+    "ServerPort" : 5002,
+    "GPUConfig" :{
+        "Fields" : [
+            "GPU_NODES_TOTAL",
+            "GPU_FAN_SPEED"
+        ],
+        "Labels": [
+            "CARD_MODEL",
+            "DRIVER_VERSION"
+        ]
+    }
 }

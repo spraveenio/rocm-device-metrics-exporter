@@ -19,10 +19,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -31,69 +29,34 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/config"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gpuagent"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/metricsutil"
 )
 
 const (
-	amdListenPort  = "5000"
 	amdMetricsFile = "/etc/metrics/config.json"
 )
 
+// global
 var (
 	mh        *metricsutil.MetricsHandler
 	gpuclient *gpuagent.GPUAgentClient
+	runConf   *config.Config
 )
 
 // get the info from gpu agent and update the current metrics registery
-func updateGPUInfo() error {
-	// send the req to gpuclient
-	res, err := gpuclient.GPUGet()
-	if err != nil {
-		logger.Log.Printf("err :%v", err)
-		return err
-	}
-	if res != nil && res.ApiStatus != 0 {
-		logger.Log.Printf("resp status :%v", res.ApiStatus)
-		return fmt.Errorf("%v", res.ApiStatus)
-	}
-	mh.UpdateGPUInfoToMetrics(res)
-	return nil
-}
-
 func prometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		updateGPUInfo()
+		mh.UpdateMetrics()
 		next.ServeHTTP(w, r)
 	})
 }
 
-func start_metrics_server(serverPort string, configPath string) *http.Server {
+func start_metrics_server(c *config.Config) *http.Server {
 
-	var err error
-	var config_fields gpumetrics.MetricConfig
-	pconfig_fields := &config_fields
-	fields, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		pconfig_fields = nil
-	} else {
-		_ = json.Unmarshal(fields, pconfig_fields)
-		logger.Log.Printf("configs : %+v", pconfig_fields)
-	}
-
-	mh, _ = metricsutil.NewMetrics(pconfig_fields)
-	res, err := gpuclient.GPUGet()
-	if err != nil {
-		logger.Log.Printf("err :%v", err)
-		return nil
-	}
-	for i, gpu := range res.Response {
-		logger.Log.Printf("GPU[%v].Status :%+v", i, gpu.Status)
-	}
-	mh.InitStaticMetrics(res)
-	mh.UpdateGPUInfoToMetrics(res)
+	serverPort := c.GetServerPort()
 
 	router := mux.NewRouter()
 	router.Use(prometheusMiddleware)
@@ -117,9 +80,9 @@ func start_metrics_server(serverPort string, configPath string) *http.Server {
 	return srv
 }
 
-func forever_watcher(serverPort string, configPath string) {
-
+func forever_watcher() {
 	var srvHandler *http.Server
+	configPath := runConf.GetMetricsConfigPath()
 
 	pollTimer := time.NewTicker(5 * time.Second)
 	defer pollTimer.Stop()
@@ -130,14 +93,16 @@ func forever_watcher(serverPort string, configPath string) {
 
 	startServer := func() {
 		if !serverRunning() {
+			mh.InitConfig()
+			serverPort := runConf.GetServerPort()
 			logger.Log.Printf("starting server on %v", serverPort)
-			srvHandler = start_metrics_server(serverPort, configPath)
+			srvHandler = start_metrics_server(runConf)
 
 		}
 	}
 	stopServer := func() {
 		if serverRunning() {
-			logger.Log.Printf("stopping server on %v", serverPort)
+			logger.Log.Printf("stopping server")
 			srvCtx, srvCancel := context.WithTimeout(context.Background(), 5*time.Second)
 			if err := srvHandler.Shutdown(srvCtx); err != nil {
 				panic(err) // failure/timeout shutting down the server gracefully
@@ -176,16 +141,13 @@ func forever_watcher(serverPort string, configPath string) {
 
 	// Start listening for events.
 	go func() {
-		for {
-			select {
-			case <-pollTimer.C:
-				if fileChanged() {
-					logger.Log.Printf("config update detected, loading new config")
-					// stop server if running
-					stopServer()
-					// start server
-					startServer()
-				}
+		for range pollTimer.C {
+			if fileChanged() {
+				logger.Log.Printf("config update detected, loading new config")
+				// stop server if running
+				stopServer()
+				// start server
+				startServer()
 			}
 		}
 	}()
@@ -197,18 +159,22 @@ func main() {
 	logger.Init()
 	var err error
 	var (
-		serverPort    = flag.String("amd-listen-port", amdListenPort, "AMD listener port")
 		metricsConfig = flag.String("amd-metrics-config", amdMetricsFile, "AMD metrics exporter config file")
 	)
 	flag.Parse()
 
+	runConf = config.NewConfig(*metricsConfig)
+
+	mh, _ = metricsutil.NewMetrics(runConf)
+	mh.InitConfig()
+
 	// do it only once, keep the same connection no need to reconnect for
 	// config changes
-	gpuclient, err = gpuagent.NewAgent()
+	gpuclient, err = gpuagent.NewAgent(mh)
 	if err != nil {
 		logger.Log.Fatalf("GPUAgent create failed")
 		return
 	}
 
-	forever_watcher(*serverPort, *metricsConfig)
+	forever_watcher()
 }

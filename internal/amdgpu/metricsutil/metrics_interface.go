@@ -15,30 +15,23 @@
 // REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 
-package logger
+package metricsutil
 
-import (
-	"log"
-	"os"
-	"sync"
-)
+type MetricsInterface interface {
+    // one time statistic pull for clients
+    UpdateStaticMetrics() error
 
-var (
-	Log     *log.Logger
-	logdir  = "/var/run/"
-	logpath = "exporter.log"
-	once    sync.Once
-)
+	// ondemand query request for client to update current stat
+	UpdateMetricsStats() error
 
-func initLogger() {
-	if os.Getenv("LOGDIR") != "" {
-		logdir = os.Getenv("LOGDIR")
-	}
-	outfile, _ := os.Create(logdir + logpath)
-	Log = log.New(outfile, "", 0)
-	Log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// metric lable for interal usage within client
+	GetExportLabels() []string
+
+	// metrics registration must be done in this
+	InitConfigs() error
 }
 
-func Init() {
-	once.Do(initLogger)
+type MetricsClient interface {
+	// client registration to the metric handler
+	RegisterMetricsClient(MetricsInterface) error
 }
