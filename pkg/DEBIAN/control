@@ -3,5 +3,4 @@ Version: 0.1
 Maintainer: AMD Inc.
 Architecture: amd64
 Description: GPU Metrics Exporter
-Pre-Depends: rdcd
-Depends: linux-vdso, librocm_smi64, libpthread, libz, librt, libdl, libstdc++, libm, libgcc_s, libc, ld-linux-x86-64
+Depends: rdc, rocm-dev
