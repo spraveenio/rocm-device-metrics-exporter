@@ -191,7 +191,8 @@ pkg: pkg-clean
 .PHONY: pkg pkg-clean
 
 pkg-clean:
-	rm -rf pkg/usr
+	rm -rf ${TOP_DIR}/bin/*.deb
+
 
 pkg:pkg-clean
 	${MAKE} gen amdexporter-lite
