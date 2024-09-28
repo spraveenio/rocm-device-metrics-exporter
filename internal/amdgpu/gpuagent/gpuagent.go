@@ -24,6 +24,7 @@ import (
 
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/metricsutil"
 	"google.golang.org/grpc"
 )
 
@@ -33,11 +34,13 @@ const (
 
 type GPUAgentClient struct {
 	conn   *grpc.ClientConn
+	mh     *metricsutil.MetricsHandler
 	client amdgpu.GPUSvcClient
+	m      *metrics // client specific metrics
 	sync.Mutex
 }
 
-func NewAgent() (*GPUAgentClient, error) {
+func NewAgent(mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
 	conn, err := grpc.Dial(gpuagentAddr, grpc.WithInsecure())
 	if err != nil {
 		logger.Log.Printf("err :%v", err)
@@ -47,12 +50,19 @@ func NewAgent() (*GPUAgentClient, error) {
 	ag := &GPUAgentClient{
 		conn:   conn,
 		client: client,
+		mh:     mh,
+	}
+	mh.RegisterMetricsClient(ag)
+	ag.InitConfigs()
+	err = ag.UpdateStaticMetrics()
+	if err != nil {
+		return nil, err
 	}
 	return ag, nil
 
 }
 
-func (ga *GPUAgentClient) GPUGet() (*amdgpu.GPUGetResponse, error) {
+func (ga *GPUAgentClient) getMetrics() (*amdgpu.GPUGetResponse, error) {
 	ga.Lock()
 	defer ga.Unlock()
 	if ga.client == nil {
@@ -63,7 +73,8 @@ func (ga *GPUAgentClient) GPUGet() (*amdgpu.GPUGetResponse, error) {
 	defer cancel()
 
 	req := &amdgpu.GPUGetRequest{}
-	return ga.client.GPUGet(ctx, req)
+	res, err := ga.client.GPUGet(ctx, req)
+	return res, err
 }
 
 func (ga *GPUAgentClient) Close() {
@@ -73,4 +84,19 @@ func (ga *GPUAgentClient) Close() {
 		ga.conn.Close()
 		ga.client = nil
 	}
+}
+
+func (ga *GPUAgentClient) UpdateMetricsStats() error {
+	// send the req to gpuclient
+	res, err := ga.getMetrics()
+	if err != nil {
+		logger.Log.Printf("err :%v", err)
+		return err
+	}
+	if res != nil && res.ApiStatus != 0 {
+		logger.Log.Printf("resp status :%v", res.ApiStatus)
+		return fmt.Errorf("%v", res.ApiStatus)
+	}
+	ga.updateGPUToMetrics(res)
+	return nil
 }
