@@ -30,16 +30,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/config"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gpuagent"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/metricsutil"
 )
 
-const (
-	amdMetricsFile = "/etc/metrics/config.json"
-)
-
-// global
+// single instance handlers
 var (
 	mh        *metricsutil.MetricsHandler
 	gpuclient *gpuagent.GPUAgentClient
@@ -49,7 +46,7 @@ var (
 // get the info from gpu agent and update the current metrics registery
 func prometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mh.UpdateMetrics()
+		_ = mh.UpdateMetrics()
 		next.ServeHTTP(w, r)
 	})
 }
@@ -159,7 +156,7 @@ func main() {
 	logger.Init()
 	var err error
 	var (
-		metricsConfig = flag.String("amd-metrics-config", amdMetricsFile, "AMD metrics exporter config file")
+		metricsConfig = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
 	)
 	flag.Parse()
 

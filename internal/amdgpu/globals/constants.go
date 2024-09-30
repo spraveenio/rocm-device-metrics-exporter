@@ -15,34 +15,16 @@
 // REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 
-package gpuagent
+package globals
 
-import (
-	"testing"
+const (
+    // metrics exporter default server port
+	AMDListenPort = 5000
 
-	"gotest.tools/assert"
+	// metrics exporter configuraiton file path
+	AMDMetricsFile = "/etc/metrics/config.json"
+
+    // GPUAgent internal clien port
+	GPUAgentAddr = "0.0.0.0:50061"
 )
 
-func TestGpuAgent(t *testing.T) {
-	teardownSuite := setupTest(t)
-	defer teardownSuite(t)
-
-	ga := getNewAgent(t)
-	defer ga.Close()
-	t.Logf("gpuagent : %+v", ga)
-
-	req, err := ga.getMetrics()
-	assert.Assert(t, err == nil, "expecting nil response")
-
-	t.Logf("req :%+v", req)
-
-	err = ga.InitConfigs()
-	assert.Assert(t, err == nil, "expecting succes config init")
-
-	err = ga.UpdateStaticMetrics()
-	assert.Assert(t, err == nil, "expecting succes config init")
-
-	err = ga.UpdateMetricsStats()
-	assert.Assert(t, err == nil, "expecting succes config init")
-
-}

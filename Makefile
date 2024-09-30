@@ -194,7 +194,7 @@ pkg-clean:
 	rm -rf ${TOP_DIR}/bin/*.deb
 
 
-pkg:pkg-clean
+pkg: pkg-clean
 	${MAKE} gen amdexporter-lite
 	#copy and strip files
 	mkdir -p ${PKG_PATH}
@@ -257,6 +257,39 @@ gopkglist:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1
 	go install golang.org/x/tools/cmd/goimports@latest
 
+GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+.PHONY: golangci-lint
+golangci-lint: ## Download golangci-lint locally if necessary.
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1)
+
+# go-get-tool will 'go install' any package $2 and install it to $1.
+PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+define go-get-tool
+@[ -f $(1) ] || { \
+set -e ;\
+echo "Downloading $(2)" ;\
+GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
+}
+endef
+
+GOFILES_NO_VENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint against code.
+	@if [ `gofmt -l $(GOFILES_NO_VENDOR) | wc -l` -ne 0 ]; then \
+		echo There are some malformed files, please make sure to run \'make fmt\'; \
+		gofmt -l $(GOFILES_NO_VENDOR); \
+		exit 1; \
+	fi
+	$(GOLANGCI_LINT) run -v --timeout 5m0s
+
+.PHONY: fmt
+fmt: ## Run go fmt against code.
+	go fmt ./...
+
+.PHONY: vet
+vet: ## Run go vet against code.
+	go vet ./...
+
 amdexporter-lite:
 	@echo "building lite version of metrics exporter"
 	go build -C cmd/exporter -ldflags "-s -w -X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG} " -o $(CURDIR)/bin/amd-metrics-exporter
@@ -308,6 +341,9 @@ docker-test-runner-cicd: gen-test-runner amdtestrunner
 docker-azure: gen amdexporter
 	${MAKE} -C docker azure TOP_DIR=$(CURDIR)
 	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR) DOCKER_CONTAINER_IMAGE=${EXPORTER_IMAGE_NAME}-${EXPORTER_IMAGE_TAG}-azure
+
+.PHONY:checks
+checks: gen vet
 
 .PHONY:checks
 checks: gen vet

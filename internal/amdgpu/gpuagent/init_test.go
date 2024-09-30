@@ -18,11 +18,16 @@
 package gpuagent
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/config"
 	amdgpu "github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/metricsutil"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/mock_gen"
 	"gotest.tools/assert"
 )
@@ -31,11 +36,19 @@ var (
 	mock_resp *amdgpu.GPUGetResponse
 	mockCtl   *gomock.Controller
 	gpuMockCl *mock_gen.MockGPUSvcClient
+	mh        *metricsutil.MetricsHandler
+	mConfig   *config.Config
 )
 
 func setupTest(t *testing.T) func(t *testing.T) {
 	t.Logf("============= TestSetup %v ===============", t.Name())
-	mockCtl := gomock.NewController(t)
+
+	os.Setenv("LOGDIR", "./exporter_ut.log")
+	fmt.Println("LOGDIR", os.Getenv("LOGDIR"))
+
+	logger.Init()
+
+	mockCtl = gomock.NewController(t)
 
 	gpuMockCl = mock_gen.NewMockGPUSvcClient(mockCtl)
 
@@ -71,15 +84,19 @@ func setupTest(t *testing.T) func(t *testing.T) {
 		gpuMockCl.EXPECT().GPUGet(gomock.Any(), gomock.Any()).Return(mock_resp, nil).AnyTimes(),
 	)
 
+	mConfig = config.NewConfig("config.json")
+
+	mh, _ = metricsutil.NewMetrics(mConfig)
+	mh.InitConfig()
+
 	return func(t *testing.T) {
 		t.Logf("============= Test:TearDown %v ===============", t.Name())
 		mockCtl.Finish()
 	}
-
 }
 
 func getNewAgent(t *testing.T) *GPUAgentClient {
-	ga, err := NewAgent()
+	ga, err := NewAgent(mh)
 	assert.Assert(t, err == nil, "error creating new agent : %v", err)
 	ga.client = gpuMockCl
 	return ga

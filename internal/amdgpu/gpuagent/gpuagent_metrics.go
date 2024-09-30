@@ -604,6 +604,20 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	return nil
 }
 
+func (ga *GPUAgentClient) UpdateMetricsStats() error {
+	// send the req to gpuclient
+	res, err := ga.getMetrics()
+	if err != nil {
+		logger.Log.Printf("err :%v", err)
+		return err
+	}
+	if res != nil && res.ApiStatus != 0 {
+		logger.Log.Printf("resp status :%v", res.ApiStatus)
+		return fmt.Errorf("%v", res.ApiStatus)
+	}
+	ga.updateGPUToMetrics(res)
+	return nil
+}
 func populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]string {
 	labels := make(map[string]string)
 	for key, enabled := range exportLables {
@@ -655,20 +669,29 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 
 	// gpu temp stats
 	tempStats := stats.Temperature
-	ga.m.gpuEdgeTemp.With(labels).Set(float64(tempStats.EdgeTemperature))
-	ga.m.gpuJunctionTemp.With(labels).Set(float64(tempStats.JunctionTemperature))
-	ga.m.gpuMemoryTemp.With(labels).Set(float64(tempStats.MemoryTemperature))
-	for j, temp := range tempStats.HBMTemperature {
-		labelsWithIndex["hbm_index"] = fmt.Sprintf("%v", j)
-		ga.m.gpuHBMTemp.With(labelsWithIndex).Set(float64(temp))
-	}
+    if tempStats != nil {
+        ga.m.gpuEdgeTemp.With(labels).Set(float64(tempStats.EdgeTemperature))
+        ga.m.gpuJunctionTemp.With(labels).Set(float64(tempStats.JunctionTemperature))
+        ga.m.gpuMemoryTemp.With(labels).Set(float64(tempStats.MemoryTemperature))
+        for j, temp := range tempStats.HBMTemperature {
+            labelsWithIndex["hbm_index"] = fmt.Sprintf("%v", j)
+            ga.m.gpuHBMTemp.With(labelsWithIndex).Set(float64(temp))
+        }
+    }
+
 	// gpu usage
-	ga.m.gpuUsage.With(labels).Set(float64(stats.Usage.Usage))
-	ga.m.gpuGFXActivity.With(labels).Set(float64(stats.Usage.GFXActivity))
+    gpuUsage := stats.Usage
+    if gpuUsage != nil {
+        ga.m.gpuUsage.With(labels).Set(float64(gpuUsage.Usage))
+        ga.m.gpuGFXActivity.With(labels).Set(float64(gpuUsage.GFXActivity))
+    }
 
 	// gpu memory usage
-	ga.m.gpuMemUsage.With(labels).Set(float64(stats.MemoryUsage.MemoryUsage))
-	ga.m.gpuMemActivity.With(labels).Set(float64(stats.MemoryUsage.Activity))
+    memUsage := stats.MemoryUsage
+    if memUsage != nil {
+        ga.m.gpuMemUsage.With(labels).Set(float64(memUsage.MemoryUsage))
+        ga.m.gpuMemActivity.With(labels).Set(float64(memUsage.Activity))
+    }
 
 	ga.m.gpuVoltage.With(labels).Set(float64(stats.Voltage))
 
