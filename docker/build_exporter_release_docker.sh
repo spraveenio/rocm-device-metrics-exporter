@@ -110,6 +110,9 @@ fi
 if [ "$SAVE_IMAGE" == 1 ]; then
     echo "Preparing final image ..."
     tar cvzf $IMAGE_DIR/exporter-release-$VER.tgz exporter-docker-$VER.tgz start_exporter.sh
+    if [ "$MOCK" == "1" ]; then
+        mv $IMAGE_DIR/exporter-release-$VER.tgz $IMAGE_DIR/exporter-release-mock-$VER.tgz
+    fi
     echo "Image ready in $IMAGE_DIR"
 fi
 

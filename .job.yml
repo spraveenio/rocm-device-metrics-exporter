@@ -17,7 +17,7 @@ builds:
     commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make docker-mock"]
     owners: ["email:prshanmug@amd.com"]
     artifacts:
-        - /device-metrics-exporter/docker/obj/exporter-release-v1.tgz
+        - /device-metrics-exporter/docker/obj/exporter-release-mock-v1.tgz
 
 targets:
   api-checks:
