@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# Specify the directory for the hooks.
+# We'll use the current one (.githooks)
+hookDir=$(dirname $(realpath $0))
+
+# Specify the hooks you want to run during
+# the pre-commit process:
+git_root=$(git rev-parse --show-toplevel)
+python3 $git_root/devops/tools/clang_check/clang_check.py precommit

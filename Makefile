@@ -31,7 +31,7 @@ pkg-clean:
 	rm -rf ${TOP_DIR}/bin/*.deb
 
 
-pkg:pkg-clean
+pkg: pkg-clean
 	${MAKE} gen amdexporter-lite
 	#copy and strip files
 	mkdir -p ${PKG_PATH}
@@ -44,12 +44,44 @@ pkg:pkg-clean
 	dpkg-deb --build pkg ${TOP_DIR}/bin
 
 .PHONY:clean
-clean:
-	rm -rf pkg/usr
+clean: pkg-clean
 	rm -rf internal/amdgpu/gen
 	rm -rf bin
 	rm -rf docker/obj
 	rm -rf docker/*.tgz
+
+GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+.PHONY: golangci-lint
+golangci-lint: ## Download golangci-lint locally if necessary.
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1)
+
+# go-get-tool will 'go install' any package $2 and install it to $1.
+PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+define go-get-tool
+@[ -f $(1) ] || { \
+set -e ;\
+echo "Downloading $(2)" ;\
+GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
+}
+endef
+
+GOFILES_NO_VENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint against code.
+	@if [ `gofmt -l $(GOFILES_NO_VENDOR) | wc -l` -ne 0 ]; then \
+		echo There are some malformed files, please make sure to run \'make fmt\'; \
+		gofmt -l $(GOFILES_NO_VENDOR); \
+		exit 1; \
+	fi
+	$(GOLANGCI_LINT) run -v --timeout 5m0s
+
+.PHONY: fmt
+fmt: ## Run go fmt against code.
+	go fmt ./...
+
+.PHONY: vet
+vet: ## Run go vet against code.
+	go vet ./...
 
 amdexporter-lite:
 	@echo "building lite version of metrics exporter"
@@ -60,18 +92,23 @@ amdexporter:
 	go build -C cmd/exporter -o $(CURDIR)/bin/amd-metrics-exporter
 
 .PHONY: docker
-docker: amdexporter
+docker: gen amdexporter
 	${MAKE} -C docker TOP_DIR=$(CURDIR) MOCK=$(MOCK)
 
 .PHONY: docker-mock
 docker-mock:
 	${MAKE} docker MOCK=1
 
+.PHONY:checks
+checks: gen vet
+
 .PHONY: docker-publish
 docker-publish:
 	${MAKE} -C docker docker-publish TOP_DIR=$(CURDIR)
 
-ut: gen
+
+.PHONY: unit-test
+unit-test:
 	@for c in ${UT_TEST}; do printf "\n+++++++++++++++++ Testing $${c} +++++++++++++++++\n"; PATH=$$PATH go test -v -mod=vendor github.com/pensando/device-metrics-exporter/$${c} || exit 1; done
 
 loadgpu:

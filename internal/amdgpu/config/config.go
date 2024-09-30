@@ -21,11 +21,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
-)
-
-const (
-	amdListenPort = 5000
 )
 
 type Config struct {
@@ -35,7 +32,7 @@ type Config struct {
 
 func NewConfig(mPath string) *Config {
 	c := &Config{
-		serverPort:        amdListenPort,
+		serverPort:        globals.AMDListenPort,
 		metricsConfigPath: mPath,
 	}
 	logger.Log.Printf("Running Config :%+v", mPath)
