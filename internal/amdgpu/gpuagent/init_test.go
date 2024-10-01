@@ -43,7 +43,6 @@ var (
 func setupTest(t *testing.T) func(t *testing.T) {
 	t.Logf("============= TestSetup %v ===============", t.Name())
 
-	os.Setenv("LOGDIR", "./exporter_ut.log")
 	fmt.Println("LOGDIR", os.Getenv("LOGDIR"))
 
 	logger.Init()

@@ -37,7 +37,7 @@ targets:
     sub-area:
     feature:
     logfiles:
-        - /device-metrics-exporter/internal/amdgpu/gpuagent/exporter_ut.logexporter.log
+        - /device-metrics-exporter/exporter.log
 
 image:
   bind_dir: "/device-metrics-exporter"
