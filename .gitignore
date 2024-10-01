@@ -1,3 +1,4 @@
+*.log
 gen
 bin
 internal/bin

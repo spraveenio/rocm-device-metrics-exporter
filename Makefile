@@ -11,8 +11,6 @@ export ${GOPATH}
 export ${OUT_DIR}
 export ${TOP_DIR}
 
-UT_TEST := internal/amdgpu/gpuagent
-
 ASSETS_PATH :=${TOP_DIR}/assets
 PKG_PATH := ${TOP_DIR}/pkg/usr/local/bin
 
@@ -109,7 +107,7 @@ docker-publish:
 
 .PHONY: unit-test
 unit-test:
-	@for c in ${UT_TEST}; do printf "\n+++++++++++++++++ Testing $${c} +++++++++++++++++\n"; PATH=$$PATH go test -v -mod=vendor github.com/pensando/device-metrics-exporter/$${c} || exit 1; done
+	PATH=$$PATH LOGDIR=$(TOP_DIR)/ go test -v -cover -mod=vendor ./...
 
 loadgpu:
 	sudo modprobe amdgpu
