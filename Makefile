@@ -5,11 +5,15 @@ OUT_DIR := bin
 TOP_DIR := $(PWD)
 GEN_DIR := $(TOP_DIR)/internal/amdgpu/
 MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
+GOINSECURE='github.com, google.golang.org, golang.org'
+GOFLAGS ='-buildvcs=false'
 
 export ${GOROOT}
 export ${GOPATH}
 export ${OUT_DIR}
 export ${TOP_DIR}
+export ${GOFLAGS}
+export ${GOINSECURE}
 
 ASSETS_PATH :=${TOP_DIR}/assets
 PKG_PATH := ${TOP_DIR}/pkg/usr/local/bin
@@ -19,7 +23,7 @@ all:
 	${MAKE} gen amdexporter
 
 .PHONY: gen
-gen:
+gen: gopkglist
 	@for c in ${TO_GEN}; do printf "\n+++++++++++++++++ Generating $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} GEN_DIR=$(GEN_DIR) || exit 1; done
 	@for c in ${TO_MOCK}; do printf "\n+++++++++++++++++ Generating mock $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} MOCK_DIR=$(MOCK_DIR) GEN_DIR=$(GEN_DIR) || exit 1; done
 
@@ -80,6 +84,14 @@ fmt: ## Run go fmt against code.
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
+
+.PHONY: gopkglist
+gopkglist:
+	go install github.com/golang/protobuf/protoc-gen-go@v1.5.4
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+	go install github.com/golang/mock/mockgen@v1.6.0
+	go install golang.org/x/tools/cmd/goimports@v0.25.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1
 
 amdexporter-lite:
 	@echo "building lite version of metrics exporter"

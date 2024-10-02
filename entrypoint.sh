@@ -1,5 +1,5 @@
-#!/bin/sh
-set -ex 
+#!/usr/bin/env bash
+set -x
 set -euo pipefail
 dir=/usr/src/github.com/pensando/device-metrics-exporter
 netns=/var/run/netns
@@ -8,6 +8,8 @@ term() {
     killall dockerd
     wait
 }
+
+PATH=/usr/local/go/bin:$PATH
 
 dockerd -s vfs &
 
