@@ -21,8 +21,7 @@ builds:
 
 targets:
   api-checks:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && \
-                                    make checks"]
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make checks"]
     owners: ["email:prshanmug@amd.com"]
     area:
     sub-area:
@@ -38,6 +37,15 @@ targets:
     feature:
     logfiles:
         - /device-metrics-exporter/exporter.log
+
+  debian-package:
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make pkg"]
+    owners: ["email:prshanmug@amd.com"]
+    area:
+    sub-area:
+    feature:
+    artifacts:
+        - /device-metrics-exporter/bin/amdgpu-exporter_0.1_amd64.deb
 
 image:
   bind_dir: "/device-metrics-exporter"
