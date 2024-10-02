@@ -51,7 +51,7 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func start_metrics_server(c *config.Config) *http.Server {
+func startMetricsServer(c *config.Config) *http.Server {
 
 	serverPort := c.GetServerPort()
 
@@ -73,11 +73,10 @@ func start_metrics_server(c *config.Config) *http.Server {
 		}
 		logger.Log.Printf("server on port %v shutdown gracefully", serverPort)
 	}()
-
 	return srv
 }
 
-func forever_watcher() {
+func foreverWatcher() {
 	var srvHandler *http.Server
 	configPath := runConf.GetMetricsConfigPath()
 
@@ -93,7 +92,7 @@ func forever_watcher() {
 			mh.InitConfig()
 			serverPort := runConf.GetServerPort()
 			logger.Log.Printf("starting server on %v", serverPort)
-			srvHandler = start_metrics_server(runConf)
+			srvHandler = startMetricsServer(runConf)
 
 		}
 	}
@@ -169,9 +168,9 @@ func main() {
 	// config changes
 	gpuclient, err = gpuagent.NewAgent(mh)
 	if err != nil {
-		logger.Log.Fatalf("GPUAgent create failed")
+		logger.Log.Fatalf("GPUAgent create failed, %v", err)
 		return
 	}
 
-	forever_watcher()
+	foreverWatcher()
 }

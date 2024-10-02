@@ -294,11 +294,11 @@ vet: ## Run go vet against code.
 
 .PHONY: gopkglist
 gopkglist:
-	go install github.com/golang/protobuf/protoc-gen-go@v1.5.4
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
 	go install github.com/golang/mock/mockgen@v1.6.0
-	go install golang.org/x/tools/cmd/goimports@v0.25.0
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1
+	go install golang.org/x/tools/cmd/goimports@latest
 
 amdexporter-lite:
 	@echo "building lite version of metrics exporter"
