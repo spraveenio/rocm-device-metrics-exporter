@@ -20,15 +20,13 @@ set -euo pipefail
 # entry point script run on creating a node management container
 # start rdcd and gpuagent processes
 # start rdcd in the background
-LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib:/opt/rocm-6.2.0/lib/rdc /opt/rocm-6.2.0/bin/rdcd -u >/dev/null 2>/dev/null &
+LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib:/opt/rocm-6.2.0/lib/rdc /opt/rocm-6.2.0/bin/rdcd -u &
 # sleep before starting gpuagent
 sleep 10
 # start gpuagent process in the background
-LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib /home/amd/bin/gpuagent >/dev/null 2>/dev/null &
+LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib /home/amd/bin/gpuagent  &
 
 # sleep before starting promethesu server
 sleep 10
 # start prometheus server
-LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib /home/amd/bin/server >/dev/null 2>/dev/null
-
-
+LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib /home/amd/bin/server

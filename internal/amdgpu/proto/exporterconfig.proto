@@ -100,13 +100,16 @@ enum GPUMetricField {
 enum GPUMetricLabel {
     // mandatory field GPU_UUID cannot be disabled
     GPU_UUID        = 0;
+    POD             = 1;
+    NAMESPACE       = 2;
+    CONTAINER       = 3;
     // mandatory SERIAL_NUMBER cannot be disabled
-    SERIAL_NUMBER   = 1;
-    CARD_SERIES     = 2;
-    CARD_MODEL      = 3;
-    CARD_VENDOR     = 4;
-    DRIVER_VERSION  = 5;
-    VBIOS_VERSION   = 6;
+    SERIAL_NUMBER   = 4;
+    CARD_SERIES     = 5;
+    CARD_MODEL      = 6;
+    CARD_VENDOR     = 7;
+    DRIVER_VERSION  = 8;
+    VBIOS_VERSION   = 9;
 }
 
 message GPUMetricConfig {

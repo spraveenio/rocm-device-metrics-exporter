@@ -1,6 +1,7 @@
 TO_GEN := internal/amdgpu/proto
 TO_MOCK := internal/amdgpu/mock
 OUT_DIR := bin
+export BUILD_CONTAINER ?= registry.test.pensando.io:5000/metrics-exporter-bld:1
 
 TOP_DIR := $(PWD)
 GEN_DIR := $(TOP_DIR)/internal/amdgpu/
@@ -87,11 +88,11 @@ vet: ## Run go vet against code.
 
 .PHONY: gopkglist
 gopkglist:
-	go install github.com/golang/protobuf/protoc-gen-go@v1.5.4
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
 	go install github.com/golang/mock/mockgen@v1.6.0
-	go install golang.org/x/tools/cmd/goimports@v0.25.0
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1
+	go install golang.org/x/tools/cmd/goimports@latest
 
 amdexporter-lite:
 	@echo "building lite version of metrics exporter"
@@ -99,7 +100,7 @@ amdexporter-lite:
 
 amdexporter:
 	@echo "building amd metrics exporter"
-	go build -C cmd/exporter -o $(CURDIR)/bin/amd-metrics-exporter
+	CGO_ENABLED=0 go build -C cmd/exporter -o $(CURDIR)/bin/amd-metrics-exporter
 
 .PHONY: docker
 docker: gen amdexporter
@@ -128,3 +129,11 @@ mod:
 	@echo "setting up go mod packages"
 	@go mod tidy
 	@go mod vendor
+
+docker-build:
+	docker run --user $(shell id -u):$(shell id -g) --privileged -e "GIT_COMMIT=${GIT_COMMIT}" -e "GIT_VERSION=${GIT_VERSION}" -e "BUILD_DATE=${BUILD_DATE}" -e "GOPATH=/import" -e GOCACHE=/import/src/github.com/pensando/device-metrics-exporter/.cache --rm -v${PWD}/../../../../:/import/ ${BUILD_CONTAINER} bash -c "cd /import/src/github.com/pensando/device-metrics-exporter && make all"
+	${MAKE} docker
+
+.PHONY: base-image
+base-image:
+	${MAKE} -C tools/base-image

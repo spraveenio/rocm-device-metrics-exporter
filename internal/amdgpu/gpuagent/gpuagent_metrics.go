@@ -18,9 +18,12 @@
 package gpuagent
 
 import (
+	"context"
 	"fmt"
+	"github.com/pensando/device-metrics-exporter/internal/k8s"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
@@ -124,10 +127,20 @@ func (ga *GPUAgentClient) GetExportLabels() []string {
 	return labelList
 }
 
-func initLableConfigs(config *gpumetrics.GPUMetricConfig) {
+func (ga *GPUAgentClient) initLableConfigs(config *gpumetrics.GPUMetricConfig) {
+	k8sLabels := map[string]bool{
+		gpumetrics.GPUMetricLabel_POD.String():       true,
+		gpumetrics.GPUMetricLabel_NAMESPACE.String(): true,
+		gpumetrics.GPUMetricLabel_CONTAINER.String(): true,
+		// todo: include gpu index
+	}
+
 	// list of mandatory labels
 	exportLables = make(map[string]bool)
 	for _, name := range gpumetrics.GPUMetricLabel_name {
+		if _, ok := k8sLabels[name]; ok && !ga.isKubernetes {
+			continue
+		}
 		exportLables[name] = false
 	}
 	// only mandatory labels are set for default
@@ -566,7 +579,7 @@ func (ga *GPUAgentClient) initFieldRegistration() error {
 
 func (ga *GPUAgentClient) InitConfigs() error {
 	filedConfigs := ga.mh.GetMetricsConfig()
-	initLableConfigs(filedConfigs)
+	ga.initLableConfigs(filedConfigs)
 	initFieldConfig(filedConfigs)
 	initGPUSelectorConfig(filedConfigs)
 	ga.initPrometheusMetrics()
@@ -598,7 +611,8 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 			continue
 		}
 		status := gpu.Status
-		labels := populateLabelsFromGPU(gpu)
+		labels := ga.populateLabelsFromGPU(gpu)
+
 		ga.m.gpuTotalMemory.With(labels).Set(float64(status.TotalMemory))
 	}
 	return nil
@@ -618,8 +632,23 @@ func (ga *GPUAgentClient) UpdateMetricsStats() error {
 	ga.updateGPUToMetrics(res)
 	return nil
 }
-func populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]string {
+
+func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]string {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	var podInfo k8s.PodResourceInfo
+
+	if ga.isKubernetes {
+		if pods, err := ga.kubeClient.ListPods(ctx); err == nil {
+			podInfo = pods[strings.ToLower(gpu.Status.PCIeBusId)]
+		} else {
+			logger.Log.Printf("failed to list pod resources, %v", err)
+			// continue
+		}
+	}
+
 	labels := make(map[string]string)
+
 	for key, enabled := range exportLables {
 		if !enabled {
 			continue
@@ -628,6 +657,12 @@ func populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]string {
 		case gpumetrics.GPUMetricLabel_GPU_UUID.String():
 			uuid, _ := uuid.FromBytes(gpu.Spec.Id)
 			labels[key] = uuid.String()
+		case gpumetrics.GPUMetricLabel_POD.String():
+			labels[key] = podInfo.Pod
+		case gpumetrics.GPUMetricLabel_NAMESPACE.String():
+			labels[key] = podInfo.Namespace
+		case gpumetrics.GPUMetricLabel_CONTAINER.String():
+			labels[key] = podInfo.Container
 		case gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String():
 			labels[key] = gpu.Status.SerialNum
 		case gpumetrics.GPUMetricLabel_CARD_SERIES.String():
@@ -661,37 +696,37 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 		return
 	}
 
-	labels := populateLabelsFromGPU(gpu)
-	labelsWithIndex := populateLabelsFromGPU(gpu)
+	labels := ga.populateLabelsFromGPU(gpu)
+	labelsWithIndex := ga.populateLabelsFromGPU(gpu)
 	stats := gpu.Stats
 	ga.m.gpuFanSpeed.With(labels).Set(float64(stats.FanSpeed))
 	ga.m.gpuAvgPkgPower.With(labels).Set(float64(stats.AvgPackagePower))
 
 	// gpu temp stats
 	tempStats := stats.Temperature
-    if tempStats != nil {
-        ga.m.gpuEdgeTemp.With(labels).Set(float64(tempStats.EdgeTemperature))
-        ga.m.gpuJunctionTemp.With(labels).Set(float64(tempStats.JunctionTemperature))
-        ga.m.gpuMemoryTemp.With(labels).Set(float64(tempStats.MemoryTemperature))
-        for j, temp := range tempStats.HBMTemperature {
-            labelsWithIndex["hbm_index"] = fmt.Sprintf("%v", j)
-            ga.m.gpuHBMTemp.With(labelsWithIndex).Set(float64(temp))
-        }
-    }
+	if tempStats != nil {
+		ga.m.gpuEdgeTemp.With(labels).Set(float64(tempStats.EdgeTemperature))
+		ga.m.gpuJunctionTemp.With(labels).Set(float64(tempStats.JunctionTemperature))
+		ga.m.gpuMemoryTemp.With(labels).Set(float64(tempStats.MemoryTemperature))
+		for j, temp := range tempStats.HBMTemperature {
+			labelsWithIndex["hbm_index"] = fmt.Sprintf("%v", j)
+			ga.m.gpuHBMTemp.With(labelsWithIndex).Set(float64(temp))
+		}
+	}
 
 	// gpu usage
-    gpuUsage := stats.Usage
-    if gpuUsage != nil {
-        ga.m.gpuUsage.With(labels).Set(float64(gpuUsage.Usage))
-        ga.m.gpuGFXActivity.With(labels).Set(float64(gpuUsage.GFXActivity))
-    }
+	gpuUsage := stats.Usage
+	if gpuUsage != nil {
+		ga.m.gpuUsage.With(labels).Set(float64(gpuUsage.Usage))
+		ga.m.gpuGFXActivity.With(labels).Set(float64(gpuUsage.GFXActivity))
+	}
 
 	// gpu memory usage
-    memUsage := stats.MemoryUsage
-    if memUsage != nil {
-        ga.m.gpuMemUsage.With(labels).Set(float64(memUsage.MemoryUsage))
-        ga.m.gpuMemActivity.With(labels).Set(float64(memUsage.Activity))
-    }
+	memUsage := stats.MemoryUsage
+	if memUsage != nil {
+		ga.m.gpuMemUsage.With(labels).Set(float64(memUsage.MemoryUsage))
+		ga.m.gpuMemActivity.With(labels).Set(float64(memUsage.Activity))
+	}
 
 	ga.m.gpuVoltage.With(labels).Set(float64(stats.Voltage))
 

@@ -20,6 +20,7 @@ package gpuagent
 import (
 	"context"
 	"fmt"
+	"github.com/pensando/device-metrics-exporter/internal/k8s"
 	"sync"
 
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
@@ -31,10 +32,12 @@ import (
 )
 
 type GPUAgentClient struct {
-	conn   *grpc.ClientConn
-	mh     *metricsutil.MetricsHandler
-	client amdgpu.GPUSvcClient
-	m      *metrics // client specific metrics
+	conn         *grpc.ClientConn
+	mh           *metricsutil.MetricsHandler
+	client       amdgpu.GPUSvcClient
+	m            *metrics // client specific metrics
+	kubeClient   k8s.PodResourcesService
+	isKubernetes bool
 	sync.Mutex
 }
 
@@ -45,11 +48,22 @@ func NewAgent(mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
 		return nil, err
 	}
 	client := amdgpu.NewGPUSvcClient(conn)
+
 	ag := &GPUAgentClient{
 		conn:   conn,
 		client: client,
 		mh:     mh,
 	}
+
+	if k8s.IsKubernetes() {
+		kubeClient, err := k8s.NewClient()
+		if err != nil {
+			return nil, fmt.Errorf("error in kubelet client, %v", err)
+		}
+		ag.isKubernetes = true
+		ag.kubeClient = kubeClient
+	}
+
 	mh.RegisterMetricsClient(ag)
 	return ag, nil
 }

@@ -18,8 +18,8 @@
 package metricsutil
 
 type MetricsInterface interface {
-    // one time statistic pull for clients
-    UpdateStaticMetrics() error
+	// one time statistic pull for clients
+	UpdateStaticMetrics() error
 
 	// ondemand query request for client to update current stat
 	UpdateMetricsStats() error

@@ -70,20 +70,20 @@ func (mh *MetricsHandler) RegisterMetricsClient(client MetricsInterface) {
 }
 
 func (mh *MetricsHandler) InitConfig() {
-    mh.reg = prometheus.NewRegistry()
-    pmConfigs := readConfig(mh.runConf)
-    mh.metricConfig = pmConfigs
-    mh.updateServerPort()
-    var wg sync.WaitGroup
-    for _, client := range mh.clients {
-        wg.Add(1)
-        go func(client MetricsInterface) {
+	mh.reg = prometheus.NewRegistry()
+	pmConfigs := readConfig(mh.runConf)
+	mh.metricConfig = pmConfigs
+	mh.updateServerPort()
+	var wg sync.WaitGroup
+	for _, client := range mh.clients {
+		wg.Add(1)
+		go func(client MetricsInterface) {
 			defer wg.Done()
-            client.InitConfigs()
-            client.UpdateStaticMetrics()
-        }(client)
-    }
-    wg.Wait()
+			client.InitConfigs()
+			client.UpdateStaticMetrics()
+		}(client)
+	}
+	wg.Wait()
 }
 
 // UpdateMetrics : send on demand update metrics request
