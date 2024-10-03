@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/gpumetrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	kube "k8s.io/kubelet/pkg/apis/podresources/v1alpha1"
@@ -13,6 +14,13 @@ import (
 
 const PodResourceSocket = "/var/lib/kubelet/pod-resources/kubelet.sock"
 const amdGpuResourceName = "amd.com/gpu"
+
+var ExportLabels = map[string]bool{
+	gpumetrics.GPUMetricLabel_POD.String():       true,
+	gpumetrics.GPUMetricLabel_NAMESPACE.String(): true,
+	gpumetrics.GPUMetricLabel_CONTAINER.String(): true,
+	// todo: include gpu index
+}
 
 type PodResourceInfo struct {
 	Pod       string
