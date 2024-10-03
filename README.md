@@ -1,31 +1,64 @@
 # device-metrics-exporter
 Device Metrics Exporter exports metrics from AMD GPUs to collectors like Prometheus.
 
-##Build and Run Instructions
+## Build and Run Instructions
 
 ### 1. Build amdexporter application binary
--  Run the following make target in the TOP directory:
-   ```
-   make all
-   ```
-   This will also generate the required protos to build the amdexporter application
-   binary.
+
+-  Run the following make target in the TOP directory. This will also generate the required protos to build the amdexporter application
+   	binary.
+   		`make all`
+   	
 
 ### 2. Build exporter container
-  -  Run the following make target in the TOP directory:
-   ```
-   make docker
-   ```
+-  Run the following make target in the TOP directory:
+   
+   	`make docker`
 ### 3. Run exporter
-  - To run the exporter container after building the container in $TOPDIR/docker, run:
-   ```
-   cd $TOPDIR
-  ./docker/start_exporter.sh -d docker/exporter-docker-v1.tgz
-  ```
-- To run the exporter from docker registery
-  ```
-  #docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter registry.test.pensando.io:5000/device-metrics-exporter/rocm-metrics-exporter:v1 bash
-  ```
+  - docker environment
+    - To run the exporter container after building the container in $TOPDIR/docker, run:
+      
+    ```
+    cd $TOPDIR
+    ./docker/start_exporter.sh -d docker/exporter-docker-v1.tgz
+    ```
+      
+    - To run the exporter from docker registery
+    ```
+    docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter 		registry.test.pensando.io:5000/device-metrics-exporter/rocm-metrics-exporter:v1 bash
+    ```
+ - ubuntu linux debian package
+   - prerequistes
+     - dkms installated on the system
+     - rdc service is expected to be up and running
+       - sample rdc.service is available in example/rdc.service
+
+  - installation package
+   `$ dpkg -i amdgpu-exporter_0.1_amd64.deb`
+
+  - enable on system bootup (Optional)
+    ```
+    systemctl enable gpuagent.service
+    systemctl enable amd-metrics-exporter.service
+    ```
+
+  - starting services
+    ```
+    systemctl start gpuagent.service
+    systemctl start amd-metrics-exporter.service
+    ```
+
+  - stopping service
+    ```
+    systemctl stop gpuagent.service
+    systemctl stop amd-metrics-exporter.service
+    ```
+
+  - uninstall package
+    ```
+    apt-get remove amdgpu-exporter
+    ```
+
 ### 4. Custom metrics config
 - To run the exporter with config mount the /etc/metrics/config.json on the
   exporter container 
@@ -49,7 +82,7 @@ Device Metrics Exporter exports metrics from AMD GPUs to collectors like Prometh
 	docker run -p 9090:9090 -v ./example/prometheus.yml:/etc/prometheus/prometheus.yml -v prometheus-data:/prometheus prom/prometheus
    ```
 ### 7. Install Grafana (Testing)
-    - installation
+- installation
     ```
     https://grafana.com/docs/grafana/latest/setup-grafana/installation/debian/
     #sudo apt-get install -y apt-transport-https software-properties-common wget
@@ -60,7 +93,7 @@ Device Metrics Exporter exports metrics from AMD GPUs to collectors like Prometh
     #sudo apt-get install grafana
 
     ```
-    - running
+- running
     ```
     sudo systemctl daemon-reload
     sudo systemctl start grafana-server

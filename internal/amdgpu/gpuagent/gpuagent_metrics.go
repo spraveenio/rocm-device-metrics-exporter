@@ -598,7 +598,8 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	// send the req to gpuclient
 	resp, err := ga.getMetrics()
 	if err != nil {
-		logger.Log.Printf("err :%v", err)
+		// crash to let service restart
+		logger.Log.Fatalf("err :%v", err)
 		return err
 	}
 	if resp != nil && resp.ApiStatus != 0 {
@@ -626,7 +627,8 @@ func (ga *GPUAgentClient) UpdateMetricsStats() error {
 	// send the req to gpuclient
 	res, err := ga.getMetrics()
 	if err != nil {
-		logger.Log.Printf("err :%v", err)
+		// stop to let service restart
+		logger.Log.Fatalf("err :%v", err)
 		return err
 	}
 	if res != nil && res.ApiStatus != 0 {

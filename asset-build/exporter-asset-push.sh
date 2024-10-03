@@ -15,8 +15,6 @@ setup_dir () {
 }
 
 copy_artifacts () {
-    # copy amd-metrics-exporter binary
-    cp /device-metrics-exporter/amd-metrics-exporter $BUNDLE_DIR/amd-metrics-exporter.gobin
     # copy docker image
     cp /device-metrics-exporter/docker/obj/exporter-release-*.tgz  $BUNDLE_DIR/
     # copy docker mock image
