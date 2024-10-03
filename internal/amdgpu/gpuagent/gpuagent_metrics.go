@@ -127,20 +127,20 @@ func (ga *GPUAgentClient) GetExportLabels() []string {
 	return labelList
 }
 
-func (ga *GPUAgentClient) initLableConfigs(config *gpumetrics.GPUMetricConfig) {
-	k8sLabels := map[string]bool{
-		gpumetrics.GPUMetricLabel_POD.String():       true,
-		gpumetrics.GPUMetricLabel_NAMESPACE.String(): true,
-		gpumetrics.GPUMetricLabel_CONTAINER.String(): true,
-		// todo: include gpu index
+func (ga *GPUAgentClient) checkK8sLabels() bool {
+	for k := range k8s.ExportLabels {
+		if ok := exportLables[k]; ok {
+			return true
+		}
 	}
+	return false
+}
+
+func (ga *GPUAgentClient) initLabelConfigs(config *gpumetrics.GPUMetricConfig) {
 
 	// list of mandatory labels
 	exportLables = make(map[string]bool)
 	for _, name := range gpumetrics.GPUMetricLabel_name {
-		if _, ok := k8sLabels[name]; ok && !ga.isKubernetes {
-			continue
-		}
 		exportLables[name] = false
 	}
 	// only mandatory labels are set for default
@@ -152,11 +152,15 @@ func (ga *GPUAgentClient) initLableConfigs(config *gpumetrics.GPUMetricConfig) {
 		for _, name := range config.GetLabels() {
 			name = strings.ToUpper(name)
 			if _, ok := exportLables[name]; ok {
+				if _, ok := k8s.ExportLabels[name]; ok && !ga.isKubernetes {
+					continue
+				}
 				logger.Log.Printf("label %v enabled", name)
 				exportLables[name] = true
 			}
 		}
 	}
+	logger.Log.Printf("export-labels updated to %v", exportLables)
 }
 
 func initGPUSelectorConfig(config *gpumetrics.GPUMetricConfig) {
@@ -579,7 +583,7 @@ func (ga *GPUAgentClient) initFieldRegistration() error {
 
 func (ga *GPUAgentClient) InitConfigs() error {
 	filedConfigs := ga.mh.GetMetricsConfig()
-	ga.initLableConfigs(filedConfigs)
+	ga.initLabelConfigs(filedConfigs)
 	initFieldConfig(filedConfigs)
 	initGPUSelectorConfig(filedConfigs)
 	ga.initPrometheusMetrics()
@@ -638,7 +642,7 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]stri
 	defer cancel()
 	var podInfo k8s.PodResourceInfo
 
-	if ga.isKubernetes {
+	if ga.isKubernetes && ga.checkK8sLabels() {
 		if pods, err := ga.kubeClient.ListPods(ctx); err == nil {
 			podInfo = pods[strings.ToLower(gpu.Status.PCIeBusId)]
 		} else {
