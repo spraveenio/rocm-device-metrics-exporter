@@ -1,12 +1,15 @@
 ---
 version: 2.0
 builds:
-  build-device-metrics-exporter:
-    commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make all"]
+  build-debian-package:
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make pkg"]
     owners: ["email:prshanmug@amd.com"]
+    area:
+    sub-area:
+    feature:
     artifacts:
-        - /device-metrics-exporter/bin/amd-metrics-exporter
-  
+        - /device-metrics-exporter/bin/amdgpu-exporter_0.1_amd64.deb
+
   build-device-metrics-exporter-docker:
     commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make docker"]
     owners: ["email:prshanmug@amd.com"]
@@ -38,14 +41,6 @@ targets:
     logfiles:
         - /device-metrics-exporter/exporter.log
 
-  debian-package:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make pkg"]
-    owners: ["email:prshanmug@amd.com"]
-    area:
-    sub-area:
-    feature:
-    artifacts:
-        - /device-metrics-exporter/bin/amdgpu-exporter_0.1_amd64.deb
 
 image:
   bind_dir: "/device-metrics-exporter"

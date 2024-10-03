@@ -18,13 +18,12 @@
 package globals
 
 const (
-    // metrics exporter default server port
+	// metrics exporter default server port
 	AMDListenPort = 5000
 
 	// metrics exporter configuraiton file path
 	AMDMetricsFile = "/etc/metrics/config.json"
 
-    // GPUAgent internal clien port
+	// GPUAgent internal clien port
 	GPUAgentAddr = "0.0.0.0:50061"
 )
-

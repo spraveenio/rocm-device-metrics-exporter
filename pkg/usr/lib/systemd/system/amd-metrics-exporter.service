@@ -1,14 +1,16 @@
 # Add any non-service units required by gpuagent here
 Requires=gpuagent.service
+After=gpuagent.service
 
 [Service]
 User=root
 Group=root
+Restart=on-failure
 
 Type=simple
 
 # If we need to start anything before gpuagent, use this
-# ExecStartPre=
+ExecStartPre=/bin/sleep 10
 # update-alternative has been run for gpuagent and
 # soft link will be available in usr/bin
 ExecStart=/usr/local/bin/amd-metrics-exporter
