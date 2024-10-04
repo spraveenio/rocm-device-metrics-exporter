@@ -606,7 +606,10 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 		logger.Log.Printf("resp status :%v", resp.ApiStatus)
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
+	ga.cacheGpuids = make(map[string][]byte)
 	for i, gpu := range resp.Response {
+		idStr := fmt.Sprintf("%v", gpu.Status.UniqueId)
+		ga.cacheGpuids[idStr] = gpu.Spec.Id
 		logger.Log.Printf("GPU[%v].Status :%+v", i, gpu.Status)
 	}
 
@@ -624,19 +627,7 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 }
 
 func (ga *GPUAgentClient) UpdateMetricsStats() error {
-	// send the req to gpuclient
-	res, err := ga.getMetrics()
-	if err != nil {
-		// stop to let service restart
-		logger.Log.Fatalf("err :%v", err)
-		return err
-	}
-	if res != nil && res.ApiStatus != 0 {
-		logger.Log.Printf("resp status :%v", res.ApiStatus)
-		return fmt.Errorf("%v", res.ApiStatus)
-	}
-	ga.updateGPUToMetrics(res)
-	return nil
+	return ga.getMetricsBulkReq()
 }
 
 func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]string {
