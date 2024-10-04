@@ -25,5 +25,5 @@ const (
 	AMDMetricsFile = "/etc/metrics/config.json"
 
 	// GPUAgent internal clien port
-	GPUAgentAddr = "0.0.0.0:50061"
+	GPUAgentPort = 50061
 )

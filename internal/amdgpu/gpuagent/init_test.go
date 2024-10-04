@@ -26,6 +26,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/config"
 	amdgpu "github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/metricsutil"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/mock_gen"
@@ -84,6 +85,7 @@ func setupTest(t *testing.T) func(t *testing.T) {
 	)
 
 	mConfig = config.NewConfig("config.json")
+	mConfig.SetAgentPort(globals.GPUAgentPort)
 
 	mh, _ = metricsutil.NewMetrics(mConfig)
 	mh.InitConfig()

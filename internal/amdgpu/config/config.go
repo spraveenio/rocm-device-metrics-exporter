@@ -18,6 +18,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -27,6 +28,7 @@ import (
 
 type Config struct {
 	serverPort        uint32
+	agentGRPCPort     int
 	metricsConfigPath string
 }
 
@@ -56,6 +58,20 @@ func (c *Config) GetServerPort() uint32 {
 		return uint32(number)
 	}
 	return c.serverPort
+}
+
+func (c *Config) GetAgentAddr() string {
+	return fmt.Sprintf("0.0.0.0:%v", c.agentGRPCPort)
+}
+
+// SetAgentPort : set gpuagent internal grpc port
+func (c *Config) SetAgentPort(grpcPort int) {
+	if grpcPort > 0 {
+		c.agentGRPCPort = grpcPort
+	} else {
+		logger.Log.Printf("invalid grpcPort set %v, ignoring", grpcPort)
+		c.agentGRPCPort = globals.GPUAgentPort
+	}
 }
 
 func (c *Config) GetMetricsConfigPath() string {
