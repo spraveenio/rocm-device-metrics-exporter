@@ -20,15 +20,23 @@ package gpuagent
 import (
 	"context"
 	"fmt"
-	"github.com/pensando/device-metrics-exporter/internal/k8s"
+	"runtime"
 	"sync"
+	"time"
 
+	"github.com/pensando/device-metrics-exporter/internal/k8s"
+
+	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/metricsutil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+)
+
+const (
+	maxJobQueue = 16
 )
 
 type GPUAgentClient struct {
@@ -39,6 +47,9 @@ type GPUAgentClient struct {
 	kubeClient   k8s.PodResourcesService
 	isKubernetes bool
 	sync.Mutex
+	cacheGpuids map[string][]byte
+	jobReqChan  chan []byte
+	resultChan  chan *amdgpu.GPUGetResponse
 }
 
 func NewAgent(mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
@@ -49,7 +60,7 @@ func NewAgent(mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
 	}
 	client := amdgpu.NewGPUSvcClient(conn)
 
-	ag := &GPUAgentClient{
+	ga := &GPUAgentClient{
 		conn:   conn,
 		client: client,
 		mh:     mh,
@@ -60,12 +71,59 @@ func NewAgent(mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error in kubelet client, %v", err)
 		}
-		ag.isKubernetes = true
-		ag.kubeClient = kubeClient
+		ga.isKubernetes = true
+		ga.kubeClient = kubeClient
 	}
 
-	mh.RegisterMetricsClient(ag)
-	return ag, nil
+	ga.cacheGpuids = make(map[string][]byte)
+	ga.jobReqChan = make(chan []byte, maxJobQueue)
+	ga.resultChan = make(chan *amdgpu.GPUGetResponse, maxJobQueue)
+	mh.RegisterMetricsClient(ga)
+
+	numCores := runtime.NumCPU()
+	logger.Log.Printf("total workers[%v] queue size[%v]", numCores, maxJobQueue)
+	// create 3 workers
+	for i := 1; i <= numCores; i++ {
+		go ga.workerInit(i)
+	}
+	return ga, nil
+}
+
+func (ga *GPUAgentClient) workerInit(id int) {
+	for gpuReq := range ga.jobReqChan {
+		uuid, _ := uuid.FromBytes(gpuReq)
+		req := &amdgpu.GPUGetRequest{
+			Id: [][]byte{
+				gpuReq,
+			},
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
+		res, err := ga.client.GPUGet(ctx, req)
+		cancel()
+		if err != nil {
+			res = nil
+			logger.Log.Printf("worker[%d] job[%d] err %v", id, uuid, err)
+		}
+		// result can be nil
+		ga.resultChan <- res
+	}
+}
+
+func (ga *GPUAgentClient) getMetricsBulkReq() error {
+	// create multiple workers
+	// keep pushing jobs based upon the available workers
+	numReq := len(ga.cacheGpuids)
+	for _, gpuid := range ga.cacheGpuids {
+		ga.jobReqChan <- gpuid
+	}
+
+	for i := 1; i <= numReq; i++ {
+		gpuRes := <-ga.resultChan
+		if gpuRes != nil && len(gpuRes.Response) > 0 {
+			ga.updateGPUInfoToMetrics(gpuRes.Response[0])
+		}
+	}
+	return nil
 }
 
 func (ga *GPUAgentClient) getMetrics() (*amdgpu.GPUGetResponse, error) {
@@ -90,4 +148,6 @@ func (ga *GPUAgentClient) Close() {
 		ga.conn.Close()
 		ga.client = nil
 	}
+	close(ga.jobReqChan)
+	close(ga.resultChan)
 }
