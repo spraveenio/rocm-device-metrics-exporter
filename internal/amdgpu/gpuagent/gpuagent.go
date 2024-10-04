@@ -35,6 +35,7 @@ import (
 )
 
 const (
+	maxWorkers  = 5
 	maxJobQueue = 16
 )
 
@@ -81,10 +82,15 @@ func NewAgent(mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
 	ga.resultChan = make(chan *amdgpu.GPUGetResponse, maxJobQueue)
 	mh.RegisterMetricsClient(ga)
 
+	totalWorkers := maxWorkers
 	numCores := runtime.NumCPU()
-	logger.Log.Printf("total workers[%v] queue size[%v]", numCores, maxJobQueue)
+
+	if numCores < maxWorkers {
+		totalWorkers = numCores
+	}
+	logger.Log.Printf("total workers[%v] queue size[%v]", totalWorkers, maxJobQueue)
 	// create 3 workers
-	for i := 1; i <= numCores; i++ {
+	for i := 1; i <= maxWorkers; i++ {
 		go ga.workerInit(i)
 	}
 	return ga, nil
