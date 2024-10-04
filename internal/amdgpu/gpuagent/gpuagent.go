@@ -28,7 +28,6 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/metricsutil"
 	"google.golang.org/grpc"
@@ -53,7 +52,9 @@ type GPUAgentClient struct {
 }
 
 func NewAgent(mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
-	conn, err := grpc.NewClient(globals.GPUAgentAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	agentAddr := mh.GetAgentAddr()
+	logger.Log.Printf("Agent connecting to %v", agentAddr)
+	conn, err := grpc.NewClient(agentAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Log.Printf("err :%v", err)
 		return nil, err

@@ -156,10 +156,12 @@ func main() {
 	var err error
 	var (
 		metricsConfig = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
+		agentGrpcPort = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
 	)
 	flag.Parse()
 
 	runConf = config.NewConfig(*metricsConfig)
+	runConf.SetAgentPort(*agentGrpcPort)
 
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()

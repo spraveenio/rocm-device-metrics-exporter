@@ -107,6 +107,10 @@ func (mh *MetricsHandler) GetMetricsConfig() *gpumetrics.GPUMetricConfig {
 	return nil
 }
 
+func (mh *MetricsHandler) GetAgentAddr() string {
+	return mh.runConf.GetAgentAddr()
+}
+
 func (mh *MetricsHandler) updateServerPort() {
 	if mh.metricConfig != nil && mh.metricConfig.GetServerPort() != 0 {
 		mh.runConf.SetServerPort(mh.metricConfig.GetServerPort())
