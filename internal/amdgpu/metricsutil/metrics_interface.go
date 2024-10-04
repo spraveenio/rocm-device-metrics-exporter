@@ -29,6 +29,9 @@ type MetricsInterface interface {
 
 	// metrics registration must be done in this
 	InitConfigs() error
+
+	// reset metric states
+	ResetMetrics() error
 }
 
 type MetricsClient interface {

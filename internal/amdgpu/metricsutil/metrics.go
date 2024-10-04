@@ -100,6 +100,20 @@ func (mh *MetricsHandler) UpdateMetrics() error {
 	return nil
 }
 
+// ResetMetrics : send reset requet to all clients
+func (mh *MetricsHandler) ResetMetrics() error {
+	var wg sync.WaitGroup
+	for _, client := range mh.clients {
+		wg.Add(1)
+		go func(client MetricsInterface) {
+			defer wg.Done()
+			client.ResetMetrics()
+		}(client)
+	}
+	wg.Wait()
+	return nil
+}
+
 func (mh *MetricsHandler) GetMetricsConfig() *gpumetrics.GPUMetricConfig {
 	if mh.metricConfig != nil {
 		return mh.metricConfig.GetGPUConfig()

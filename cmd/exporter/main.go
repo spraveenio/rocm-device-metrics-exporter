@@ -48,6 +48,7 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = mh.UpdateMetrics()
 		next.ServeHTTP(w, r)
+		_ = mh.ResetMetrics()
 	})
 }
 
