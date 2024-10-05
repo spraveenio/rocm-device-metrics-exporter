@@ -137,3 +137,6 @@ docker-build:
 .PHONY: base-image
 base-image:
 	${MAKE} -C tools/base-image
+
+copyrights:
+	GOFLAGS=-mod=mod go run tools/build/copyright/main.go && ./tools/build/check-local-files.sh
