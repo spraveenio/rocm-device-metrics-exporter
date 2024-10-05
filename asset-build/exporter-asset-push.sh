@@ -12,11 +12,14 @@ setup_dir () {
     ls -al /device-metrics-exporter/
     BUNDLE_DIR=/device-metrics-exporter/output/
     mkdir -p $BUNDLE_DIR
+    UPLOAD_DIR=/device-metrics-exporter/upload/
+    mkdir -p $UPLOAD_DIR
 }
 
 copy_artifacts () {
     # copy docker image
     cp /device-metrics-exporter/docker/obj/exporter-release-*.tgz  $BUNDLE_DIR/
+    cp /device-metrics-exporter/docker/obj/exporter-release-v1.tgz  $UPLOAD_DIR/
     # copy docker mock image
     cp /device-metrics-exporter/docker/obj/exporter-release-mock-*.tgz  $BUNDLE_DIR/
     # copy debian package
@@ -25,9 +28,18 @@ copy_artifacts () {
     ls -la $BUNDLE_DIR
 }
 
+docker_build_push () {
+    cd $UPLOAD_DIR/
+    tar xzf exporter-release-v1.tgz
+    docker load -i exporter-docker-v1.tgz
+    echo "FROM registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest" | docker build --label HOURLY_TAG=$RELEASE -t "registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest" -
+    docker push registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
+}
+
 setup () {
     setup_dir
     copy_artifacts
+    docker_build_push
 }
 
 upload () {
