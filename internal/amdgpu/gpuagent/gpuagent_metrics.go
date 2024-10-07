@@ -808,7 +808,7 @@ func (ga *GPUAgentClient) exporterEnabledGPU(instance int) bool {
 
 func normalizeUint64(x interface{}) float64 {
 	if v, ok := x.(uint64); ok {
-		if v == math.MaxUint64 {
+		if v == math.MaxUint64 || v == math.MaxUint32 || v == math.MaxUint16 {
 			return 0
 		} else {
 			return float64(v)
@@ -879,9 +879,9 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 	// pcie status
 	pcieStatus := status.PCIeStatus
 	if pcieStatus != nil {
-		ga.m.gpuPCIeSpeed.With(labels).Set(float64(pcieStatus.Speed))
-		ga.m.gpuPCIeMaxSpeed.With(labels).Set(float64(pcieStatus.MaxSpeed))
-		ga.m.gpuPCIeBandwidth.With(labels).Set(float64(pcieStatus.Bandwidth))
+		ga.m.gpuPCIeSpeed.With(labels).Set(normalizeUint64(pcieStatus.Speed))
+		ga.m.gpuPCIeMaxSpeed.With(labels).Set(normalizeUint64(pcieStatus.MaxSpeed))
+		ga.m.gpuPCIeBandwidth.With(labels).Set(normalizeUint64(pcieStatus.Bandwidth))
 	}
 
 	// pcie stats
