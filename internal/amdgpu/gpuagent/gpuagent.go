@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -20,6 +19,7 @@ package gpuagent
 import (
 	"context"
 	"fmt"
+	"github.com/pensando/device-metrics-exporter/internal/slurm"
 	"runtime"
 	"sync"
 	"time"
@@ -46,13 +46,14 @@ type GPUAgentClient struct {
 	m            *metrics // client specific metrics
 	kubeClient   k8s.PodResourcesService
 	isKubernetes bool
+	slurmClient  slurm.JobsService
 	sync.Mutex
 	cacheGpuids map[string][]byte
 	jobReqChan  chan []byte
 	resultChan  chan *amdgpu.GPUGetResponse
 }
 
-func NewAgent(mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
+func NewAgent(ctx context.Context, mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
 	agentAddr := mh.GetAgentAddr()
 	logger.Log.Printf("Agent connecting to %v", agentAddr)
 	conn, err := grpc.NewClient(agentAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -75,8 +76,15 @@ func NewAgent(mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
 		}
 		ga.isKubernetes = true
 		ga.kubeClient = kubeClient
+	} else {
+		cli, err := slurm.NewClient(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error in slurm client, %v", err)
+		}
+		ga.slurmClient = cli
+		ga.isKubernetes = false
 	}
-
+	logger.Log.Printf("monitor %v jobs", map[bool]string{true: "kubernetes", false: "slurm"}[ga.isKubernetes])
 	ga.cacheGpuids = make(map[string][]byte)
 	ga.jobReqChan = make(chan []byte, maxJobQueue)
 	ga.resultChan = make(chan *amdgpu.GPUGetResponse, maxJobQueue)
@@ -154,6 +162,14 @@ func (ga *GPUAgentClient) Close() {
 	if ga.conn != nil {
 		ga.conn.Close()
 		ga.client = nil
+	}
+	if ga.isKubernetes {
+		ga.kubeClient.Close()
+		ga.kubeClient = nil
+
+	} else {
+		ga.slurmClient.Close()
+		ga.slurmClient = nil
 	}
 	close(ga.jobReqChan)
 	close(ga.resultChan)

@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -18,6 +17,7 @@
 package gpuagent
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -97,7 +97,7 @@ func setupTest(t *testing.T) func(t *testing.T) {
 }
 
 func getNewAgent(t *testing.T) *GPUAgentClient {
-	ga, err := NewAgent(mh)
+	ga, err := NewAgent(context.Background(), mh)
 	assert.Assert(t, err == nil, "error creating new agent : %v", err)
 	ga.client = gpuMockCl
 	return ga
