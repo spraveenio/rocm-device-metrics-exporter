@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -19,10 +18,12 @@ package main
 
 import (
 	"context"
+	"expvar"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"time"
 
@@ -61,6 +62,19 @@ func startMetricsServer(c *config.Config) *http.Server {
 
 	reg := mh.GetRegistry()
 	router.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+	// pprof
+	router.Methods("GET").Subrouter().Handle("/debug/vars", expvar.Handler())
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/", pprof.Index)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/profile", pprof.Profile)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/trace", pprof.Trace)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/allocs", pprof.Handler("allocs").ServeHTTP)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/block", pprof.Handler("block").ServeHTTP)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/mutex", pprof.Handler("mutex").ServeHTTP)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/goroutine", pprof.Handler("goroutine").ServeHTTP)
+	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/threadcreate", pprof.Handler("threadcreate").ServeHTTP)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%v", serverPort),
@@ -169,7 +183,9 @@ func main() {
 
 	// do it only once, keep the same connection no need to reconnect for
 	// config changes
-	gpuclient, err = gpuagent.NewAgent(mh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	gpuclient, err = gpuagent.NewAgent(ctx, mh)
 	if err != nil {
 		logger.Log.Fatalf("GPUAgent create failed, %v", err)
 		return

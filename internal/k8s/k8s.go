@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -36,7 +35,6 @@ var ExportLabels = map[string]bool{
 	gpumetrics.GPUMetricLabel_POD.String():       true,
 	gpumetrics.GPUMetricLabel_NAMESPACE.String(): true,
 	gpumetrics.GPUMetricLabel_CONTAINER.String(): true,
-	// todo: include gpu index
 }
 
 type PodResourceInfo struct {
@@ -47,6 +45,8 @@ type PodResourceInfo struct {
 
 type PodResourcesService interface {
 	ListPods(ctx context.Context) (map[string]PodResourceInfo, error)
+	CheckExportLabels(labels map[string]bool) bool
+	Close() error
 }
 
 type podResourcesClient struct {
@@ -96,4 +96,17 @@ func (pr *podResourcesClient) ListPods(ctx context.Context) (map[string]PodResou
 		}
 	}
 	return podInfo, nil
+}
+
+func (cl *podResourcesClient) CheckExportLabels(labels map[string]bool) bool {
+	for k := range ExportLabels {
+		if ok := labels[k]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func (cl *podResourcesClient) Close() error {
+	return cl.clientConn.Close()
 }

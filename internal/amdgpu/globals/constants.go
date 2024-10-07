@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -26,4 +25,6 @@ const (
 
 	// GPUAgent internal clien port
 	GPUAgentPort = 50061
+
+	ZmqPort = "6601"
 )

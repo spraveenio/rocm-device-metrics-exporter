@@ -37,12 +37,12 @@ func TestGpuAgent(t *testing.T) {
 	t.Logf("req :%+v", req)
 
 	err = ga.InitConfigs()
-	assert.Assert(t, err == nil, "expecting succes config init")
+	assert.Assert(t, err == nil, "expecting success config init")
 
 	err = ga.UpdateStaticMetrics()
-	assert.Assert(t, err == nil, "expecting succes config init")
+	assert.Assert(t, err == nil, "expecting success config init")
 
 	err = ga.UpdateMetricsStats()
-	assert.Assert(t, err == nil, "expecting succes config init")
+	assert.Assert(t, err == nil, "expecting success config init")
 
 }

@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pensando/device-metrics-exporter/internal/k8s"
+	"github.com/pensando/device-metrics-exporter/internal/slurm"
 	"strings"
 	"sync"
 	"time"
@@ -194,15 +195,6 @@ func (ga *GPUAgentClient) GetExportLabels() []string {
 		labelList = append(labelList, key)
 	}
 	return labelList
-}
-
-func (ga *GPUAgentClient) checkK8sLabels() bool {
-	for k := range k8s.ExportLabels {
-		if ok := exportLables[k]; ok {
-			return true
-		}
-	}
-	return false
 }
 
 func (ga *GPUAgentClient) initLabelConfigs(config *gpumetrics.GPUMetricConfig) {
@@ -632,6 +624,7 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			labels),
 	}
 	ga.initFieldMetricsMap()
+
 }
 
 func (ga *GPUAgentClient) initFieldRegistration() error {
@@ -652,6 +645,7 @@ func (ga *GPUAgentClient) initFieldRegistration() error {
 
 func (ga *GPUAgentClient) InitConfigs() error {
 	filedConfigs := ga.mh.GetMetricsConfig()
+
 	ga.initLabelConfigs(filedConfigs)
 	initFieldConfig(filedConfigs)
 	initGPUSelectorConfig(filedConfigs)
@@ -703,13 +697,21 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]stri
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	var podInfo k8s.PodResourceInfo
+	var jobInfo slurm.JobInfo
 
-	if ga.isKubernetes && ga.checkK8sLabels() {
-		if pods, err := ga.kubeClient.ListPods(ctx); err == nil {
-			podInfo = pods[strings.ToLower(gpu.Status.PCIeBusId)]
-		} else {
-			logger.Log.Printf("failed to list pod resources, %v", err)
-			// continue
+	if ga.isKubernetes {
+		if ga.kubeClient.CheckExportLabels(exportLables) {
+			if pods, err := ga.kubeClient.ListPods(ctx); err == nil {
+				podInfo = pods[strings.ToLower(gpu.Status.PCIeBusId)]
+			} else {
+				logger.Log.Printf("failed to list pod resources, %v", err)
+				// continue
+			}
+		}
+	} else {
+		if ga.slurmClient.CheckExportLabels(exportLables) {
+			jobs := ga.slurmClient.ListJobs()
+			jobInfo = jobs[fmt.Sprintf("%v", gpu.Status.Index)]
 		}
 	}
 
@@ -723,12 +725,16 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]stri
 		case gpumetrics.GPUMetricLabel_GPU_UUID.String():
 			uuid, _ := uuid.FromBytes(gpu.Spec.Id)
 			labels[key] = uuid.String()
+		case gpumetrics.GPUMetricLabel_GPU_ID.String():
+			labels[key] = fmt.Sprintf("%v", gpu.Status.Index)
 		case gpumetrics.GPUMetricLabel_POD.String():
 			labels[key] = podInfo.Pod
 		case gpumetrics.GPUMetricLabel_NAMESPACE.String():
 			labels[key] = podInfo.Namespace
 		case gpumetrics.GPUMetricLabel_CONTAINER.String():
 			labels[key] = podInfo.Container
+		case gpumetrics.GPUMetricLabel_JOB_ID.String():
+			labels[key] = fmt.Sprintf("%v", jobInfo.JobId)
 		case gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String():
 			labels[key] = gpu.Status.SerialNum
 		case gpumetrics.GPUMetricLabel_CARD_SERIES.String():
