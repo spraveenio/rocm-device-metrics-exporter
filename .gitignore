@@ -1,4 +1,5 @@
 *.log
+.cache
 gen
 bin
 internal/bin

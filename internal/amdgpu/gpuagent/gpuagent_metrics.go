@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -20,11 +19,14 @@ package gpuagent
 import (
 	"context"
 	"fmt"
-	"github.com/pensando/device-metrics-exporter/internal/k8s"
-	"github.com/pensando/device-metrics-exporter/internal/slurm"
+	"math"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/pensando/device-metrics-exporter/internal/k8s"
+	"github.com/pensando/device-metrics-exporter/internal/slurm"
 
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
@@ -47,26 +49,32 @@ var (
 )
 
 type metrics struct {
-	gpuNodesTotal      prometheus.Gauge
-	gpuFanSpeed        prometheus.GaugeVec
-	gpuAvgPkgPower     prometheus.GaugeVec
-	gpuEdgeTemp        prometheus.GaugeVec
-	gpuJunctionTemp    prometheus.GaugeVec
-	gpuMemoryTemp      prometheus.GaugeVec
-	gpuHBMTemp         prometheus.GaugeVec
-	gpuUsage           prometheus.GaugeVec
-	gpuGFXActivity     prometheus.GaugeVec
-	gpuMemUsage        prometheus.GaugeVec
-	gpuMemActivity     prometheus.GaugeVec
-	gpuVoltage         prometheus.GaugeVec
-	gpuPCIeBandwidth   prometheus.GaugeVec
-	gpuEnergeyConsumed prometheus.GaugeVec
-	gpuPCIeReplayCount prometheus.GaugeVec
-	gpuClock           prometheus.GaugeVec
-	gpuMemoryClock     prometheus.GaugeVec
-	gpuPCIeTxUsage     prometheus.GaugeVec
-	gpuPCIeRxUsage     prometheus.GaugeVec
-	gpuPowerUsage      prometheus.GaugeVec
+	gpuNodesTotal              prometheus.Gauge
+	gpuPackagePower            prometheus.GaugeVec
+	gpuAvgPkgPower             prometheus.GaugeVec
+	gpuEdgeTemp                prometheus.GaugeVec
+	gpuJunctionTemp            prometheus.GaugeVec
+	gpuMemoryTemp              prometheus.GaugeVec
+	gpuHBMTemp                 prometheus.GaugeVec
+	gpuGFXActivity             prometheus.GaugeVec
+	gpuUMCActivity             prometheus.GaugeVec
+	gpuMMAActivity             prometheus.GaugeVec
+	gpuVCNActivity             prometheus.GaugeVec
+	gpuJPEGActivity            prometheus.GaugeVec
+	gpuVoltage                 prometheus.GaugeVec
+	gpuGFXVoltage              prometheus.GaugeVec
+	gpuMemVoltage              prometheus.GaugeVec
+	gpuPCIeSpeed               prometheus.GaugeVec
+	gpuPCIeMaxSpeed            prometheus.GaugeVec
+	gpuPCIeBandwidth           prometheus.GaugeVec
+	gpuEnergyConsumed          prometheus.GaugeVec
+	gpuPCIeReplayCount         prometheus.GaugeVec
+	gpuPCIeRecoveryCount       prometheus.GaugeVec
+	gpuPCIeReplayRolloverCount prometheus.GaugeVec
+	gpuPCIeNACKSentCount       prometheus.GaugeVec
+	gpuPCIeNACKReceivedCount   prometheus.GaugeVec
+	gpuClock                   prometheus.GaugeVec
+	gpuPowerUsage              prometheus.GaugeVec
 
 	gpuEccCorrectTotal      prometheus.GaugeVec
 	gpuEccUncorrectTotal    prometheus.GaugeVec
@@ -117,73 +125,79 @@ type metrics struct {
 	gpuTotalMemory prometheus.GaugeVec
 }
 
-func (ga* GPUAgentClient) ResetMetrics() error {
-    // reset all label based fields
-    ga.m.gpuFanSpeed.Reset()
-    ga.m.gpuAvgPkgPower.Reset()
-    ga.m.gpuEdgeTemp.Reset()
-    ga.m.gpuJunctionTemp.Reset()
-    ga.m.gpuMemoryTemp.Reset()
-    ga.m.gpuHBMTemp.Reset()
-    ga.m.gpuUsage.Reset()
-    ga.m.gpuGFXActivity.Reset()
-    ga.m.gpuMemUsage.Reset()
-    ga.m.gpuMemActivity.Reset()
-    ga.m.gpuVoltage.Reset()
-    ga.m.gpuPCIeBandwidth.Reset()
-    ga.m.gpuEnergeyConsumed.Reset()
-    ga.m.gpuPCIeReplayCount.Reset()
-    ga.m.gpuClock.Reset()
-    ga.m.gpuMemoryClock.Reset()
-    ga.m.gpuPCIeTxUsage.Reset()
-    ga.m.gpuPCIeRxUsage.Reset()
-    ga.m.gpuPowerUsage.Reset()
-    ga.m.gpuTotalMemory.Reset()
-    ga.m.gpuEccCorrectTotal.Reset()
-    ga.m.gpuEccUncorrectTotal.Reset()
-    ga.m.gpuEccCorrectSDMA.Reset()
-    ga.m.gpuEccUncorrectSDMA.Reset()
-    ga.m.gpuEccCorrectGFX.Reset()
-    ga.m.gpuEccUncorrectGFX.Reset()
-    ga.m.gpuEccCorrectMMHUB.Reset()
-    ga.m.gpuEccUncorrectMMHUB.Reset()
-    ga.m.gpuEccCorrectATHUB.Reset()
-    ga.m.gpuEccUncorrectATHUB.Reset()
-    ga.m.gpuEccCorrectBIF.Reset()
-    ga.m.gpuEccUncorrectBIF.Reset()
-    ga.m.gpuEccCorrectHDP.Reset()
-    ga.m.gpuEccUncorrectHDP.Reset()
-    ga.m.gpuEccCorrectXgmiWAFL.Reset()
-    ga.m.gpuEccUncorrectXgmiWAFL.Reset()
-    ga.m.gpuEccCorrectDF.Reset()
-    ga.m.gpuEccUncorrectDF.Reset()
-    ga.m.gpuEccCorrectSMN.Reset()
-    ga.m.gpuEccUncorrectSMN.Reset()
-    ga.m.gpuEccCorrectSEM.Reset()
-    ga.m.gpuEccUncorrectSEM.Reset()
-    ga.m.gpuEccCorrectMP0.Reset()
-    ga.m.gpuEccUncorrectMP0.Reset()
-    ga.m.gpuEccCorrectMP1.Reset()
-    ga.m.gpuEccUncorrectMP1.Reset()
-    ga.m.gpuEccCorrectFUSE.Reset()
-    ga.m.gpuEccUncorrectFUSE.Reset()
-    ga.m.gpuEccCorrectUMC.Reset()
-    ga.m.gpuEccUncorrectUMC.Reset()
-    ga.m.xgmiNbrNopTx0.Reset()
-    ga.m.xgmiNbrReqTx0.Reset()
-    ga.m.xgmiNbrRespTx0.Reset()
-    ga.m.xgmiNbrBeatsTx0.Reset()
-    ga.m.xgmiNbrNopTx1.Reset()
-    ga.m.xgmiNbrReqTx1.Reset()
-    ga.m.xgmiNbrRespTx1.Reset()
-    ga.m.xgmiNbrBeatsTx1.Reset()
-    ga.m.xgmiNbrTxTput0.Reset()
-    ga.m.xgmiNbrTxTput1.Reset()
-    ga.m.xgmiNbrTxTput2.Reset()
-    ga.m.xgmiNbrTxTput3.Reset()
-    ga.m.xgmiNbrTxTput4.Reset()
-    ga.m.xgmiNbrTxTput5.Reset()
-    return nil
+func (ga *GPUAgentClient) ResetMetrics() error {
+	// reset all label based fields
+	ga.m.gpuPackagePower.Reset()
+	ga.m.gpuAvgPkgPower.Reset()
+	ga.m.gpuEdgeTemp.Reset()
+	ga.m.gpuJunctionTemp.Reset()
+	ga.m.gpuMemoryTemp.Reset()
+	ga.m.gpuHBMTemp.Reset()
+	ga.m.gpuGFXActivity.Reset()
+	ga.m.gpuUMCActivity.Reset()
+	ga.m.gpuMMAActivity.Reset()
+	ga.m.gpuVCNActivity.Reset()
+	ga.m.gpuJPEGActivity.Reset()
+	ga.m.gpuVoltage.Reset()
+	ga.m.gpuGFXVoltage.Reset()
+	ga.m.gpuMemVoltage.Reset()
+	ga.m.gpuPCIeSpeed.Reset()
+	ga.m.gpuPCIeMaxSpeed.Reset()
+	ga.m.gpuPCIeBandwidth.Reset()
+	ga.m.gpuEnergyConsumed.Reset()
+	ga.m.gpuPCIeReplayCount.Reset()
+	ga.m.gpuPCIeRecoveryCount.Reset()
+	ga.m.gpuPCIeReplayRolloverCount.Reset()
+	ga.m.gpuPCIeNACKSentCount.Reset()
+	ga.m.gpuPCIeNACKReceivedCount.Reset()
+	ga.m.gpuClock.Reset()
+	ga.m.gpuPowerUsage.Reset()
+	ga.m.gpuTotalMemory.Reset()
+	ga.m.gpuEccCorrectTotal.Reset()
+	ga.m.gpuEccUncorrectTotal.Reset()
+	ga.m.gpuEccCorrectSDMA.Reset()
+	ga.m.gpuEccUncorrectSDMA.Reset()
+	ga.m.gpuEccCorrectGFX.Reset()
+	ga.m.gpuEccUncorrectGFX.Reset()
+	ga.m.gpuEccCorrectMMHUB.Reset()
+	ga.m.gpuEccUncorrectMMHUB.Reset()
+	ga.m.gpuEccCorrectATHUB.Reset()
+	ga.m.gpuEccUncorrectATHUB.Reset()
+	ga.m.gpuEccCorrectBIF.Reset()
+	ga.m.gpuEccUncorrectBIF.Reset()
+	ga.m.gpuEccCorrectHDP.Reset()
+	ga.m.gpuEccUncorrectHDP.Reset()
+	ga.m.gpuEccCorrectXgmiWAFL.Reset()
+	ga.m.gpuEccUncorrectXgmiWAFL.Reset()
+	ga.m.gpuEccCorrectDF.Reset()
+	ga.m.gpuEccUncorrectDF.Reset()
+	ga.m.gpuEccCorrectSMN.Reset()
+	ga.m.gpuEccUncorrectSMN.Reset()
+	ga.m.gpuEccCorrectSEM.Reset()
+	ga.m.gpuEccUncorrectSEM.Reset()
+	ga.m.gpuEccCorrectMP0.Reset()
+	ga.m.gpuEccUncorrectMP0.Reset()
+	ga.m.gpuEccCorrectMP1.Reset()
+	ga.m.gpuEccUncorrectMP1.Reset()
+	ga.m.gpuEccCorrectFUSE.Reset()
+	ga.m.gpuEccUncorrectFUSE.Reset()
+	ga.m.gpuEccCorrectUMC.Reset()
+	ga.m.gpuEccUncorrectUMC.Reset()
+	ga.m.xgmiNbrNopTx0.Reset()
+	ga.m.xgmiNbrReqTx0.Reset()
+	ga.m.xgmiNbrRespTx0.Reset()
+	ga.m.xgmiNbrBeatsTx0.Reset()
+	ga.m.xgmiNbrNopTx1.Reset()
+	ga.m.xgmiNbrReqTx1.Reset()
+	ga.m.xgmiNbrRespTx1.Reset()
+	ga.m.xgmiNbrBeatsTx1.Reset()
+	ga.m.xgmiNbrTxTput0.Reset()
+	ga.m.xgmiNbrTxTput1.Reset()
+	ga.m.xgmiNbrTxTput2.Reset()
+	ga.m.xgmiNbrTxTput3.Reset()
+	ga.m.xgmiNbrTxTput4.Reset()
+	ga.m.xgmiNbrTxTput5.Reset()
+	return nil
 }
 
 func (ga *GPUAgentClient) GetExportLabels() []string {
@@ -268,24 +282,30 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 	// must follow index mapping to fields.proto (GPUMetricField)
 	fieldMetricsMap = []prometheus.Collector{
 		ga.m.gpuNodesTotal,
-		ga.m.gpuFanSpeed,
+		ga.m.gpuPackagePower,
 		ga.m.gpuAvgPkgPower,
 		ga.m.gpuEdgeTemp,
 		ga.m.gpuJunctionTemp,
 		ga.m.gpuMemoryTemp,
 		ga.m.gpuHBMTemp,
-		ga.m.gpuUsage,
 		ga.m.gpuGFXActivity,
-		ga.m.gpuMemUsage,
-		ga.m.gpuMemActivity,
+		ga.m.gpuUMCActivity,
+		ga.m.gpuMMAActivity,
+		ga.m.gpuVCNActivity,
+		ga.m.gpuJPEGActivity,
 		ga.m.gpuVoltage,
+		ga.m.gpuGFXVoltage,
+		ga.m.gpuMemVoltage,
+		ga.m.gpuPCIeSpeed,
+		ga.m.gpuPCIeMaxSpeed,
 		ga.m.gpuPCIeBandwidth,
-		ga.m.gpuEnergeyConsumed,
+		ga.m.gpuEnergyConsumed,
 		ga.m.gpuPCIeReplayCount,
+		ga.m.gpuPCIeRecoveryCount,
+		ga.m.gpuPCIeReplayRolloverCount,
+		ga.m.gpuPCIeNACKSentCount,
+		ga.m.gpuPCIeNACKReceivedCount,
 		ga.m.gpuClock,
-		ga.m.gpuMemoryClock,
-		ga.m.gpuPCIeTxUsage,
-		ga.m.gpuPCIeRxUsage,
 		ga.m.gpuPowerUsage,
 		ga.m.gpuTotalMemory,
 		ga.m.gpuEccCorrectTotal,
@@ -338,7 +358,6 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 
 func (ga *GPUAgentClient) initPrometheusMetrics() {
 	labels := ga.GetExportLabels()
-	labelsWithIndex := append(labels, "hbm_index")
 	ga.m = &metrics{
 		gpuNodesTotal: prometheus.NewGauge(
 			prometheus.GaugeOpts{
@@ -346,9 +365,9 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 				Help: "Number of nodes with GPUs",
 			},
 		),
-		gpuFanSpeed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_fan_speed",
-			Help: "Current fan speed",
+		gpuPackagePower: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_package_power",
+			Help: "package power in Watts",
 		},
 			labels),
 		gpuAvgPkgPower: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -375,67 +394,89 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Name: "gpu_hbm_temperature",
 			Help: "Current HBM temperature in celsius",
 		},
-			labelsWithIndex),
-		gpuUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_usage",
-			Help: "Current usage as percentage of time the GPU is busy.",
-		},
-			labels),
+			append(labels, "hbm_index")),
 		gpuGFXActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_gfx_activity",
-			Help: "Current GFX activity",
 		},
 			labels),
-		gpuMemUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_memory_usage",
-			Help: "Current memory usage as percentage of available memory in use",
+		gpuUMCActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_umc_activity",
 		},
 			labels),
-		gpuMemActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_memory_activity",
-			Help: "Current memory usage activity",
+		gpuMMAActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_mma_activity",
+			Help: "usage of MultiMedia (MM) engine as a percentage",
 		},
 			labels),
+		gpuVCNActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_vcn_activity",
+			Help: "usage of Video Core Next (VCN) activity as a percentage",
+		},
+			append(labels, "vcn_index")),
+		gpuJPEGActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_jpeg_activity",
+		},
+			append(labels, "jpeg_index")),
 		gpuVoltage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_voltage",
 			Help: "Current voltage draw in mV",
 		},
 			labels),
-		gpuPCIeBandwidth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "pcie_bandwidth",
+		gpuGFXVoltage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_gfx_voltage",
+			Help: "Current graphics voltage in mV",
+		},
+			labels),
+		gpuMemVoltage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_memory_voltage",
+			Help: "current PCIe speed in GT/s",
+		},
+			labels),
+		gpuPCIeSpeed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pcie_speed",
+			Help: "maximum PCIe speed in GT/s",
+		},
+			labels),
+		gpuPCIeMaxSpeed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pcie_max_speed",
 			Help: "estimated maximum PCIe bandwidth over the last second in MB/s",
 		},
 			labels),
-		gpuEnergeyConsumed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		gpuPCIeBandwidth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pcie_bandwidth",
+			Help: "current PCIe bandwidth in MB/s",
+		},
+			labels),
+		gpuEnergyConsumed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_energy_consumed",
 			Help: "accumulated energy consumed in uJ",
 		},
 			labels),
 		gpuPCIeReplayCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_replay_count",
-			Help: "PCIe replay count",
+		},
+			labels),
+		gpuPCIeRecoveryCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pcie_recovery_count",
+		},
+			labels),
+		gpuPCIeReplayRolloverCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pcie_replay_rollover_count",
+		},
+			labels),
+		gpuPCIeNACKSentCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pcie_nack_sent_count",
+		},
+			labels),
+		gpuPCIeNACKReceivedCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pcie_nack_received_count",
 		},
 			labels),
 		gpuClock: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_clock",
 			Help: "current GPU clock frequency in MHz",
 		},
-			labels),
-		gpuMemoryClock: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_memory_clock",
-			Help: "current memory clock frequency in MHz",
-		},
-			labels),
-		gpuPCIeTxUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "pcie_tx",
-			Help: "PCIe Tx utilization",
-		},
-			labels),
-		gpuPCIeRxUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "pcie_rx",
-			Help: "PCIe Rx utilization",
-		},
-			labels),
+			append(labels, "clock_type")),
 		gpuPowerUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_power_usage",
 			Help: "power usage in Watts",
@@ -671,8 +712,8 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	}
 	ga.cacheGpuids = make(map[string][]byte)
 	for i, gpu := range resp.Response {
-		idStr := fmt.Sprintf("%v", gpu.Status.UniqueId)
-		ga.cacheGpuids[idStr] = gpu.Spec.Id
+		uuid, _ := uuid.FromBytes(gpu.Spec.Id)
+		ga.cacheGpuids[uuid.String()] = gpu.Spec.Id
 		logger.Log.Printf("GPU[%v].Status :%+v", i, gpu.Status)
 	}
 
@@ -702,7 +743,9 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]stri
 	if ga.isKubernetes {
 		if ga.kubeClient.CheckExportLabels(exportLables) {
 			if pods, err := ga.kubeClient.ListPods(ctx); err == nil {
-				podInfo = pods[strings.ToLower(gpu.Status.PCIeBusId)]
+				if gpu.Status.PCIeStatus != nil {
+					podInfo = pods[strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)]
+				}
 			} else {
 				logger.Log.Printf("failed to list pod resources, %v", err)
 				// continue
@@ -763,6 +806,26 @@ func (ga *GPUAgentClient) exporterEnabledGPU(instance int) bool {
 
 }
 
+func normalizeUint64(x interface{}) float64 {
+	if v, ok := x.(uint64); ok {
+		if v == math.MaxUint64 {
+			return 0
+		} else {
+			return float64(v)
+		}
+	}
+	if v, ok := x.(uint32); ok {
+		// special case
+		if v == math.MaxUint16 || v == math.MaxUint32 {
+			return 0
+		} else {
+			return float64(v)
+		}
+	}
+	logger.Log.Fatalf("only uint64 and uint32 are expected but got %v", reflect.TypeOf(x))
+	return 0
+}
+
 func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 	if !ga.exporterEnabledGPU(getGPUInstanceID(gpu)) {
 		return
@@ -770,9 +833,10 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 
 	labels := ga.populateLabelsFromGPU(gpu)
 	labelsWithIndex := ga.populateLabelsFromGPU(gpu)
+	status := gpu.Status
 	stats := gpu.Stats
-	ga.m.gpuFanSpeed.With(labels).Set(float64(stats.FanSpeed))
-	ga.m.gpuAvgPkgPower.With(labels).Set(float64(stats.AvgPackagePower))
+	ga.m.gpuPackagePower.With(labels).Set(normalizeUint64(stats.PackagePower))
+	ga.m.gpuAvgPkgPower.With(labels).Set(normalizeUint64(stats.AvgPackagePower))
 
 	// gpu temp stats
 	tempStats := stats.Temperature
@@ -784,88 +848,115 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 			labelsWithIndex["hbm_index"] = fmt.Sprintf("%v", j)
 			ga.m.gpuHBMTemp.With(labelsWithIndex).Set(float64(temp))
 		}
+		delete(labelsWithIndex, "hbm_index")
 	}
 
 	// gpu usage
 	gpuUsage := stats.Usage
 	if gpuUsage != nil {
-		ga.m.gpuUsage.With(labels).Set(float64(gpuUsage.Usage))
-		ga.m.gpuGFXActivity.With(labels).Set(float64(gpuUsage.GFXActivity))
+		ga.m.gpuGFXActivity.With(labels).Set(normalizeUint64(gpuUsage.GFXActivity))
+		ga.m.gpuUMCActivity.With(labels).Set(normalizeUint64(gpuUsage.UMCActivity))
+		ga.m.gpuMMAActivity.With(labels).Set(normalizeUint64(gpuUsage.MMActivity))
+		for j, act := range gpuUsage.VCNActivity {
+			labelsWithIndex["vcn_index"] = fmt.Sprintf("%v", j)
+			ga.m.gpuVCNActivity.With(labelsWithIndex).Set(normalizeUint64(act))
+		}
+		delete(labelsWithIndex, "vcn_index")
+		for j, act := range gpuUsage.JPEGActivity {
+			labelsWithIndex["jpeg_index"] = fmt.Sprintf("%v", j)
+			ga.m.gpuJPEGActivity.With(labelsWithIndex).Set(normalizeUint64(act))
+		}
+		delete(labelsWithIndex, "jpeg_index")
 	}
 
-	// gpu memory usage
-	memUsage := stats.MemoryUsage
-	if memUsage != nil {
-		ga.m.gpuMemUsage.With(labels).Set(float64(memUsage.MemoryUsage))
-		ga.m.gpuMemActivity.With(labels).Set(float64(memUsage.Activity))
+	volt := stats.Voltage
+	if volt != nil {
+		ga.m.gpuVoltage.With(labels).Set(normalizeUint64(volt.Voltage))
+		ga.m.gpuGFXVoltage.With(labels).Set(normalizeUint64(volt.GFXVoltage))
+		ga.m.gpuMemVoltage.With(labels).Set(normalizeUint64(volt.MemoryVoltage))
 	}
 
-	ga.m.gpuVoltage.With(labels).Set(float64(stats.Voltage))
+	// pcie status
+	pcieStatus := status.PCIeStatus
+	if pcieStatus != nil {
+		ga.m.gpuPCIeSpeed.With(labels).Set(float64(pcieStatus.Speed))
+		ga.m.gpuPCIeMaxSpeed.With(labels).Set(float64(pcieStatus.MaxSpeed))
+		ga.m.gpuPCIeBandwidth.With(labels).Set(float64(pcieStatus.Bandwidth))
+	}
 
 	// pcie stats
-	ga.m.gpuPCIeBandwidth.With(labels).Set(float64(stats.PCIeBandwidth))
-	ga.m.gpuEnergeyConsumed.With(labels).Set(float64(stats.EnergyConsumed))
-	ga.m.gpuPCIeReplayCount.With(labels).Set(float64(stats.PCIeReplayCount))
+	pcieStats := stats.PCIeStats
+	if pcieStats != nil {
+		ga.m.gpuPCIeReplayCount.With(labels).Set(normalizeUint64(pcieStats.ReplayCount))
+		ga.m.gpuPCIeRecoveryCount.With(labels).Set(normalizeUint64(pcieStats.RecoveryCount))
+		ga.m.gpuPCIeReplayRolloverCount.With(labels).Set(normalizeUint64(pcieStats.ReplayRolloverCount))
+		ga.m.gpuPCIeNACKSentCount.With(labels).Set(normalizeUint64(pcieStats.NACKSentCount))
+		ga.m.gpuPCIeNACKReceivedCount.With(labels).Set(normalizeUint64(pcieStats.NACKReceivedCount))
+	}
 
-	// clock stats
-	ga.m.gpuClock.With(labels).Set(float64(stats.GPUClock))
-	ga.m.gpuMemoryClock.With(labels).Set(float64(stats.MemoryClock))
+	ga.m.gpuEnergyConsumed.With(labels).Set(stats.EnergyConsumed)
 
-	// pcie usage
-	ga.m.gpuPCIeTxUsage.With(labels).Set(float64(stats.PCIeTxUsage))
-	ga.m.gpuPCIeRxUsage.With(labels).Set(float64(stats.PCIeRxUsage))
+	// clock status
+	clockStatus := status.ClockStatus
+	if clockStatus != nil {
+		for _, clock := range clockStatus {
+			labelsWithIndex["clock_type"] = fmt.Sprintf("%v", clock.Type.String())
+			ga.m.gpuClock.With(labelsWithIndex).Set(normalizeUint64(clock.Frequency))
+		}
+		delete(labelsWithIndex, "clock_type")
+	}
 
 	ga.m.gpuPowerUsage.With(labels).Set(float64(stats.PowerUsage))
 
-	ga.m.gpuEccCorrectTotal.With(labels).Set(float64(stats.TotalCorrectableErrors))
-	ga.m.gpuEccUncorrectTotal.With(labels).Set(float64(stats.TotalUncorrectableErrors))
-	ga.m.gpuEccCorrectSDMA.With(labels).Set(float64(stats.SDMACorrectableErrors))
-	ga.m.gpuEccUncorrectSDMA.With(labels).Set(float64(stats.SDMAUncorrectableErrors))
-	ga.m.gpuEccCorrectGFX.With(labels).Set(float64(stats.GFXCorrectableErrors))
-	ga.m.gpuEccUncorrectGFX.With(labels).Set(float64(stats.GFXUncorrectableErrors))
-	ga.m.gpuEccCorrectMMHUB.With(labels).Set(float64(stats.MMHUBCorrectableErrors))
-	ga.m.gpuEccUncorrectMMHUB.With(labels).Set(float64(stats.MMHUBUncorrectableErrors))
-	ga.m.gpuEccCorrectATHUB.With(labels).Set(float64(stats.ATHUBCorrectableErrors))
-	ga.m.gpuEccUncorrectATHUB.With(labels).Set(float64(stats.ATHUBUncorrectableErrors))
+	ga.m.gpuEccCorrectTotal.With(labels).Set(normalizeUint64(stats.TotalCorrectableErrors))
+	ga.m.gpuEccUncorrectTotal.With(labels).Set(normalizeUint64(stats.TotalUncorrectableErrors))
+	ga.m.gpuEccCorrectSDMA.With(labels).Set(normalizeUint64(stats.SDMACorrectableErrors))
+	ga.m.gpuEccUncorrectSDMA.With(labels).Set(normalizeUint64(stats.SDMAUncorrectableErrors))
+	ga.m.gpuEccCorrectGFX.With(labels).Set(normalizeUint64(stats.GFXCorrectableErrors))
+	ga.m.gpuEccUncorrectGFX.With(labels).Set(normalizeUint64(stats.GFXUncorrectableErrors))
+	ga.m.gpuEccCorrectMMHUB.With(labels).Set(normalizeUint64(stats.MMHUBCorrectableErrors))
+	ga.m.gpuEccUncorrectMMHUB.With(labels).Set(normalizeUint64(stats.MMHUBUncorrectableErrors))
+	ga.m.gpuEccCorrectATHUB.With(labels).Set(normalizeUint64(stats.ATHUBCorrectableErrors))
+	ga.m.gpuEccUncorrectATHUB.With(labels).Set(normalizeUint64(stats.ATHUBUncorrectableErrors))
 
-	ga.m.gpuEccCorrectBIF.With(labels).Set(float64(stats.BIFCorrectableErrors))
-	ga.m.gpuEccUncorrectBIF.With(labels).Set(float64(stats.BIFUncorrectableErrors))
-	ga.m.gpuEccCorrectHDP.With(labels).Set(float64(stats.HDPCorrectableErrors))
-	ga.m.gpuEccUncorrectHDP.With(labels).Set(float64(stats.HDPUncorrectableErrors))
-	ga.m.gpuEccCorrectXgmiWAFL.With(labels).Set(float64(stats.XGMIWAFLCorrectableErrors))
-	ga.m.gpuEccUncorrectXgmiWAFL.With(labels).Set(float64(stats.XGMIWAFLUncorrectableErrors))
-	ga.m.gpuEccCorrectDF.With(labels).Set(float64(stats.DFCorrectableErrors))
-	ga.m.gpuEccUncorrectDF.With(labels).Set(float64(stats.DFUncorrectableErrors))
-	ga.m.gpuEccCorrectSMN.With(labels).Set(float64(stats.SMNCorrectableErrors))
-	ga.m.gpuEccUncorrectSMN.With(labels).Set(float64(stats.SMNUncorrectableErrors))
-	ga.m.gpuEccCorrectSEM.With(labels).Set(float64(stats.SEMCorrectableErrors))
-	ga.m.gpuEccUncorrectSEM.With(labels).Set(float64(stats.SEMUncorrectableErrors))
+	ga.m.gpuEccCorrectBIF.With(labels).Set(normalizeUint64(stats.BIFCorrectableErrors))
+	ga.m.gpuEccUncorrectBIF.With(labels).Set(normalizeUint64(stats.BIFUncorrectableErrors))
+	ga.m.gpuEccCorrectHDP.With(labels).Set(normalizeUint64(stats.HDPCorrectableErrors))
+	ga.m.gpuEccUncorrectHDP.With(labels).Set(normalizeUint64(stats.HDPUncorrectableErrors))
+	ga.m.gpuEccCorrectXgmiWAFL.With(labels).Set(normalizeUint64(stats.XGMIWAFLCorrectableErrors))
+	ga.m.gpuEccUncorrectXgmiWAFL.With(labels).Set(normalizeUint64(stats.XGMIWAFLUncorrectableErrors))
+	ga.m.gpuEccCorrectDF.With(labels).Set(normalizeUint64(stats.DFCorrectableErrors))
+	ga.m.gpuEccUncorrectDF.With(labels).Set(normalizeUint64(stats.DFUncorrectableErrors))
+	ga.m.gpuEccCorrectSMN.With(labels).Set(normalizeUint64(stats.SMNCorrectableErrors))
+	ga.m.gpuEccUncorrectSMN.With(labels).Set(normalizeUint64(stats.SMNUncorrectableErrors))
+	ga.m.gpuEccCorrectSEM.With(labels).Set(normalizeUint64(stats.SEMCorrectableErrors))
+	ga.m.gpuEccUncorrectSEM.With(labels).Set(normalizeUint64(stats.SEMUncorrectableErrors))
 
-	ga.m.gpuEccCorrectMP0.With(labels).Set(float64(stats.MP0CorrectableErrors))
-	ga.m.gpuEccUncorrectMP0.With(labels).Set(float64(stats.MP0UncorrectableErrors))
-	ga.m.gpuEccCorrectMP1.With(labels).Set(float64(stats.MP1CorrectableErrors))
-	ga.m.gpuEccUncorrectMP1.With(labels).Set(float64(stats.MP1UncorrectableErrors))
-	ga.m.gpuEccCorrectFUSE.With(labels).Set(float64(stats.FUSECorrectableErrors))
-	ga.m.gpuEccUncorrectFUSE.With(labels).Set(float64(stats.FUSEUncorrectableErrors))
-	ga.m.gpuEccCorrectUMC.With(labels).Set(float64(stats.UMCCorrectableErrors))
-	ga.m.gpuEccUncorrectUMC.With(labels).Set(float64(stats.UMCUncorrectableErrors))
+	ga.m.gpuEccCorrectMP0.With(labels).Set(normalizeUint64(stats.MP0CorrectableErrors))
+	ga.m.gpuEccUncorrectMP0.With(labels).Set(normalizeUint64(stats.MP0UncorrectableErrors))
+	ga.m.gpuEccCorrectMP1.With(labels).Set(normalizeUint64(stats.MP1CorrectableErrors))
+	ga.m.gpuEccUncorrectMP1.With(labels).Set(normalizeUint64(stats.MP1UncorrectableErrors))
+	ga.m.gpuEccCorrectFUSE.With(labels).Set(normalizeUint64(stats.FUSECorrectableErrors))
+	ga.m.gpuEccUncorrectFUSE.With(labels).Set(normalizeUint64(stats.FUSEUncorrectableErrors))
+	ga.m.gpuEccCorrectUMC.With(labels).Set(normalizeUint64(stats.UMCCorrectableErrors))
+	ga.m.gpuEccUncorrectUMC.With(labels).Set(normalizeUint64(stats.UMCUncorrectableErrors))
 
-	ga.m.xgmiNbrNopTx0.With(labels).Set(float64(stats.XGMINeighbor0TxNOPs))
-	ga.m.xgmiNbrReqTx0.With(labels).Set(float64(stats.XGMINeighbor0TxRequests))
-	ga.m.xgmiNbrRespTx0.With(labels).Set(float64(stats.XGMINeighbor0TxResponses))
-	ga.m.xgmiNbrBeatsTx0.With(labels).Set(float64(stats.XGMINeighbor0TXBeats))
+	ga.m.xgmiNbrNopTx0.With(labels).Set(normalizeUint64(stats.XGMINeighbor0TxNOPs))
+	ga.m.xgmiNbrReqTx0.With(labels).Set(normalizeUint64(stats.XGMINeighbor0TxRequests))
+	ga.m.xgmiNbrRespTx0.With(labels).Set(normalizeUint64(stats.XGMINeighbor0TxResponses))
+	ga.m.xgmiNbrBeatsTx0.With(labels).Set(normalizeUint64(stats.XGMINeighbor0TXBeats))
 
-	ga.m.xgmiNbrNopTx1.With(labels).Set(float64(stats.XGMINeighbor1TxNOPs))
-	ga.m.xgmiNbrReqTx1.With(labels).Set(float64(stats.XGMINeighbor1TxRequests))
-	ga.m.xgmiNbrRespTx1.With(labels).Set(float64(stats.XGMINeighbor1TxResponses))
-	ga.m.xgmiNbrBeatsTx1.With(labels).Set(float64(stats.XGMINeighbor1TXBeats))
+	ga.m.xgmiNbrNopTx1.With(labels).Set(normalizeUint64(stats.XGMINeighbor1TxNOPs))
+	ga.m.xgmiNbrReqTx1.With(labels).Set(normalizeUint64(stats.XGMINeighbor1TxRequests))
+	ga.m.xgmiNbrRespTx1.With(labels).Set(normalizeUint64(stats.XGMINeighbor1TxResponses))
+	ga.m.xgmiNbrBeatsTx1.With(labels).Set(normalizeUint64(stats.XGMINeighbor1TXBeats))
 
-	ga.m.xgmiNbrTxTput0.With(labels).Set(float64(stats.XGMINeighbor0TxThroughput))
-	ga.m.xgmiNbrTxTput1.With(labels).Set(float64(stats.XGMINeighbor1TxThroughput))
-	ga.m.xgmiNbrTxTput2.With(labels).Set(float64(stats.XGMINeighbor2TxThroughput))
-	ga.m.xgmiNbrTxTput3.With(labels).Set(float64(stats.XGMINeighbor3TxThroughput))
-	ga.m.xgmiNbrTxTput4.With(labels).Set(float64(stats.XGMINeighbor4TxThroughput))
-	ga.m.xgmiNbrTxTput5.With(labels).Set(float64(stats.XGMINeighbor5TxThroughput))
+	ga.m.xgmiNbrTxTput0.With(labels).Set(normalizeUint64(stats.XGMINeighbor0TxThroughput))
+	ga.m.xgmiNbrTxTput1.With(labels).Set(normalizeUint64(stats.XGMINeighbor1TxThroughput))
+	ga.m.xgmiNbrTxTput2.With(labels).Set(normalizeUint64(stats.XGMINeighbor2TxThroughput))
+	ga.m.xgmiNbrTxTput3.With(labels).Set(normalizeUint64(stats.XGMINeighbor3TxThroughput))
+	ga.m.xgmiNbrTxTput4.With(labels).Set(normalizeUint64(stats.XGMINeighbor4TxThroughput))
+	ga.m.xgmiNbrTxTput5.With(labels).Set(normalizeUint64(stats.XGMINeighbor5TxThroughput))
 }
 
 // parallel update for each gpu metrics. metrics package is atomic and all the

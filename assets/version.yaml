@@ -1,0 +1,12 @@
+assets:
+  - name    : gpuagent_mock.bin.gz
+    version : 1.101.0-79
+	branch  : master
+
+  - name    : gpuagent_static.bin.gz
+    version : 1.101.0-79
+	branch  : master
+
+  - name    : gpuctl.gobin
+	version : n/a
+	branch  : n/a

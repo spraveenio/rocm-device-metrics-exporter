@@ -64,6 +64,14 @@ enum GPUClockType {
   GPU_CLOCK_TYPE_SYSTEM = 3;
   // SoC clock (aka. socclk)
   GPU_CLOCK_TYPE_SOC    = 4;
+  // Display Controller Engine (DCE) clock
+  GPU_CLOCK_TYPE_DCE    = 5;
+  // PCIe clock
+  GPU_CLOCK_TYPE_PCIE   = 6;
+  // video clock
+  GPU_CLOCK_TYPE_VIDEO  = 7;
+  // data clock
+  GPU_CLOCK_TYPE_DATA   = 8;
 }
 
 // powerplay performance levels
@@ -88,11 +96,13 @@ enum GPUPerformanceLevel {
 // clock frequency range
 // NOTE:
 // values are in MHz
-message ClockFrequencyRange {
+message GPUClockFrequencyRange {
+  // clock type
+  GPUClockType ClockType     = 1;
   // low frequency value
-  uint32 LowFrequency  = 1;
+  uint32       LowFrequency  = 2;
   // high frequency value
-  uint32 HighFrequency = 2;
+  uint32       HighFrequency = 3;
 }
 
 // RAS configuration per block
@@ -104,32 +114,21 @@ message GPURASSpec {
 message GPUSpec {
   // uuid identifying the GPU
   // this uuid is generated and will be unique across the GPU cluster
-  bytes                 Id                   = 1;
+  bytes                           Id               = 1;
   // admin state of the GPU device
-  GPUAdminState         AdminState           = 2;
-  // virtual pod GPU is associated with
-  // NOTE:
-  // 1. to disassociate GPU from a vPod, vPod uuid must be empty/nil
-  // 2. to change the association of GPU from one pod to another, controller
-  //    has to ensure no workload is actively using the GPU during that
-  //    transition
-  bytes                 vPod                 = 3;
+  GPUAdminState                   AdminState       = 2;
   // GPU clock overdrive level (as percentage)
-  float                 OverDriveLevel       = 4;
-  // GPU memory clock overdrive level (as percentage)
-  float                 MemoryOverDriveLevel = 5;
+  uint32                          OverDriveLevel   = 3;
   // max package power (in Watts) GPU can consume (i.e power cap)
-  uint64                GPUPowerCap          = 6;
+  uint64                          GPUPowerCap      = 4;
   // GPU performance level
-  GPUPerformanceLevel   PerformanceLevel     = 7;
+  GPUPerformanceLevel             PerformanceLevel = 5;
   // GPU clock speed/frequency setting
-  ClockFrequencyRange   GPUClockFrequency    = 8;
-  // GPU memory clock speed/frequency setting
-  ClockFrequencyRange   MemoryClockFrequency = 9;
-  // fan speed (TODO: what is the unit ? level or percentage or do we need to support both ?)
-  float                 FanSpeed             = 10;
+  repeated GPUClockFrequencyRange ClockFrequency   = 6;
+  // fan speed; allowed range 0 - 255
+  uint64                          FanSpeed         = 7;
   // RAS configuration
-  GPURASSpec            RASSpec              = 11;
+  GPURASSpec                      RASSpec          = 8;
 }
 
 // operational status of GPU
@@ -155,11 +154,19 @@ enum GPUXGMIStatus {
 // clock information
 message GPUClockStatus {
   // clock type
-  GPUClockType Type      = 1;
-  // clock level
-  uint32       Level     = 2;
+  GPUClockType Type          = 1;
   // clock frequency in MHz
-  uint32       Frequency = 3;
+  uint32       Frequency     = 2;
+  // low frequency value
+  uint32       LowFrequency  = 3;
+  // high frequency value
+  uint32       HighFrequency = 4;
+  // clock is locked or not
+  // NOTE:
+  // applicable only for system (grpahics) clock
+  bool         Locked        = 5;
+  // clock is in deep sleep
+  bool         DeepSleep     = 6;
 }
 
 // voltage curve point
@@ -185,12 +192,40 @@ message GPUFirmwareVersion {
   string Version  = 2;
 }
 
+// PCIe slot type
+enum PCIeSlotType {
+    PCIE_SLOT_TYPE_NONE    = 0;
+    PCIE_SLOT_TYPE_PCIE    = 1;
+    PCIE_SLOT_TYPE_OAM     = 2;
+    PCIE_SLOT_TYPE_CEM     = 3;
+    PCIE_SLOT_TYPE_UNKNOWN = 4;
+}
+
+message GPUPCIeStatus {
+  // PCIe card form factor
+  PCIeSlotType SlotType  = 1;
+  // PCIe interface version
+  uint32       Version   = 2;
+  // PCIe bus id of the GPU
+  string       PCIeBusId = 3;
+  // current PCIe lanes
+  uint32       Width     = 4;
+  // maximum number of PCIe lanes
+  uint32       MaxWidth  = 5;
+  // current PCIe speed (in GT/s)
+  uint32       Speed     = 6;
+  // maximum PCIe speed (in GT/s)
+  uint32       MaxSpeed  = 7;
+  // current PCIe bandwidth (in MB/s)
+  uint64       Bandwidth = 8;
+}
+
 // operational information of a physical GPU
 message GPUStatus {
   // assigned GPU index local to the compute node
   uint32                        Index             = 1;
-  // assigned GPU unique id local to the compute node
-  uint64                        UniqueId          = 2;
+  // GPU handle
+  uint64                        GPUHandle         = 2;
   // serial number of the GPU
   string                        SerialNum         = 3;
   // product series of the GPU
@@ -201,36 +236,30 @@ message GPUStatus {
   string                        CardVendor        = 6;
   // SKU of the GPU card
   string                        CardSKU           = 7;
-  // PCIe bus id of the GPU
-  string                        PCIeBusId         = 8;
   // operational status of the device
-  GPUOperStatus                 Status            = 9;
+  GPUOperStatus                 OperStatus        = 8;
   // driver version
-  string                        DriverVersion     = 10;
+  string                        DriverVersion     = 9;
+  // VBIOS part number
+  string                        VBIOSPartNumber   = 10;
   // VBIOS version
   string                        VBIOSVersion      = 11;
   // firmware versions of various components
   repeated GPUFirmwareVersion   FirmwareVersion   = 12;
   // memory component vendor
   string                        MemoryVendor      = 13;
-  // supported fclk frequencies
-  repeated uint32               FClockFrequency   = 14;
-  // supported mclk frequencies
-  repeated uint32               MClockFrequency   = 15;
-  // supported sclk frequencies
-  repeated uint32               SClockFrequency   = 16;
-  // supported SoC clk frequencies
-  repeated uint32               SoCClockFrequency = 17;
   // GPU clock status
-  repeated GPUClockStatus       ClockStatus       = 18;
+  repeated GPUClockStatus       ClockStatus       = 14;
   // Kernel Fusion Driver (KFD) process ids using the GPU
-  repeated uint32               KFDProcessId      = 19;
+  repeated uint32               KFDProcessId      = 15;
   // RAS (Reliability, Availability & Serviceability) information
-  GPURASStatus                  RASStatus         = 20;
+  GPURASStatus                  RASStatus         = 16;
   // XGMI error status
-  GPUXGMIStatus                 XGMIErrorStatus   = 21;
+  GPUXGMIStatus                 XGMIErrorStatus   = 17;
   // total VRAM memory of the GPU (in MB)
-  uint64                        TotalMemory       = 22;
+  uint64                        TotalMemory       = 18;
+  // PCIe status
+  GPUPCIeStatus                 PCIeStatus        = 19;
 }
 
 // GPU temperature information
@@ -248,9 +277,17 @@ message GPUTemperatureStats {
 }
 
 // GPU usage as percentage of time GPU is busy
-message GPUUSage {
-  float Usage       = 1;
-  float GFXActivity = 2;
+message GPUUsage {
+  // usage of graphics engine as a percentage
+  uint32          GFXActivity  = 1;
+  // usage of Unified Memory Controller (UMC) engine as a percentage
+  uint32          UMCActivity  = 2;
+  // usage of MultiMedia (MM) engine as a percentage
+  uint32          MMActivity   = 3;
+  // Video Core Next (VCN) activity as a percentage
+  repeated uint32 VCNActivity  = 4;
+  // JPEG activity as a percentage
+  repeated uint32 JPEGActivity = 5;
 }
 
 // GPU current memory usage
@@ -261,126 +298,139 @@ message GPUMemoryUsage {
   float Activity    = 2;
 }
 
+// PCIe statistics
+message GPUPCIeStats {
+    // total number of the replays issued on the PCIe link
+    uint64 ReplayCount         = 1;
+    // total number of times the PCIe link transitioned from L0 to the recovery
+    // state
+    uint64 RecoveryCount       = 2;
+    // total number of replay rollovers issued on the PCIe link
+    uint64 ReplayRolloverCount = 3;
+    // total number of NACKs issued on the PCIe link by the device
+    uint64 NACKSentCount       = 4;
+    // total number of NACKs issued on the PCIe link by the receiver
+    uint64 NACKReceivedCount   = 5;
+}
+
+// voltage statistics
+message GPUVoltage {
+  // current voltage (in mV)
+  uint64 Voltage       = 1;
+  // current graphics voltage (in mV)
+  uint64 GFXVoltage    = 2;
+  // current memory voltage (in mV)
+  uint64 MemoryVoltage = 3;
+}
+
 // GPU statistics
 message GPUStats {
-  // current fan speed (TODO: what is the unit ?)
-  float               FanSpeed                    = 1;
+  // current graphics package power (in Watts)
+  uint64                 PackagePower                = 1;
   // avg. graphics package power (in Watts)
-  float               AvgPackagePower             = 2;
+  uint64                 AvgPackagePower             = 2;
   // current temperature
-  GPUTemperatureStats Temperature                 = 3;
+  GPUTemperatureStats    Temperature                 = 3;
   // current GPU usage
-  GPUUSage             Usage                      = 4;
-  // current memory usage
-  GPUMemoryUsage       MemoryUsage                = 5;
+  GPUUsage               Usage                       = 4;
   // current voltage in milli volts (mV)
-  uint64              Voltage                     = 6;
-  // estimated maximum PCIe bandwidth over the last second (in MB/s)
-  float               PCIeBandwidth               = 7;
+  GPUVoltage             Voltage                     = 5;
+  // PCIe statistics
+  GPUPCIeStats           PCIeStats                   = 6;
   // accumulated energy consumed (in uJ)
-  double              EnergyConsumed              = 8;
-  // PCIe replay count
-  uint32              PCIeReplayCount             = 9;
-  // current GPU clock frequency (in MHz)
-  uint32              GPUClock                    = 10;
-  // current memory clock frequency (in MHz)
-  uint32              MemoryClock                 = 11;
-  // PCIe Tx utilization (TODO: what is the unit % ?)
-  float               PCIeTxUsage                 = 12;
-  // PCIe Rx utilization (TODO: what is the unit % ?)
-  float               PCIeRxUsage                 = 13;
+  double                 EnergyConsumed              = 7;
   // total correctable errors
-  uint64              TotalCorrectableErrors      = 14;
+  uint64                 TotalCorrectableErrors      = 8;
   // total uncorrectable errors
-  uint64              TotalUncorrectableErrors    = 15;
+  uint64                 TotalUncorrectableErrors    = 9;
   // SDMA correctable errors
-  uint64              SDMACorrectableErrors       = 16;
+  uint64                 SDMACorrectableErrors       = 10;
   // SDMA uncorrectable errors
-  uint64              SDMAUncorrectableErrors     = 17;
+  uint64                 SDMAUncorrectableErrors     = 11;
   // GFX correctable errors
-  uint64              GFXCorrectableErrors        = 18;
+  uint64                 GFXCorrectableErrors        = 12;
   // GFX uncorrectable errors
-  uint64              GFXUncorrectableErrors      = 19;
+  uint64                 GFXUncorrectableErrors      = 13;
   // MMHUB correctable errors
-  uint64              MMHUBCorrectableErrors      = 20;
+  uint64                 MMHUBCorrectableErrors      = 14;
   // MMHUB uncorrectable errors
-  uint64              MMHUBUncorrectableErrors    = 21;
+  uint64                 MMHUBUncorrectableErrors    = 15;
   // ATHUB correctable errors
-  uint64              ATHUBCorrectableErrors      = 22;
+  uint64                 ATHUBCorrectableErrors      = 16;
   // ATHUB uncorrectable errors
-  uint64              ATHUBUncorrectableErrors    = 23;
+  uint64                 ATHUBUncorrectableErrors    = 17;
   // BIF correctable errors
-  uint64              BIFCorrectableErrors        = 24;
+  uint64                 BIFCorrectableErrors        = 18;
   // BIF uncorrectable errors
-  uint64              BIFUncorrectableErrors      = 25;
+  uint64                 BIFUncorrectableErrors      = 19;
   // HDP correctable errors
-  uint64              HDPCorrectableErrors        = 26;
+  uint64                 HDPCorrectableErrors        = 20;
   // HDP uncorrectable errors
-  uint64              HDPUncorrectableErrors      = 27;
+  uint64                 HDPUncorrectableErrors      = 21;
   // XGMI WAFL correctable errors
-  uint64              XGMIWAFLCorrectableErrors   = 28;
+  uint64                 XGMIWAFLCorrectableErrors   = 22;
   // XGMI WAFL uncorrectable errors
-  uint64              XGMIWAFLUncorrectableErrors = 29;
+  uint64                 XGMIWAFLUncorrectableErrors = 23;
   // DF correctable errors
-  uint64              DFCorrectableErrors         = 30;
+  uint64                 DFCorrectableErrors         = 24;
   // DF uncorrectable errors
-  uint64              DFUncorrectableErrors       = 31;
+  uint64                 DFUncorrectableErrors       = 25;
   // SMN correctable errors
-  uint64              SMNCorrectableErrors        = 32;
+  uint64                 SMNCorrectableErrors        = 26;
   // SMN uncorrectable errors
-  uint64              SMNUncorrectableErrors      = 33;
+  uint64                 SMNUncorrectableErrors      = 27;
   // SEM correctable errors
-  uint64              SEMCorrectableErrors        = 34;
+  uint64                 SEMCorrectableErrors        = 28;
   // SEM uncorrectable errors
-  uint64              SEMUncorrectableErrors      = 35;
+  uint64                 SEMUncorrectableErrors      = 29;
   // MP0 correctable errors
-  uint64              MP0CorrectableErrors        = 36;
+  uint64                 MP0CorrectableErrors        = 30;
   // MP0 uncorrectable errors
-  uint64              MP0UncorrectableErrors      = 37;
+  uint64                 MP0UncorrectableErrors      = 31;
   // MP1 correctable errors
-  uint64              MP1CorrectableErrors        = 38;
+  uint64                 MP1CorrectableErrors        = 32;
   // MP1 uncorrectable errors
-  uint64              MP1UncorrectableErrors      = 39;
+  uint64                 MP1UncorrectableErrors      = 33;
   // FUSE correctable errors
-  uint64              FUSECorrectableErrors       = 40;
+  uint64                 FUSECorrectableErrors       = 34;
   // FUSE uncorrectable errors
-  uint64              FUSEUncorrectableErrors     = 41;
+  uint64                 FUSEUncorrectableErrors     = 35;
   // UMC correctable errors
-  uint64              UMCCorrectableErrors        = 42;
+  uint64                 UMCCorrectableErrors        = 36;
   // UMC uncorrectable errors
-  uint64              UMCUncorrectableErrors      = 43;
+  uint64                 UMCUncorrectableErrors      = 37;
   // XGMI counters
   // NOPs sent to neighbor0
-  uint64              XGMINeighbor0TxNOPs         = 44;
+  uint64                 XGMINeighbor0TxNOPs         = 38;
   // outgoing requests to neighbor0
-  uint64              XGMINeighbor0TxRequests     = 45;
+  uint64                 XGMINeighbor0TxRequests     = 39;
   // outgoing responses to neighbor0
-  uint64              XGMINeighbor0TxResponses    = 46;
+  uint64                 XGMINeighbor0TxResponses    = 40;
   // data beats sent to neighbor0 (each beat = 32 Bytes)
-  uint64              XGMINeighbor0TXBeats        = 47;
+  uint64                 XGMINeighbor0TXBeats        = 41;
   // NOPs sent to neighbor1
-  uint64              XGMINeighbor1TxNOPs         = 48;
+  uint64                 XGMINeighbor1TxNOPs         = 42;
   // outgoing requests to neighbor1
-  uint64              XGMINeighbor1TxRequests     = 49;
+  uint64                 XGMINeighbor1TxRequests     = 43;
   // outgoing responses to neighbor1
-  uint64              XGMINeighbor1TxResponses    = 50;
+  uint64                 XGMINeighbor1TxResponses    = 44;
   // data beats sent to neighbor1 (each beat = 32 Bytes)
-  uint64              XGMINeighbor1TXBeats        = 51;
+  uint64                 XGMINeighbor1TXBeats        = 45;
   // TODO: are there be above like stats for Neighbors 2,3,4 and 5?
   // transmit throughput to XGMI neighbor 0 (in Bytes per second)
-  uint64              XGMINeighbor0TxThroughput   = 52;
+  uint64                 XGMINeighbor0TxThroughput   = 46;
   // transmit throughput to XGMI neighbor 1 (in Bytes per second)
-  uint64              XGMINeighbor1TxThroughput   = 53;
+  uint64                 XGMINeighbor1TxThroughput   = 47;
   // transmit throughput to XGMI neighbor 2 (in Bytes per second)
-  uint64              XGMINeighbor2TxThroughput   = 54;
+  uint64                 XGMINeighbor2TxThroughput   = 48;
   // transmit throughput to XGMI neighbor 3 (in Bytes per second)
-  uint64              XGMINeighbor3TxThroughput   = 55;
+  uint64                 XGMINeighbor3TxThroughput   = 49;
   // transmit throughput to XGMI neighbor 4 (in Bytes per second)
-  uint64              XGMINeighbor4TxThroughput   = 56;
+  uint64                 XGMINeighbor4TxThroughput   = 50;
   // transmit throughput to XGMI neighbor 5 (in Bytes per second)
-  uint64              XGMINeighbor5TxThroughput   = 57;
+  uint64                 XGMINeighbor5TxThroughput   = 51;
   // power usage (in Watts)
-  uint64              PowerUsage                  = 58;
+  uint64                 PowerUsage                  = 52;
 }
 
 // GPU captures config, operational status and stat of GPU object

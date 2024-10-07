@@ -47,16 +47,18 @@ enum ApiStatus {
 
 // API error codes (set in cases where ApiStatus is not API_STATUS_OK
 enum ErrorCode {
-  ERR_CODE_NONE                                     = 0;
+  ERR_CODE_NONE                                           = 0;
 
   // GPU specific error codes
-  ERR_CODE_GPU_CLOCK_FREQUENCY_RANGE_INVALID        = 4096;
-  ERR_CODE_GPU_MEMORY_CLOCK_FREQUENCY_RANGE_INVALID = 4097;
-  ERR_CODE_GPU_OVERDRIVE_OUT_OF_RANGE               = 4098;
+  ERR_CODE_GPU_CLOCK_FREQ_RANGE_INVALID                   = 4096;
+  ERR_CODE_GPU_OVERDRIVE_OUT_OF_RANGE                     = 4097;
+  ERR_CODE_GPU_NUM_CLOCK_FREQ_RANGE_EXCEEDED              = 4098;
+  ERR_CODE_GPU_DUPLICATE_CLOCK_FREQ_RANGE                 = 4099;
+  ERR_CODE_GPU_CLOCK_TYPE_FREQ_RANGE_UPDATE_NOT_SUPPORTED = 4100;
 
   // smi layer object specific error codes
-  ERR_CODE_SMI_GPU_POWER_CAP_OUT_OF_RANGE           = 65536;
+  ERR_CODE_SMI_GPU_POWER_CAP_OUT_OF_RANGE                 = 65536;
 
   // catch all error code
-  ERR_CODE_UNKNOWN                                  = 0x1FFFFFFF;
+  ERR_CODE_UNKNOWN                                        = 0x1FFFFFFF;
 }
