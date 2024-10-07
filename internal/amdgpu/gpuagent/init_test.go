@@ -63,7 +63,7 @@ func setupTest(t *testing.T) func(t *testing.T) {
 					SerialNum: "mock-serial",
 				},
 				Stats: &amdgpu.GPUStats{
-					FanSpeed: 1.1,
+					PackagePower: 41,
 				},
 			},
 			{
@@ -74,7 +74,7 @@ func setupTest(t *testing.T) func(t *testing.T) {
 					SerialNum: "mock-serial-2",
 				},
 				Stats: &amdgpu.GPUStats{
-					FanSpeed: 2.1,
+					PackagePower: 41,
 				},
 			},
 		},

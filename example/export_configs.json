@@ -3,7 +3,8 @@
     "GPUConfig" :{
         "Fields" : [
             "GPU_NODES_TOTAL",
-            "GPU_FAN_SPEED"
+            "PCIE_REPLAY_COUNT",
+            "GPU_CLOCK"
         ],
         "Labels": [
             "CARD_MODEL",
