@@ -30,10 +30,13 @@ copy_artifacts () {
 
 docker_build_push () {
     cd $UPLOAD_DIR/
+    EXPORTER_IMAGE_URL=registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
     tar xzf exporter-release-v1.tgz
+    ls -la $UPLOAD_DIR/
     docker load -i exporter-docker-v1.tgz
-    echo "FROM registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest" | docker build --label HOURLY_TAG=$RELEASE -t "registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest" -
-    docker push registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
+    docker tag amd/exporter:v1 $EXPORTER_IMAGE_URL
+    echo "FROM $EXPORTER_IMAGE_URL" | docker build --label HOURLY_TAG=$RELEASE -t "$EXPORTER_IMAGE_URL" -
+    docker push $EXPORTER_IMAGE_URL
 }
 
 setup () {
