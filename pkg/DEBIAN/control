@@ -3,4 +3,4 @@ Version: 0.1
 Maintainer: AMD Inc.
 Architecture: amd64
 Description: GPU Metrics Exporter
-Depends: rdc, rocm-dev
+Depends: rdc, rocm
