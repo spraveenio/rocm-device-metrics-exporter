@@ -21,7 +21,7 @@ PKG_PATH := ${TOP_DIR}/pkg/usr/local/bin
 
 .PHONY: all
 all:
-	${MAKE} gen amdexporter
+	${MAKE} gen amdexporter metricutil
 
 .PHONY: gen
 gen: gopkglist
@@ -101,6 +101,10 @@ amdexporter-lite:
 amdexporter:
 	@echo "building amd metrics exporter"
 	CGO_ENABLED=0 go build -C cmd/exporter -o $(CURDIR)/bin/amd-metrics-exporter
+
+metricutil:
+	@echo "building metrics util"
+	CGO_ENABLED=0 go build -C cmd/metricutil -o $(CURDIR)/bin/metricutil
 
 .PHONY: docker
 docker: gen amdexporter
