@@ -107,7 +107,7 @@ metricutil:
 	CGO_ENABLED=0 go build -C cmd/metricutil -o $(CURDIR)/bin/metricutil
 
 .PHONY: docker
-docker: gen amdexporter
+docker: docker-compile
 	${MAKE} -C docker TOP_DIR=$(CURDIR) MOCK=$(MOCK)
 
 .PHONY: docker-mock
@@ -134,9 +134,8 @@ mod:
 	@go mod tidy
 	@go mod vendor
 
-docker-build:
+docker-compile:
 	docker run --user $(shell id -u):$(shell id -g) --privileged -e "GIT_COMMIT=${GIT_COMMIT}" -e "GIT_VERSION=${GIT_VERSION}" -e "BUILD_DATE=${BUILD_DATE}" -e "GOPATH=/import" -e GOCACHE=/import/src/github.com/pensando/device-metrics-exporter/.cache --rm -v${PWD}/../../../../:/import/ ${BUILD_CONTAINER} bash -c "cd /import/src/github.com/pensando/device-metrics-exporter && make all"
-	${MAKE} docker
 
 .PHONY: base-image
 base-image:

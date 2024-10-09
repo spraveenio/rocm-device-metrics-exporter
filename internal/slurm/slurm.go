@@ -67,34 +67,38 @@ func NewClient(ctx context.Context) (JobsService, error) {
 			case <-ctx.Done():
 				logger.Log.Printf("context done")
 			default:
-				logger.Log.Printf("waiting for notifications")
+				logger.Log.Printf("waiting for job notifications")
 				msg, err := sock.Recv()
-				if err != nil && err != io.EOF {
-					logger.Log.Printf("could not receive message %s", err)
+				if err != nil {
+					if err != io.EOF {
+						logger.Log.Printf("could not receive message %v", err)
+					}
 					break
 				}
 				if err := proto.Unmarshal(msg.Bytes(), &slurmMsg); err != nil {
 					logger.Log.Printf("could not receive message %v", err)
 					break
 				}
-				logger.Log.Printf("received slurm notification %+v", slurmMsg.SData)
+				logger.Log.Printf("received slurm notification %+v", slurmMsg.String())
 				if slurmMsg.SData == nil {
 					logger.Log.Printf("SData is empty %+v", slurmMsg.SData)
 					break
 				}
 
-				logger.Log.Printf("slurm msg type %v job %v gpus %v", slurmMsg.Type, slurmMsg.SData.JobID, slurmMsg.SData.AllocGPUs)
+				logger.Log.Printf("slurm msg type:%v job:%v gpus:%v", slurmMsg.Type, slurmMsg.SData.JobID, slurmMsg.SData.AllocGPUs)
 				switch slurmMsg.Type {
 				case luaplugin.Stages_TaskInit:
-					cl.Lock()
-					for _, allocGPU := range slurmMsg.SData.AllocGPUs {
-						if slurmMsg.SData.JobID > 0 {
+					if slurmMsg.SData.JobID > 0 && len(slurmMsg.SData.AllocGPUs) > 0 {
+						cl.Lock()
+						for _, allocGPU := range slurmMsg.SData.AllocGPUs {
 							cl.GpuJobs[allocGPU] = JobInfo{
 								JobId: fmt.Sprintf("%v", slurmMsg.SData.JobID),
 							}
+
 						}
+						cl.Unlock()
 					}
-					cl.Unlock()
+
 				case luaplugin.Stages_TaskExit:
 					cl.Lock()
 					for _, allocGPU := range slurmMsg.SData.AllocGPUs {
