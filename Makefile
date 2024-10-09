@@ -56,6 +56,9 @@ GEN_DIR := $(TOP_DIR)/internal/amdgpu/
 MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
 GOINSECURE='github.com, google.golang.org, golang.org'
 GOFLAGS ='-buildvcs=false'
+BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
+GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
+VERSION ?=$(RELEASE)
 
 export ${GOROOT}
 export ${GOPATH}
@@ -291,6 +294,7 @@ fmt: ## Run go fmt against code.
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
+
 
 .PHONY: gopkglist
 gopkglist:

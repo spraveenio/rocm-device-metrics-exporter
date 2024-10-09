@@ -19,14 +19,13 @@ package gpuagent
 import (
 	"context"
 	"fmt"
-	"github.com/pensando/device-metrics-exporter/internal/slurm"
-	"runtime"
 	"sync"
 	"time"
 
+	"github.com/pensando/device-metrics-exporter/internal/slurm"
+
 	"github.com/pensando/device-metrics-exporter/internal/k8s"
 
-	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/amdgpu"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/metricsutil"
@@ -35,8 +34,8 @@ import (
 )
 
 const (
-	maxWorkers  = 5
-	maxJobQueue = 16
+	// cachgpuid are updated after this many pull request
+	refreshInterval = 10
 )
 
 type GPUAgentClient struct {
@@ -49,8 +48,7 @@ type GPUAgentClient struct {
 	slurmClient  slurm.JobsService
 	sync.Mutex
 	cacheGpuids map[string][]byte
-	jobReqChan  chan []byte
-	resultChan  chan *amdgpu.GPUGetResponse
+	cachePulls  int
 }
 
 func NewAgent(ctx context.Context, mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
@@ -86,57 +84,29 @@ func NewAgent(ctx context.Context, mh *metricsutil.MetricsHandler) (*GPUAgentCli
 	}
 	logger.Log.Printf("monitor %v jobs", map[bool]string{true: "kubernetes", false: "slurm"}[ga.isKubernetes])
 	ga.cacheGpuids = make(map[string][]byte)
-	ga.jobReqChan = make(chan []byte, maxJobQueue)
-	ga.resultChan = make(chan *amdgpu.GPUGetResponse, maxJobQueue)
 	mh.RegisterMetricsClient(ga)
 
-	totalWorkers := maxWorkers
-	numCores := runtime.NumCPU()
-
-	if numCores < maxWorkers {
-		totalWorkers = numCores
-	}
-	logger.Log.Printf("total workers[%v] queue size[%v]", totalWorkers, maxJobQueue)
-	// create 3 workers
-	for i := 1; i <= maxWorkers; i++ {
-		go ga.workerInit(i)
-	}
 	return ga, nil
-}
-
-func (ga *GPUAgentClient) workerInit(id int) {
-	for gpuReq := range ga.jobReqChan {
-		uuid, _ := uuid.FromBytes(gpuReq)
-		req := &amdgpu.GPUGetRequest{
-			Id: [][]byte{
-				gpuReq,
-			},
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
-		res, err := ga.client.GPUGet(ctx, req)
-		cancel()
-		if err != nil {
-			res = nil
-			logger.Log.Printf("worker[%d] job[%d] err %v", id, uuid, err)
-		}
-		// result can be nil
-		ga.resultChan <- res
-	}
 }
 
 func (ga *GPUAgentClient) getMetricsBulkReq() error {
 	// create multiple workers
-	// keep pushing jobs based upon the available workers
-	numReq := len(ga.cacheGpuids)
-	for _, gpuid := range ga.cacheGpuids {
-		ga.jobReqChan <- gpuid
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
+	defer cancel()
+	responses, err := NewWokerRequest(ctx, ga.client, ga.cacheGpuids)
+	if err != nil {
+		logger.Log.Printf("worker request errored: %v", err)
+		return err
 	}
-
-	for i := 1; i <= numReq; i++ {
-		gpuRes := <-ga.resultChan
-		if gpuRes != nil && len(gpuRes.Response) > 0 {
-			ga.updateGPUInfoToMetrics(gpuRes.Response[0])
-		}
+	for _, gpuRes := range responses {
+		ga.updateGPUInfoToMetrics(gpuRes.Response[0])
+	}
+	// this handle gpu dynamically being added to the system
+	// to refresh the cachedgpu ids
+	ga.cachePulls++
+	if ga.cachePulls == refreshInterval {
+		ga.cachePulls = 0
+		go ga.UpdateStaticMetrics()
 	}
 	return nil
 }
@@ -171,6 +141,4 @@ func (ga *GPUAgentClient) Close() {
 		ga.slurmClient.Close()
 		ga.slurmClient = nil
 	}
-	close(ga.jobReqChan)
-	close(ga.resultChan)
 }
