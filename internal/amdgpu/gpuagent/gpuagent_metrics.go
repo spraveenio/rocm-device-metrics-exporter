@@ -476,7 +476,7 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Name: "gpu_clock",
 			Help: "current GPU clock frequency in MHz",
 		},
-			append(labels, "clock_type")),
+			append(labels, []string{"clock_index", "clock_type"}...)),
 		gpuPowerUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_power_usage",
 			Help: "power usage in Watts",
@@ -710,12 +710,13 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 		logger.Log.Printf("resp status :%v", resp.ApiStatus)
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
+	ga.Lock()
 	ga.cacheGpuids = make(map[string][]byte)
-	for i, gpu := range resp.Response {
+	for _, gpu := range resp.Response {
 		uuid, _ := uuid.FromBytes(gpu.Spec.Id)
 		ga.cacheGpuids[uuid.String()] = gpu.Spec.Id
-		logger.Log.Printf("GPU[%v].Status :%+v", i, gpu.Status)
 	}
+	ga.Unlock()
 
 	ga.m.gpuNodesTotal.Set(float64(len(resp.Response)))
 	for _, gpu := range resp.Response {
@@ -899,10 +900,12 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 	// clock status
 	clockStatus := status.ClockStatus
 	if clockStatus != nil {
-		for _, clock := range clockStatus {
+		for j, clock := range clockStatus {
+			labelsWithIndex["clock_index"] = fmt.Sprintf("%v", j)
 			labelsWithIndex["clock_type"] = fmt.Sprintf("%v", clock.Type.String())
 			ga.m.gpuClock.With(labelsWithIndex).Set(normalizeUint64(clock.Frequency))
 		}
+		delete(labelsWithIndex, "clock_index")
 		delete(labelsWithIndex, "clock_type")
 	}
 

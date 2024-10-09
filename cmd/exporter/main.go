@@ -39,6 +39,9 @@ import (
 
 // single instance handlers
 var (
+	Version   string
+	BuildDate string
+	GitCommit string
 	mh        *metricsutil.MetricsHandler
 	gpuclient *gpuagent.GPUAgentClient
 	runConf   *config.Config
@@ -174,6 +177,10 @@ func main() {
 		agentGrpcPort = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
 	)
 	flag.Parse()
+
+	logger.Log.Printf("Version : %v", Version)
+	logger.Log.Printf("BuildDate: %v", BuildDate)
+	logger.Log.Printf("GitCommit: %v", GitCommit)
 
 	runConf = config.NewConfig(*metricsConfig)
 	runConf.SetAgentPort(*agentGrpcPort)

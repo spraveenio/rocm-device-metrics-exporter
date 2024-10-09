@@ -1,6 +1,15 @@
 # device-metrics-exporter
 Device Metrics Exporter exports metrics from AMD GPUs to collectors like Prometheus.
 
+#help
+```
+Usage of bin/amd-metrics-exporter:
+  -agent-grpc-port int
+      Agent GRPC port (default 50061)
+  -amd-metrics-config string
+      AMD metrics exporter config file (default "/etc/metrics/config.json")
+```
+
 ## Build and Run Instructions
 
 ### 1. Build amdexporter application binary
@@ -28,13 +37,27 @@ Device Metrics Exporter exports metrics from AMD GPUs to collectors like Prometh
     docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter 		registry.test.pensando.io:5000/device-metrics-exporter/rocm-metrics-exporter:v1 bash
     ```
  - ubuntu linux debian package
+   - Supported ROCM versions : 6.2.0 and up
    - prerequistes
      - dkms installated on the system
-     - rdc service is expected to be up and running
+     - rdc service is expected to be up and running with supported versions
+       only
        - sample rdc.service is available in example/rdc.service
+
+  - if running unsupported rocm then the behavior is undefined and some metric fields
+    may not work as intended
+    update the LD_LIBRARY_PATH in '/lib/systemd/system/gpuagent.service' to
+    proper library location after installation and before starting the
+    services
 
   - installation package
    `$ dpkg -i amdgpu-exporter_0.1_amd64.deb`
+
+  - default config file path /etc/metrics/config.json
+  - to change to a custom file, update
+    /lib/systemd/system/amd-metrics-exporter.service
+    ExecStart=/usr/local/bin/amd-metrics-exporter -f <custom_config_path>
+
 
   - enable on system bootup (Optional)
     ```

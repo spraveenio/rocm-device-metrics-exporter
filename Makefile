@@ -8,6 +8,9 @@ GEN_DIR := $(TOP_DIR)/internal/amdgpu/
 MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
 GOINSECURE='github.com, google.golang.org, golang.org'
 GOFLAGS ='-buildvcs=false'
+BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
+GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
+VERSION ?=$(RELEASE)
 
 export ${GOROOT}
 export ${GOPATH}
@@ -86,6 +89,7 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+
 .PHONY: gopkglist
 gopkglist:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
@@ -96,11 +100,11 @@ gopkglist:
 
 amdexporter-lite:
 	@echo "building lite version of metrics exporter"
-	go build -C cmd/exporter -ldflags "-s -w" -o $(CURDIR)/bin/amd-metrics-exporter
+	go build -C cmd/exporter -ldflags "-s -w -X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" -o $(CURDIR)/bin/amd-metrics-exporter
 
 amdexporter:
 	@echo "building amd metrics exporter"
-	CGO_ENABLED=0 go build -C cmd/exporter -o $(CURDIR)/bin/amd-metrics-exporter
+	CGO_ENABLED=0 go build  -C cmd/exporter -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" -o $(CURDIR)/bin/amd-metrics-exporter
 
 metricutil:
 	@echo "building metrics util"
