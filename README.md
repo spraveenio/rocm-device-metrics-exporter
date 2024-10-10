@@ -104,12 +104,25 @@ Usage of bin/amd-metrics-exporter:
         GPU_UUID and SERIAL_NUMBER are always set and cannot be removed 
         array of optional label info can be specified in
         internal/amdgpu/proto/fields.proto:GPUMetricLabel
+### 6. Slurm integration
+Metrics exporter uses SPANK((Slurm Plug-in Architecture for Node and job (K)control)  plugin to collect job metrics
+- Configure SPANK config, plugstack.conf(default) on  worker nodes
+- Copy metrics exporter plugin files from /etc/metrics/slurm to slurm config (/etc/slurm)
+- Restart slurmd service
+- Include JOB_ID in exported labels (config.json)
 
-### 6. Run prometheus (Testing)
+metrics will be reported with slurm JOB_IDs, example
+```
+gpu_edge_temperature{CARD_MODEL="0xc34",DRIVER_VERSION="6.8.5",GPU_ID="0",GPU_UUID="0beb0a09-4200-4242-0e05-67bf583b4c72",JOB_ID="32",SERIAL_NUMBER="692251001124"} 32
+```
+
+
+
+### 7. Run prometheus (Testing)
    ```
 	docker run -p 9090:9090 -v ./example/prometheus.yml:/etc/prometheus/prometheus.yml -v prometheus-data:/prometheus prom/prometheus
    ```
-### 7. Install Grafana (Testing)
+### 8. Install Grafana (Testing)
 - installation
     ```
     https://grafana.com/docs/grafana/latest/setup-grafana/installation/debian/

@@ -115,7 +115,7 @@ metricutil:
 	CGO_ENABLED=0 go build -C cmd/metricutil -o $(CURDIR)/bin/metricutil
 
 .PHONY: docker
-docker: docker-compile
+docker: gen amdexporter
 	${MAKE} -C docker TOP_DIR=$(CURDIR) MOCK=$(MOCK)
 
 .PHONY: docker-mock
