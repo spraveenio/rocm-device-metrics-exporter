@@ -21,6 +21,8 @@ export ${GOINSECURE}
 
 ASSETS_PATH :=${TOP_DIR}/assets
 PKG_PATH := ${TOP_DIR}/pkg/usr/local/bin
+LUA_PROTO := ${TOP_DIR}/internal/amdgpu/proto/luaplugin.proto
+PKG_LUA_PATH := ${TOP_DIR}/pkg/usr/local/etc/metrics/slurm
 
 .PHONY: all
 all:
@@ -44,10 +46,12 @@ pkg: pkg-clean
 	gunzip -c ${ASSETS_PATH}/gpuagent_static.bin.gz > ${PKG_PATH}/gpuagent
 	chmod +x ${PKG_PATH}/gpuagent
 	cd ${PKG_PATH} && strip ${PKG_PATH}/gpuagent
+	cp -vf ${LUA_PROTO} ${PKG_LUA_PATH}/plugin.proto
 	cp -vf ${ASSETS_PATH}/gpuctl.gobin ${PKG_PATH}/
 	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
 	cd ${TOP_DIR}
 	dpkg-deb --build pkg ${TOP_DIR}/bin
+	rm -rf ${PKG_LUA_PATH}/plugin.proto
 
 .PHONY:clean
 clean: pkg-clean

@@ -85,6 +85,7 @@ Usage of bin/amd-metrics-exporter:
   - slurm lua plugin file for metrics job id integrations, this can be copied
     onto the slurm plugin directory to job labels on metrics.
     path : `/usr/local/etc/metrics/pensando.lua`
+    proto : `/usr/local/etc/metrics/plugin.proto`
 
 ### 4. Custom metrics config
 - To run the exporter with config mount the /etc/metrics/config.json on the
