@@ -394,7 +394,7 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Name: "gpu_hbm_temperature",
 			Help: "Current HBM temperature in celsius",
 		},
-			append(labels, "hbm_index")),
+			append([]string{"hbm_index"}, labels...)),
 		gpuGFXActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_gfx_activity",
 		},
@@ -412,11 +412,11 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Name: "gpu_vcn_activity",
 			Help: "usage of Video Core Next (VCN) activity as a percentage",
 		},
-			append(labels, "vcn_index")),
+			append([]string{"vcn_index"}, labels...)),
 		gpuJPEGActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_jpeg_activity",
 		},
-			append(labels, "jpeg_index")),
+			append([]string{"jpeg_index"}, labels...)),
 		gpuVoltage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_voltage",
 			Help: "Current voltage draw in mV",
@@ -476,7 +476,7 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Name: "gpu_clock",
 			Help: "current GPU clock frequency in MHz",
 		},
-			append(labels, []string{"clock_index", "clock_type"}...)),
+			append([]string{"clock_index", "clock_type"}, labels...)),
 		gpuPowerUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_power_usage",
 			Help: "power usage in Watts",
