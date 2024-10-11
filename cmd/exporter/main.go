@@ -175,8 +175,16 @@ func main() {
 	var (
 		metricsConfig = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
 		agentGrpcPort = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
+		versionOpt    = flag.Bool("version", false, "show version")
 	)
 	flag.Parse()
+
+	if *versionOpt {
+		fmt.Printf("Version : %v\n", Version)
+		fmt.Printf("BuildDate: %v\n", BuildDate)
+		fmt.Printf("GitCommit: %v\n", GitCommit)
+		os.Exit(0)
+	}
 
 	logger.Log.Printf("Version : %v", Version)
 	logger.Log.Printf("BuildDate: %v", BuildDate)
