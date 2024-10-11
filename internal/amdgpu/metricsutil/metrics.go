@@ -93,21 +93,8 @@ func (mh *MetricsHandler) UpdateMetrics() error {
 		wg.Add(1)
 		go func(client MetricsInterface) {
 			defer wg.Done()
-			client.UpdateMetricsStats()
-		}(client)
-	}
-	wg.Wait()
-	return nil
-}
-
-// ResetMetrics : send reset requet to all clients
-func (mh *MetricsHandler) ResetMetrics() error {
-	var wg sync.WaitGroup
-	for _, client := range mh.clients {
-		wg.Add(1)
-		go func(client MetricsInterface) {
-			defer wg.Done()
 			client.ResetMetrics()
+			client.UpdateMetricsStats()
 		}(client)
 	}
 	wg.Wait()

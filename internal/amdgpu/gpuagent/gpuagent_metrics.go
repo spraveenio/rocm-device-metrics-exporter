@@ -22,7 +22,6 @@ import (
 	"math"
 	"reflect"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pensando/device-metrics-exporter/internal/k8s"
@@ -775,6 +774,7 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 		logger.Log.Printf("resp status :%v", resp.ApiStatus)
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
+	/* disable multiple request to gpuagent, getting wrong responses
 	ga.Lock()
 	ga.cacheGpuids = make(map[string][]byte)
 	for _, gpu := range resp.Response {
@@ -782,13 +782,16 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 		ga.cacheGpuids[uuid.String()] = gpu.Spec.Id
 	}
 	ga.Unlock()
-
+	*/
 	ga.m.gpuNodesTotal.Set(float64(len(resp.Response)))
+	for _, gpu := range resp.Response {
+		ga.updateGPUInfoToMetrics(gpu)
+	}
 	return nil
 }
 
 func (ga *GPUAgentClient) UpdateMetricsStats() error {
-	return ga.getMetricsBulkReq()
+	return ga.getMetricsAll()
 }
 
 func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]string {
@@ -1031,18 +1034,4 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 		ga.m.gpuUsedGTT.With(labels).Set(normalizeUint64(vramUsage.UsedGTT))
 		ga.m.gpuFreeGTT.With(labels).Set(normalizeUint64(vramUsage.FreeGTT))
 	}
-}
-
-// parallel update for each gpu metrics. metrics package is atomic and all the
-// entries are unique
-func (ga *GPUAgentClient) updateGPUToMetrics(resp *amdgpu.GPUGetResponse) {
-	var wg sync.WaitGroup
-	for _, gpu := range resp.Response {
-		wg.Add(1)
-		go func(gpu *amdgpu.GPU) {
-			defer wg.Done()
-			ga.updateGPUInfoToMetrics(gpu)
-		}(gpu)
-	}
-	wg.Wait()
 }

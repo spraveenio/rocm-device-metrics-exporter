@@ -89,6 +89,25 @@ func NewAgent(ctx context.Context, mh *metricsutil.MetricsHandler) (*GPUAgentCli
 	return ga, nil
 }
 
+func (ga *GPUAgentClient) getMetricsAll() error {
+	// send the req to gpuclient
+	resp, err := ga.getMetrics()
+	if err != nil {
+		// crash to let service restart
+		logger.Log.Fatalf("err :%v", err)
+		return err
+	}
+	if resp != nil && resp.ApiStatus != 0 {
+		logger.Log.Printf("resp status :%v", resp.ApiStatus)
+		return fmt.Errorf("%v", resp.ApiStatus)
+	}
+	for _, gpu := range resp.Response {
+		ga.updateGPUInfoToMetrics(gpu)
+	}
+
+	return nil
+}
+
 func (ga *GPUAgentClient) getMetricsBulkReq() error {
 	// create multiple workers
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
