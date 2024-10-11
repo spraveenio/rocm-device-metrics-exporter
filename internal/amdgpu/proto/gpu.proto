@@ -220,6 +220,51 @@ message GPUPCIeStatus {
   uint64       Bandwidth = 8;
 }
 
+// VRAM memory type
+enum VRAMType {
+  VRAM_TYPE_NONE    = 0;
+  VRAM_TYPE_HBM     = 1;
+  VRAM_TYPE_HBM2    = 2;
+  VRAM_TYPE_HBM2E   = 3;
+  VRAM_TYPE_HBM3    = 4;
+  VRAM_TYPE_DDR2    = 5;
+  VRAM_TYPE_DDR3    = 6;
+  VRAM_TYPE_DDR4    = 7;
+  VRAM_TYPE_GDDR1   = 8;
+  VRAM_TYPE_GDDR2   = 9;
+  VRAM_TYPE_GDDR3   = 10;
+  VRAM_TYPE_GDDR4   = 11;
+  VRAM_TYPE_GDDR5   = 12;
+  VRAM_TYPE_GDDR6   = 13;
+  VRAM_TYPE_GDDR7   = 14;
+  VRAM_TYPE_UNKNOWN = 15;
+}
+
+// VRAM vendor
+enum VRAMVendor {
+  VRAM_VENDOR_NONE     = 0;
+  VRAM_VENDOR_SAMSUNG  = 1;
+  VRAM_VENDOR_INFINEON = 2;
+  VRAM_VENDOR_ELPIDA   = 3;
+  VRAM_VENDOR_ETRON    = 4;
+  VRAM_VENDOR_NANYA    = 5;
+  VRAM_VENDOR_HYNIX    = 6;
+  VRAM_VENDOR_MOSEL    = 7;
+  VRAM_VENDOR_WINBOND  = 8;
+  VRAM_VENDOR_ESMT     = 9;
+  VRAM_VENDOR_MICRON   = 10;
+  VRAM_VENDOR_UNKNOWN  = 11;
+}
+
+message GPUVRAMStatus {
+  // VRAM memory type
+  VRAMType   Type   = 1;
+  // VRAM vendor
+  VRAMVendor Vendor = 2;
+  // VRAM size (in MB)
+  uint64     Size   = 3;
+}
+
 // operational information of a physical GPU
 message GPUStatus {
   // assigned GPU index local to the compute node
@@ -256,8 +301,8 @@ message GPUStatus {
   GPURASStatus                  RASStatus         = 16;
   // XGMI error status
   GPUXGMIStatus                 XGMIErrorStatus   = 17;
-  // total VRAM memory of the GPU (in MB)
-  uint64                        TotalMemory       = 18;
+  // VRAM status
+  GPUVRAMStatus                 VRAMStatus        = 18;
   // PCIe status
   GPUPCIeStatus                 PCIeStatus        = 19;
 }
@@ -321,6 +366,28 @@ message GPUVoltage {
   uint64 GFXVoltage    = 2;
   // current memory voltage (in mV)
   uint64 MemoryVoltage = 3;
+}
+
+// VRAM usage
+message GPUVRAMUsage {
+  // total VRAM (in MB)
+  uint64 TotalVRAM        = 1;
+  // used VRAM (in MB)
+  uint64 UsedVRAM         = 2;
+  // free VRAM (in MB)
+  uint64 FreeVRAM         = 3;
+  // total visible VRAM (in MB)
+  uint64 TotalVisibleVRAM = 4;
+  // used visible VRAM (in MB)
+  uint64 UsedVisibleVRAM  = 5;
+  // free visible VRAM (in MB)
+  uint64 FreeVisibleVRAM  = 6;
+  // total Graphics Translation Table (GTT) (in MB)
+  uint64 TotalGTT         = 7;
+  // used GTT (in MB)
+  uint64 UsedGTT          = 8;
+  // free GTT (in MB)
+  uint64 FreeGTT          = 9;
 }
 
 // GPU statistics
@@ -431,6 +498,8 @@ message GPUStats {
   uint64                 XGMINeighbor5TxThroughput   = 51;
   // power usage (in Watts)
   uint64                 PowerUsage                  = 52;
+  // VRAM usage
+  GPUVRAMUsage           VRAMUsage                   = 53;
 }
 
 // GPU captures config, operational status and stat of GPU object

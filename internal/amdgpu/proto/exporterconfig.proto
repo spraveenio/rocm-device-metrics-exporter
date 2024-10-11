@@ -101,6 +101,14 @@ enum GPUMetricField {
     GPU_XGMI_NBR_3_TX_THRPUT    = 68;
     GPU_XGMI_NBR_4_TX_THRPUT    = 69;
     GPU_XGMI_NBR_5_TX_THRPUT    = 70;
+    GPU_USED_VRAM               = 71;
+    GPU_FREE_VRAM               = 72;
+    GPU_TOTAL_VISIBLE_VRAM      = 73;
+    GPU_USED_VISIBLE_VRAM       = 74;
+    GPU_FREE_VISIBLE_VRAM       = 75;
+    GPU_TOTAL_GTT               = 76;
+    GPU_USED_GTT                = 77;
+    GPU_FREE_GTT                = 78;
 }
 
 enum GPUMetricLabel {
