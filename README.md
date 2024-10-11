@@ -44,9 +44,22 @@ Usage of bin/amd-metrics-exporter:
        only
        - sample rdc.service is available in example/rdc.service
 
+  - Services run on following default ports. These can be changed by updating
+    the respective service file with the below option
+    gpuagent - 50061 : changing this port would require amd-metrics-exporter
+    to be configured with the port as these services are dependent
+        -p <grpc_port>
+
+    exporter http port is configurable through the config file ServerPort
+    filed in /etc/metrics/config.json : please refer to the example/export_configs.json
+    amd-metrics-exporter - 5000
+        -agent-grpc-port <grpc_port>
+    
+        
+
   - if running unsupported rocm then the behavior is undefined and some metric fields
     may not work as intended
-    update the LD_LIBRARY_PATH in '/lib/systemd/system/gpuagent.service' to
+    update the LD_LIBRARY_PATH in '/usr/local/etc/metrics/gpuagent.conf' to
     proper library location after installation and before starting the
     services
 

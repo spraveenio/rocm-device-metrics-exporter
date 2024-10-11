@@ -6,12 +6,13 @@ Before=amd-metrics-exporter.service
 [Service]
 User=root
 Group=root
+EnvironmentFile=/usr/local/etc/metrics/gpuagent.conf
 Restart=on-failure
 
 Type=simple
 
 # If we need to start anything before gpuagent, use this
-ExecStartPre=/bin/sleep 10 && LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib
+ExecStartPre=/bin/sleep 10
 
 # update-alternative has been run for gpuagent and
 # soft link will be available in usr/bin
