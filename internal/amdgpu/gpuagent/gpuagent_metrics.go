@@ -121,8 +121,17 @@ type metrics struct {
 	xgmiNbrTxTput4          prometheus.GaugeVec
 	xgmiNbrTxTput5          prometheus.GaugeVec
 
-	//static field values
-	gpuTotalMemory prometheus.GaugeVec
+	gpuTotalVram prometheus.GaugeVec
+	gpuUsedVram  prometheus.GaugeVec
+	gpuFreeVram  prometheus.GaugeVec
+
+	gpuTotalVisibleVram prometheus.GaugeVec
+	gpuUsedVisibleVram  prometheus.GaugeVec
+	gpuFreeVisibleVram  prometheus.GaugeVec
+
+	gpuTotalGTT prometheus.GaugeVec
+	gpuUsedGTT  prometheus.GaugeVec
+	gpuFreeGTT  prometheus.GaugeVec
 }
 
 func (ga *GPUAgentClient) ResetMetrics() error {
@@ -152,7 +161,15 @@ func (ga *GPUAgentClient) ResetMetrics() error {
 	ga.m.gpuPCIeNACKReceivedCount.Reset()
 	ga.m.gpuClock.Reset()
 	ga.m.gpuPowerUsage.Reset()
-	ga.m.gpuTotalMemory.Reset()
+	ga.m.gpuTotalVram.Reset()
+	ga.m.gpuUsedVram.Reset()
+	ga.m.gpuFreeVram.Reset()
+	ga.m.gpuTotalVisibleVram.Reset()
+	ga.m.gpuUsedVisibleVram.Reset()
+	ga.m.gpuFreeVisibleVram.Reset()
+	ga.m.gpuTotalGTT.Reset()
+	ga.m.gpuUsedGTT.Reset()
+	ga.m.gpuFreeGTT.Reset()
 	ga.m.gpuEccCorrectTotal.Reset()
 	ga.m.gpuEccUncorrectTotal.Reset()
 	ga.m.gpuEccCorrectSDMA.Reset()
@@ -307,7 +324,7 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		ga.m.gpuPCIeNACKReceivedCount,
 		ga.m.gpuClock,
 		ga.m.gpuPowerUsage,
-		ga.m.gpuTotalMemory,
+		ga.m.gpuTotalVram,
 		ga.m.gpuEccCorrectTotal,
 		ga.m.gpuEccUncorrectTotal,
 		ga.m.gpuEccCorrectSDMA,
@@ -352,6 +369,14 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		ga.m.xgmiNbrTxTput3,
 		ga.m.xgmiNbrTxTput4,
 		ga.m.xgmiNbrTxTput5,
+		ga.m.gpuUsedVram,
+		ga.m.gpuFreeVram,
+		ga.m.gpuTotalVisibleVram,
+		ga.m.gpuUsedVisibleVram,
+		ga.m.gpuFreeVisibleVram,
+		ga.m.gpuTotalGTT,
+		ga.m.gpuUsedGTT,
+		ga.m.gpuFreeGTT,
 	}
 
 }
@@ -362,7 +387,7 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 		gpuNodesTotal: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "gpu_nodes_total",
-				Help: "Number of nodes with GPUs",
+				Help: "Number of GPUs in the node",
 			},
 		),
 		gpuPackagePower: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -482,9 +507,49 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Help: "power usage in Watts",
 		},
 			labels),
-		gpuTotalMemory: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_total_memory",
-			Help: "total VRAM memory of the GPU (in MB)",
+		gpuTotalVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_total_vram",
+			Help: "total VRAM of the GPU (in MB)",
+		},
+			labels),
+		gpuUsedVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_used_vram",
+			Help: "used VRAM of the GPU (in MB)",
+		},
+			labels),
+		gpuFreeVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_free_vram",
+			Help: "free VRAM memory of the GPU (in MB)",
+		},
+			labels),
+		gpuTotalVisibleVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_total_visible_vram",
+			Help: "total visible VRAM of the GPU (in MB)",
+		},
+			labels),
+		gpuUsedVisibleVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_used_visible_vram",
+			Help: "used visible VRAM of the GPU (in MB)",
+		},
+			labels),
+		gpuFreeVisibleVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_free_visible_vram",
+			Help: "free visible VRAM of the GPU (in MB)",
+		},
+			labels),
+		gpuTotalGTT: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_total_gtt",
+			Help: "total graphics translation table of the GPU (in MB)",
+		},
+			labels),
+		gpuUsedGTT: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_used_gtt",
+			Help: "used graphics translation table of the GPU (in MB)",
+		},
+			labels),
+		gpuFreeGTT: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_free_gtt",
+			Help: "total graphics translation table of the GPU (in MB)",
 		},
 			labels),
 		gpuEccCorrectTotal: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -719,15 +784,6 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	ga.Unlock()
 
 	ga.m.gpuNodesTotal.Set(float64(len(resp.Response)))
-	for _, gpu := range resp.Response {
-		if !ga.exporterEnabledGPU(getGPUInstanceID(gpu)) {
-			continue
-		}
-		status := gpu.Status
-		labels := ga.populateLabelsFromGPU(gpu)
-
-		ga.m.gpuTotalMemory.With(labels).Set(float64(status.TotalMemory))
-	}
 	return nil
 }
 
@@ -960,6 +1016,21 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 	ga.m.xgmiNbrTxTput3.With(labels).Set(normalizeUint64(stats.XGMINeighbor3TxThroughput))
 	ga.m.xgmiNbrTxTput4.With(labels).Set(normalizeUint64(stats.XGMINeighbor4TxThroughput))
 	ga.m.xgmiNbrTxTput5.With(labels).Set(normalizeUint64(stats.XGMINeighbor5TxThroughput))
+
+	vramUsage := stats.VRAMUsage
+	if vramUsage != nil {
+		ga.m.gpuTotalVram.With(labels).Set(normalizeUint64(vramUsage.TotalVRAM))
+		ga.m.gpuUsedVram.With(labels).Set(normalizeUint64(vramUsage.UsedVRAM))
+		ga.m.gpuFreeVram.With(labels).Set(normalizeUint64(vramUsage.FreeVRAM))
+
+		ga.m.gpuTotalVisibleVram.With(labels).Set(normalizeUint64(vramUsage.TotalVisibleVRAM))
+		ga.m.gpuUsedVisibleVram.With(labels).Set(normalizeUint64(vramUsage.UsedVisibleVRAM))
+		ga.m.gpuFreeVisibleVram.With(labels).Set(normalizeUint64(vramUsage.FreeVisibleVRAM))
+
+		ga.m.gpuTotalGTT.With(labels).Set(normalizeUint64(vramUsage.TotalGTT))
+		ga.m.gpuUsedGTT.With(labels).Set(normalizeUint64(vramUsage.UsedGTT))
+		ga.m.gpuFreeGTT.With(labels).Set(normalizeUint64(vramUsage.FreeGTT))
+	}
 }
 
 // parallel update for each gpu metrics. metrics package is atomic and all the
