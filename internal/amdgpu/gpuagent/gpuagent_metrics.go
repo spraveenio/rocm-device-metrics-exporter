@@ -914,9 +914,9 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 	// gpu usage
 	gpuUsage := stats.Usage
 	if gpuUsage != nil {
-		ga.m.gpuGFXActivity.With(labels).Set(normalizeUint64(gpuUsage.GFXActivity))
-		ga.m.gpuUMCActivity.With(labels).Set(normalizeUint64(gpuUsage.UMCActivity))
-		ga.m.gpuMMAActivity.With(labels).Set(normalizeUint64(gpuUsage.MMActivity))
+		ga.m.gpuGFXActivity.With(labels).Set(float64(gpuUsage.GFXActivity))
+		ga.m.gpuUMCActivity.With(labels).Set(float64(gpuUsage.UMCActivity))
+		ga.m.gpuMMAActivity.With(labels).Set(float64(gpuUsage.MMActivity))
 		for j, act := range gpuUsage.VCNActivity {
 			labelsWithIndex["vcn_index"] = fmt.Sprintf("%v", j)
 			ga.m.gpuVCNActivity.With(labelsWithIndex).Set(normalizeUint64(act))
