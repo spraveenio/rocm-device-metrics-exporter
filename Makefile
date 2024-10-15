@@ -201,6 +201,10 @@ pkg-clean:
 
 pkg: pkg-clean
 	${MAKE} gen amdexporter-lite
+	#copy precompiled libs
+	mkdir -p ${PKG_LIB_PATH}
+	cp -rvf ${GPUAGENT_LIBS}/ ${PKG_LIB_PATH}
+	cp -rvf ${THIRDPARTY_LIBS}/ ${PKG_LIB_PATH}
 	#copy and strip files
 	mkdir -p ${PKG_PATH}
 	gunzip -c ${ASSETS_PATH}/gpuagent_static.bin.gz > ${PKG_PATH}/gpuagent
@@ -211,6 +215,8 @@ pkg: pkg-clean
 	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
 	cd ${TOP_DIR}
 	dpkg-deb --build pkg ${TOP_DIR}/bin
+	#remove copied files
+	rm -rf ${PKG_LIB_PATH}
 	rm -rf ${PKG_LUA_PATH}/plugin.proto
 
 .PHONY:clean
