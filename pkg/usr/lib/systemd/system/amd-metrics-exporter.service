@@ -1,5 +1,6 @@
 # Add any non-service units required by gpuagent here
 Requires=gpuagent.service
+Wants=gpuagent.service
 After=gpuagent.service
 
 [Service]
