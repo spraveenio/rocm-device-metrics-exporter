@@ -79,6 +79,7 @@ else
     gunzip -c $TOP_DIR/assets/gpuagent_static.bin.gz > $TOP_DIR/docker/gpuagent
 fi
 chmod +x $TOP_DIR/docker/gpuagent
+cp -r $TOP_DIR/assets/amd_smi_lib/x86_64/lib $TOP_DIR/docker/smilib
 ln -f $TOP_DIR/assets/gpuctl.gobin $TOP_DIR/docker/gpuctl
 ln -f $TOP_DIR/bin/amd-metrics-exporter $TOP_DIR/docker/amd-metrics-exporter
 
@@ -117,6 +118,6 @@ if [ "$SAVE_IMAGE" == 1 ]; then
 fi
 
 # remove the symlinks we created for the docker image
-rm -rf gpuagent gpuctl amd-metrics-exporter
+rm -rf gpuagent gpuctl amd-metrics-exporter smilib
 
 exit 0
