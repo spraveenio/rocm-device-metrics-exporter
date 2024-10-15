@@ -21,7 +21,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
   python3-pip \
   libcap-dev \
   rdc \
-  rocm-dev \
+  libdrm-amdgpu1 \
   vim \
   net-tools && \
   apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -29,10 +29,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/amd/bin/
 RUN mkdir -p /home/amd/bin/
 RUN mkdir -p /home/amd/lib/
+ADD ./smilib/ /home/amd/lib/
 RUN mkdir -p /home/amd/tools/
 ADD ./gpuagent /home/amd/bin/gpuagent
 ADD ./gpuctl /home/amd/bin/gpuctl
-RUN ln -sf /opt/rocm-6.2.0/lib/librocm_smi64.so.7 /opt/rocm-6.2.0/lib/librocm_smi64.so.2
 ADD ./amd-metrics-exporter /home/amd/bin/server
 ADD ./entrypoint.sh /home/amd/tools/entrypoint.sh
 RUN chmod +x /home/amd/tools/entrypoint.sh

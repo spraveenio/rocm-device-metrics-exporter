@@ -24,9 +24,9 @@ LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib:/opt/rocm-6.2.0/lib/rdc /opt/rocm-6.2.0/bin/
 # sleep before starting gpuagent
 sleep 10
 # start gpuagent process in the background
-LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib /home/amd/bin/gpuagent  &
+LD_LIBRARY_PATH=/home/amd/lib/ /home/amd/bin/gpuagent  &
 
 # sleep before starting promethesu server
 sleep 10
 # start prometheus server
-LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib /home/amd/bin/server
+/home/amd/bin/server
