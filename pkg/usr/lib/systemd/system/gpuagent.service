@@ -1,5 +1,6 @@
 # Add any non-service units required by gpuagent here
 Requires=rdc.service
+Wants=rdc.service
 After=rdc.service
 Before=amd-metrics-exporter.service
 
