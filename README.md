@@ -46,15 +46,19 @@ Usage of bin/amd-metrics-exporter:
 
   - Services run on following default ports. These can be changed by updating
     the respective service file with the below option
-    gpuagent - 50061 : changing this port would require amd-metrics-exporter
+    
+    gpuagent - default port 50061 : changing this port would require amd-metrics-exporter
     to be configured with the port as these services are dependent
-        -p <grpc_port>
+    ```
+    gpuagent -p <grpc_port>
+    ```
 
     exporter http port is configurable through the config file ServerPort
     filed in /etc/metrics/config.json : please refer to the example/export_configs.json
-    amd-metrics-exporter - 5000
+    ```
+    amd-metrics-exporter - defualt port 5000
         -agent-grpc-port <grpc_port>
-    
+    ```
         
 
   - if running unsupported rocm then the behavior is undefined and some metric fields
@@ -106,7 +110,7 @@ Usage of bin/amd-metrics-exporter:
 	- create your config in config.json
 	- start docker container
    ```
-  	#docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 -v ./config.json:/etc/metrics/config.json --name exporter registry.test.pensando.io:5000/device-metrics-exporter/rocm-metrics-exporter:v1 bash
+  	#docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 -v ./config.json:/etc/metrics/config.json --name exporter registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest bash
    ```
 ### 5. Metrics Config formats
 - a json file with the following keys are expected
