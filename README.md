@@ -65,7 +65,9 @@ Usage of bin/amd-metrics-exporter:
     may not work as intended
     update the LD_LIBRARY_PATH in '/usr/local/etc/metrics/gpuagent.conf' to
     proper library location after installation and before starting the
-    services
+    services. the following libraries must be installed onto the new Library
+    path or the system with below command
+        `apt-get install -y libdrm libdrm-amdgpu1`
 
   - installation package
    `$ dpkg -i amdgpu-exporter_0.1_amd64.deb`

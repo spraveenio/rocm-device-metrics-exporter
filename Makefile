@@ -20,7 +20,10 @@ export ${GOFLAGS}
 export ${GOINSECURE}
 
 ASSETS_PATH :=${TOP_DIR}/assets
+GPUAGENT_LIBS := ${ASSETS_PATH}/amd_smi_lib/x86_64/lib
+THIRDPARTY_LIBS := ${ASSETS_PATH}/thirdparty/x86_64-linux-gnu/lib
 PKG_PATH := ${TOP_DIR}/pkg/usr/local/bin
+PKG_LIB_PATH := ${TOP_DIR}/pkg/usr/local/metrics/
 LUA_PROTO := ${TOP_DIR}/internal/amdgpu/proto/luaplugin.proto
 PKG_LUA_PATH := ${TOP_DIR}/pkg/usr/local/etc/metrics/slurm
 
@@ -41,6 +44,10 @@ pkg-clean:
 
 pkg: pkg-clean
 	${MAKE} gen amdexporter-lite
+	#copy precompiled libs
+	mkdir -p ${PKG_LIB_PATH}
+	cp -rvf ${GPUAGENT_LIBS}/ ${PKG_LIB_PATH}
+	cp -rvf ${THIRDPARTY_LIBS}/ ${PKG_LIB_PATH}
 	#copy and strip files
 	mkdir -p ${PKG_PATH}
 	gunzip -c ${ASSETS_PATH}/gpuagent_static.bin.gz > ${PKG_PATH}/gpuagent
@@ -51,6 +58,8 @@ pkg: pkg-clean
 	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
 	cd ${TOP_DIR}
 	dpkg-deb --build pkg ${TOP_DIR}/bin
+	#remove copied files
+	rm -rf ${PKG_LIB_PATH}
 	rm -rf ${PKG_LUA_PATH}/plugin.proto
 
 .PHONY:clean

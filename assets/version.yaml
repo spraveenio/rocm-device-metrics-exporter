@@ -14,3 +14,7 @@ assets:
   - name    : amd_smi_lib
     version : 1.102.0-2
     branch  : master
+
+  - name    :  thirdparty
+    version : jammy
+    branch  : ubuntu 22.04 
