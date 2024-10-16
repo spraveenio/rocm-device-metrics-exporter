@@ -1,7 +1,6 @@
 # device-metrics-exporter
 Device Metrics Exporter exports metrics from AMD GPUs to collectors like Prometheus.
 
-#help
 ```
 Usage of bin/amd-metrics-exporter:
   -agent-grpc-port int
@@ -9,6 +8,10 @@ Usage of bin/amd-metrics-exporter:
   -amd-metrics-config string
       AMD metrics exporter config file (default "/etc/metrics/config.json")
 ```
+## Supported Platforms
+  - Ubuntu 22.04
+## RDC version
+  - ROCM 6.2
 
 ## Build and Run Instructions
 
@@ -16,66 +19,72 @@ Usage of bin/amd-metrics-exporter:
 
 -  Run the following make target in the TOP directory. This will also generate the required protos to build the amdexporter application
    	binary.
-   		`make all`
+   	```
+    cd $TOPDIR
+    make all
+    ```
    	
 
 ### 2. Build exporter container
 -  Run the following make target in the TOP directory:
-   
-   	`make docker`
+   	```
+    cd $TOPDIR
+    make docker
+    ```
 ### 3. Run exporter
   - docker environment
     - To run the exporter container after building the container in $TOPDIR/docker, run:
       
     ```
-    cd $TOPDIR
-    ./docker/start_exporter.sh -d docker/exporter-docker-v1.tgz
+    cd $TOPDIR/docker/obj
+    tar xzf exporter-release-v1.tgz
+    ./start_exporter.sh -d docker/exporter-docker-v1.tgz
     ```
       
     - To run the exporter from docker registery
     ```
     docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter 		registry.test.pensando.io:5000/device-metrics-exporter/rocm-metrics-exporter:v1 bash
     ```
- - ubuntu linux debian package
-   - Supported ROCM versions : 6.2.0 and up
-   - prerequistes
-     - dkms installated on the system
-     - rdc service is expected to be up and running with supported versions
+   - ubuntu linux debian package
+     - Supported ROCM versions : 6.2.0 and up
+     - prerequistes
+       - dkms installated on the system
+       - rdc service is expected to be up and running with supported versions
        only
-       - sample rdc.service is available in example/rdc.service
-
-  - Services run on following default ports. These can be changed by updating
+         - sample rdc.service is available in **example/rdc.service**
+      - Services run on following default ports. These can be changed by updating
     the respective service file with the below option
     
-    gpuagent - default port 50061 : changing this port would require amd-metrics-exporter
-    to be configured with the port as these services are dependent
-    ```
-    gpuagent -p <grpc_port>
-    ```
+        - gpuagent - default port 50061 : changing this port would require amd-metrics-exporter to be configured with the port as these services are dependent
+    
+        `gpuagent -p <grpc_port>`
 
-    exporter http port is configurable through the config file ServerPort
-    filed in /etc/metrics/config.json : please refer to the example/export_configs.json
-    ```
-    amd-metrics-exporter - defualt port 5000
-        -agent-grpc-port <grpc_port>
-    ```
+        - exporter http port is configurable through the config file **ServerPort** filed in /etc/metrics/config.json : please refer to the example/export_configs.json
+          ```
+          amd-metrics-exporter - defualt port 5000
+               -agent-grpc-port <grpc_port>
+           ```
         
 
-  - if running unsupported rocm then the behavior is undefined and some metric fields
-    may not work as intended
-    update the LD_LIBRARY_PATH in '/usr/local/etc/metrics/gpuagent.conf' to
+  - if running unsupported rocm then the behavior is undefined and some metric fields may not work as intended update the **LD_LIBRARY_PATH** in _/usr/local/etc/metrics/gpuagent.conf_ to
     proper library location after installation and before starting the
-    services. the following libraries must be installed onto the new Library
+    services. 
+    -   the following libraries must be installed onto the new Library
     path or the system with below command
+
         `apt-get install -y libdrm libdrm-amdgpu1`
 
-  - installation package
-   `$ dpkg -i amdgpu-exporter_0.1_amd64.deb`
+  -  package installation
+    ```
+    $ dpkg -i amdgpu-exporter_0.1_amd64.deb
+    ```
 
-  - default config file path /etc/metrics/config.json
-  - to change to a custom file, update
-    /lib/systemd/system/amd-metrics-exporter.service
-    ExecStart=/usr/local/bin/amd-metrics-exporter -f <custom_config_path>
+  - default config file path _/etc/metrics/config.json_
+ 
+  - to change to a custom conifg file, update
+    _/lib/systemd/system/amd-metrics-exporter.service_
+
+    **ExecStart=/usr/local/bin/amd-metrics-exporter -f <custom_config_path>**
 
 
   - enable on system bootup (Optional)
@@ -115,14 +124,14 @@ Usage of bin/amd-metrics-exporter:
   	#docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 -v ./config.json:/etc/metrics/config.json --name exporter registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest bash
    ```
 ### 5. Metrics Config formats
-- a json file with the following keys are expected
-    - Field
+- Json file with the following keys are expected
+    - Fields
         array of string specifying what field to be exported
-        present in internal/amdgpu/proto/fields.proto:GPUMetricField
-    - Label
-        GPU_UUID and SERIAL_NUMBER are always set and cannot be removed 
-        array of optional label info can be specified in
-        internal/amdgpu/proto/fields.proto:GPUMetricLabel
+        present in [_internal/amdgpu/proto/fields.proto_:**GPUMetricField**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L32)
+    - Labels
+        CARD_MODEL, GPU_UUID and SERIAL_NUMBER are always set and cannot be removed. Labels supported are available in
+        [_internal/amdgpu/proto/fields.proto_**:GPUMetricLabel**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L114)
+
 ### 6. Slurm integration
 Metrics exporter uses SPANK((Slurm Plug-in Architecture for Node and job (K)control)  plugin to collect job metrics
 - Configure SPANK config, plugstack.conf(default) on  worker nodes
@@ -159,3 +168,50 @@ gpu_edge_temperature{CARD_MODEL="0xc34",DRIVER_VERSION="6.8.5",GPU_ID="0",GPU_UU
     sudo systemctl start grafana-server
     sudo systemctl status grafana-server
     ```
+
+### 9. Debian Complete Installation : Ubuntu 22.04
+  - Installation prerequisites
+    - DKMS Installation and Setup
+        [DKMS detailed
+        installation](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/amdgpu-install.html)
+        ```
+        wget https://repo.radeon.com/amdgpu-install/6.2/ubuntu/jammy/amdgpu-install_6.2.60200-1_all.deb
+ 		apt install ./amdgpu-install_6.2.60200-1_all.deb
+ 		apt --fix-broken install
+        apt install ./amdgpu-install_6.2.60200-1_all.deb
+        amdgpu-install --usecase=dkms
+		modprobe amdgpu
+        ```
+    - RDC Installation and Setup
+        - Installation
+		[RDC detailed installation](https://rocm.docs.amd.com/projects/rdc/en/latest/install/install.html)
+
+	    ```
+	    apt-get install rdc
+	    ```
+
+	    - default behavior for rdc.service is setup to run with **rdc** user and
+	    **rdc** group. the user need to be changed to applicable user. the
+	    installed location is _/lib/systemd/system/rdc.service_. 
+
+	    update the binary **PATH** variable as per [RDC post
+	    install](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/post-install.html)
+
+	    ```
+	    export PATH=$PATH:/opt/rocm-6.2.0/bin
+	    ```
+
+	  - start the RDC service
+	    ``` 
+	    systemctl enable rdc.service
+	    systemctl start rdc.service
+	    ```
+    - AMD Metrics Exporter Installation and Setup 
+        ```
+        dpkg -i amdgpu-exporter_0.1_amd64.deb
+
+        systemctl enable gpuagent.service
+        systemctl enable amd-metrics-exporter.service
+        systemctl start gpuagent.service
+        systemctl start amd-metrics-exporter.service
+        ```
