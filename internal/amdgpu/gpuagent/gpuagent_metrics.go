@@ -454,7 +454,7 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			labels),
 		gpuMemVoltage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_memory_voltage",
-			Help: "current PCIe speed in GT/s",
+			Help: "current memory voltage in mV",
 		},
 			labels),
 		gpuPCIeSpeed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -464,12 +464,12 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			labels),
 		gpuPCIeMaxSpeed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_max_speed",
-			Help: "estimated maximum PCIe bandwidth over the last second in MB/s",
+			Help: "estimated maximum PCIe bandwidth over the last second in GT/s",
 		},
 			labels),
 		gpuPCIeBandwidth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_bandwidth",
-			Help: "current PCIe bandwidth in MB/s",
+			Help: "current PCIe bandwidth in Mb/s",
 		},
 			labels),
 		gpuEnergyConsumed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
