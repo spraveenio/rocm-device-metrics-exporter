@@ -40,6 +40,7 @@ var (
 	mandatoryLables = []string{
 		gpumetrics.GPUMetricLabel_GPU_UUID.String(),
 		gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String(),
+		gpumetrics.GPUMetricLabel_CARD_MODEL.String(),
 	}
 	exportLables    map[string]bool
 	exportFieldMap  map[string]bool
@@ -222,7 +223,7 @@ func (ga *GPUAgentClient) GetExportLabels() []string {
 		if !enabled {
 			continue
 		}
-		labelList = append(labelList, key)
+		labelList = append(labelList, strings.ToLower(key))
 	}
 	return labelList
 }
@@ -820,11 +821,12 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]stri
 
 	labels := make(map[string]string)
 
-	for key, enabled := range exportLables {
+	for ckey, enabled := range exportLables {
 		if !enabled {
 			continue
 		}
-		switch key {
+        key := strings.ToLower(ckey)
+		switch ckey {
 		case gpumetrics.GPUMetricLabel_GPU_UUID.String():
 			uuid, _ := uuid.FromBytes(gpu.Spec.Id)
 			labels[key] = uuid.String()

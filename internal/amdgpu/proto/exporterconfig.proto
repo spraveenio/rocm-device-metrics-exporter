@@ -122,6 +122,7 @@ enum GPUMetricLabel {
     CONTAINER       = 5;
     JOB_ID          = 6;
     CARD_SERIES     = 7;
+    // mandator CARD_MODEL cannot be disabled
     CARD_MODEL      = 8;
     CARD_VENDOR     = 9;
     DRIVER_VERSION  = 10;
