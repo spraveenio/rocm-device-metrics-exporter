@@ -43,12 +43,6 @@
     },
     {
       "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": ""
-    },
-    {
-      "type": "panel",
       "id": "timeseries",
       "name": "Time series",
       "version": ""
@@ -82,19 +76,12 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Number of GPUs in the node",
+      "description": "Number of nodes with GPUs",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Go to GPU Dashboard",
-              "url": "/d/ae0aj8euc43r4b/gpu"
-            }
-          ],
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -102,6 +89,10 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
           }
@@ -110,7 +101,7 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 2,
+        "w": 3,
         "x": 0,
         "y": 0
       },
@@ -146,106 +137,13 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
-          "legendFormat": "GPUs",
+          "legendFormat": "GPU nodes",
           "range": false,
           "refId": "A",
           "useBackend": false
         }
       ],
-      "title": "GPUs",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Number of jobs",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Go to Job Dashboard",
-              "url": "/d/ce1x81pyv3dvkb/job"
-            }
-          ],
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 2,
-        "x": 2,
-        "y": 0
-      },
-      "id": 22,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.2.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "exemplar": false,
-          "expr": "sum(group by(job_id) (gpu_gfx_activity{job_id!=\"\"}))",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "Jobs",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "builder",
-          "exemplar": false,
-          "expr": "sum(group by(pod) (gpu_gfx_activity{pod!=\"\"}))",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "Pods",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Jobs",
+      "title": "GPU Nodes",
       "type": "stat"
     },
     {
@@ -266,6 +164,10 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
           },
@@ -275,8 +177,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
+        "w": 5,
+        "x": 3,
         "y": 0
       },
       "id": 2,
@@ -307,42 +209,14 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "sum(gpu_average_package_power)",
+          "expr": "sum(gpu_power_usage)",
           "fullMetaSearch": false,
-          "hide": true,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Average Package Power (W)",
+          "legendFormat": "Power Usage (W)",
           "range": true,
           "refId": "A",
           "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "sum(gpu_package_power)",
-          "fullMetaSearch": false,
-          "hide": true,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "Current Package Power (W)",
-          "range": true,
-          "refId": "B",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "__expr__",
-            "uid": "${DS_EXPRESSION}"
-          },
-          "expression": "$A+$B",
-          "hide": false,
-          "refId": "Total Package Power Usage",
-          "type": "math"
         }
       ],
       "title": "Total Power Usage",
@@ -353,7 +227,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Current maximum PCIe speed",
+      "description": "Estimated maximum PCIe bandwidth over the last second, in MB/s",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -580,21 +454,13 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Top 5 current GPU GFX Activity, labeled with hostname, GPU ID, and job ID.",
+      "description": "Top 5 current GPU GFX Activity",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Go to GPU dashboard",
-              "url": "/d/ae0aj8euc43r4b/gpu?var-g_gpu_uuid=${__field.labels.gpu_uuid}&var-g_hostname=${__field.labels.hostname}&var-g_gpu_id=${__field.labels.gpu_id}"
-            }
-          ],
           "mappings": [],
-          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -651,7 +517,7 @@
           "includeNullMetadata": true,
           "instant": true,
           "interval": "",
-          "legendFormat": "{{hostname}} | {{gpu_id}} | {{job_id}}",
+          "legendFormat": "{{GPU_UUID}}",
           "range": false,
           "refId": "A",
           "useBackend": false
@@ -665,7 +531,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Top 5 GPUs with highest VRAM used, labeled with hostname and GPU ID.",
+      "description": "Top 5 GPUs with highest VRAM used",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -726,9 +592,9 @@
           "expr": "topk(5, gpu_used_vram)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": true,
-          "legendFormat": "{{hostname}} | {{gpu_id}}",
-          "range": false,
+          "instant": false,
+          "legendFormat": "{{GPU_UUID}}",
+          "range": true,
           "refId": "A",
           "useBackend": false
         }
@@ -805,7 +671,7 @@
           "useBackend": false
         }
       ],
-      "title": "Current Total PCIe Bandwidth",
+      "title": "Total PCIe Bandwidth",
       "type": "stat"
     },
     {
@@ -839,8 +705,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
+        "w": 5,
+        "x": 3,
         "y": 4
       },
       "id": 24,
@@ -915,19 +781,12 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "\\# of GPUs allocated by jobs",
+      "description": "Number of jobs",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Go to GPU Dashboard",
-              "url": "/d/ae0aj8euc43r4b/gpu"
-            }
-          ],
           "mappings": [],
           "noValue": "0",
           "thresholds": {
@@ -936,6 +795,10 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
           }
@@ -944,16 +807,16 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 6
       },
-      "id": 34,
+      "id": 22,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "orientation": "vertical",
+        "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
@@ -963,9 +826,6 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {
-          "titleSize": 13
-        },
         "textMode": "auto",
         "wideLayout": true
       },
@@ -976,44 +836,20 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "sum(group by(gpu_uuid) (gpu_gfx_activity{job_id!=\"\"}))",
+          "expr": "sum(group by(job_id) (gpu_nodes_total{job_id!=\"\"}))",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
           "instant": true,
-          "legendFormat": "Allocated by Jobs",
+          "legendFormat": "Jobs",
           "range": false,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "builder",
-          "exemplar": false,
-          "expr": "sum(group by(gpu_uuid) (gpu_gfx_activity{pod!=\"\"}))",
-          "hide": false,
-          "instant": true,
-          "legendFormat": "Allocated by Pods",
-          "range": false,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "sum(group by(gpu_uuid) (gpu_gfx_activity > 0))",
-          "hide": false,
-          "instant": true,
-          "legendFormat": "Busy GPUs",
-          "range": false,
-          "refId": "C"
+          "refId": "A",
+          "useBackend": false
         }
       ],
-      "title": "Allocated GPUs",
+      "title": "Jobs",
       "type": "stat"
     },
     {
@@ -1021,7 +857,6 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total PCIe Bandwidth over time",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1150,8 +985,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
+        "w": 5,
+        "x": 3,
         "y": 8
       },
       "id": 8,
@@ -1352,7 +1187,7 @@
               "mode": "off"
             }
           },
-          "displayName": "Used VRAM",
+          "displayName": "Used VRAM %",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1531,7 +1366,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "avg(gpu_package_power{card_model=~\"102-G30211-00|102-G30211-0C|102-G30211-4C|102-G30212-0C|102-G30213-00|102-G30213-0C\"})",
+          "expr": "avg(gpu_package_power)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -1539,19 +1374,6 @@
           "range": true,
           "refId": "A",
           "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "builder",
-          "expr": "avg(gpu_average_package_power{card_model!~\"102-G30211-00|102-G30211-0C|102-G30211-4C|102-G30212-0C|102-G30213-00|102-G30213-0C\"})",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "GPU Power",
-          "range": true,
-          "refId": "B"
         }
       ],
       "title": "Average GPU Power",
@@ -1562,7 +1384,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Current temperature, in Celsius",
+      "description": "Current edge temperature, in Celsius",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1601,7 +1423,6 @@
               "mode": "off"
             }
           },
-          "displayName": "GPU Temperature",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1648,41 +1469,17 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "avg(gpu_edge_temperature{card_model!~\"102-G30211-00|102-G30211-0C|102-G30211-4C|102-G30212-0C|102-G30213-00|102-G30213-0C\"})",
+          "expr": "avg(gpu_edge_temperature)",
           "fullMetaSearch": false,
-          "hide": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Edge Temperature",
+          "legendFormat": "GPU Temperature",
           "range": true,
           "refId": "A",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "avg(gpu_junction_temperature{card_model=~\"102-G30211-00|102-G30211-0C|102-G30211-4C|102-G30212-0C|102-G30213-00|102-G30213-0C\"})",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "Junction Temperature",
-          "range": true,
-          "refId": "B",
           "useBackend": false
         }
       ],
       "title": "Average GPU Temperature",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        }
-      ],
       "type": "timeseries"
     },
     {
@@ -1924,196 +1721,6 @@
       ],
       "title": "Average Sensor Temperatures",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "List of all GPUs. Click on the row to go to that GPU's dashboard (opens new tab).",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": true,
-            "inspect": false
-          },
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Go to GPU Dashboard",
-              "url": "/d/ae0aj8euc43r4b/gpu?var-g_gpu_uuid=${__data.fields[\"gpu_uuid\"]}&var-g_hostname=${__data.fields.HOSTNAME}&var-g_gpu_id=${__data.fields[\"GPU ID\"]}"
-            }
-          ],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "GPU ID"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 100
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "GPU UUID"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 320
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 24
-      },
-      "id": 33,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": true,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": false,
-            "displayName": "HOSTNAME"
-          },
-          {
-            "desc": false,
-            "displayName": "GPU ID"
-          }
-        ]
-      },
-      "pluginVersion": "11.2.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "gpu_gfx_activity",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "All GPUs",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "labelsToFields": true,
-            "reducers": [
-              "last"
-            ]
-          }
-        },
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "GPU UUID": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "gpu_id": {
-                "aggregations": [
-                  "last"
-                ],
-                "operation": "aggregate"
-              },
-              "gpu_uuid": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "hostname": {
-                "aggregations": [
-                  "last"
-                ],
-                "operation": "aggregate"
-              }
-            }
-          }
-        },
-        {
-          "disabled": true,
-          "id": "filterFieldsByName",
-          "options": {
-            "byVariable": false,
-            "include": {
-              "names": [
-                "gpu_uuid",
-                "gpu_id (last)",
-                "hostname (last)"
-              ]
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "gpu_uuid": false,
-              "pod": false
-            },
-            "includeByName": {},
-            "indexByName": {
-              "gpu_id (last)": 1,
-              "gpu_uuid": 2,
-              "hostname (last)": 0
-            },
-            "renameByName": {
-              "gpu_id": "GPU ID",
-              "gpu_id (last)": "GPU ID",
-              "gpu_uuid": "GPU UUID",
-              "hostname": "HOSTNAME",
-              "hostname (last)": "HOSTNAME",
-              "pod": "POD"
-            }
-          }
-        }
-      ],
-      "type": "table"
     }
   ],
   "schemaVersion": 39,
@@ -2176,6 +1783,6 @@
   "timezone": "browser",
   "title": "Overview",
   "uid": "fe0ayyeeoxvy8f",
-  "version": 1,
+  "version": 31,
   "weekStart": ""
 }
