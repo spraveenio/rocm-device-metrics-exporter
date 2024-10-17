@@ -343,6 +343,12 @@ metricutil:
 	@echo "building metrics util"
 	CGO_ENABLED=0 go build -C cmd/metricutil -o $(CURDIR)/bin/metricutil
 
+.PHONY: docker-cicd
+docker-cicd: gen amdexporter
+	echo "Building cicd docker for publish"
+	${MAKE} -C docker docker-cicd TOP_DIR=$(CURDIR)
+	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
+
 .PHONY: docker
 docker: gen amdexporter
 	${MAKE} -C docker TOP_DIR=$(CURDIR)

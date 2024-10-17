@@ -7,19 +7,15 @@ then
 fi
 
 echo "Copying device-metrics-exporter artifacts..."
-
 setup_dir () {
     ls -al /device-metrics-exporter/
     BUNDLE_DIR=/device-metrics-exporter/output/
     mkdir -p $BUNDLE_DIR
-    UPLOAD_DIR=/device-metrics-exporter/upload/
-    mkdir -p $UPLOAD_DIR
 }
 
 copy_artifacts () {
     # copy docker image
-    cp /device-metrics-exporter/docker/obj/exporter-release-*.tgz  $BUNDLE_DIR/
-    cp /device-metrics-exporter/docker/obj/exporter-release-v1.tgz  $UPLOAD_DIR/
+    cp /device-metrics-exporter/docker/exporter-latest.tar.gz $BUNDLE_DIR/
     # copy docker mock image
     cp /device-metrics-exporter/docker/obj/exporter-release-mock-*.tgz  $BUNDLE_DIR/
     # copy debian package
@@ -29,13 +25,9 @@ copy_artifacts () {
 }
 
 docker_build_push () {
-    cd $UPLOAD_DIR/
     EXPORTER_IMAGE_URL=registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
-    tar xzf exporter-release-v1.tgz
-    ls -la $UPLOAD_DIR/
-    docker load -i exporter-docker-v1.tgz
-    docker tag amd/exporter:v1 $EXPORTER_IMAGE_URL
-    echo "FROM $EXPORTER_IMAGE_URL" | docker build --label HOURLY_TAG=$RELEASE -t "$EXPORTER_IMAGE_URL" -
+    docker load -i /device-metrics-exporter/docker/exporter-latest.tar.gz
+    docker inspect $EXPORTER_IMAGE_URL | grep "HOURLY"
     docker push $EXPORTER_IMAGE_URL
 }
 
