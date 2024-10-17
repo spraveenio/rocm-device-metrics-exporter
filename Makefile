@@ -68,6 +68,8 @@ clean: pkg-clean
 	rm -rf bin
 	rm -rf docker/obj
 	rm -rf docker/*.tgz
+	rm -rf docker/*.tar
+	rm -rf docker/*.tar.gz
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 .PHONY: golangci-lint
@@ -122,6 +124,12 @@ amdexporter:
 metricutil:
 	@echo "building metrics util"
 	CGO_ENABLED=0 go build -C cmd/metricutil -o $(CURDIR)/bin/metricutil
+
+.PHONY: docker-cicd
+docker-cicd: gen amdexporter
+	echo "Building cicd docker for publish"
+	${MAKE} -C docker docker-cicd TOP_DIR=$(CURDIR)
+	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
 
 .PHONY: docker
 docker: gen amdexporter

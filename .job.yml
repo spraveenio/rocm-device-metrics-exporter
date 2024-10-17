@@ -11,10 +11,11 @@ builds:
         - /device-metrics-exporter/bin/amdgpu-exporter_0.1_amd64.deb
 
   build-device-metrics-exporter-docker:
-    commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make docker"]
+    commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make && \
+                            HOURLY_TAG_LABEL=$RELEASE IMAGE_TAG=latest make docker-cicd"]
     owners: ["email:prshanmug@amd.com"]
     artifacts:
-        - /device-metrics-exporter/docker/obj/exporter-release-v1.tgz
+        - /device-metrics-exporter/docker/exporter-latest.tar.gz
 
   build-device-metrics-exporter-docker-mock:
     commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make docker-mock"]
