@@ -481,6 +481,7 @@
               "mode": "off"
             }
           },
+          "displayName": "PCIe Bandwidth",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -897,6 +898,7 @@
               "mode": "off"
             }
           },
+          "displayName": "GPU Usage",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -961,7 +963,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Used VRAM on the GPU over time, in MB",
+      "description": "Used VRAM on the GPU over time",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1000,7 +1002,7 @@
               "mode": "off"
             }
           },
-          "displayName": "Used VRAM %",
+          "displayName": "Used VRAM",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1135,6 +1137,7 @@
               "mode": "off"
             }
           },
+          "displayName": "GPU Power",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1199,7 +1202,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Current edge temperature, in Celsius",
+      "description": "Current GPU temperature, in Celsius",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1238,6 +1241,7 @@
               "mode": "off"
             }
           },
+          "displayName": "GPU Temperature",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1263,6 +1267,7 @@
         "y": 17
       },
       "id": 32,
+      "maxDataPoints": 60,
       "options": {
         "legend": {
           "calcs": [],
@@ -1283,13 +1288,30 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_edge_temperature{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "gpu_edge_temperature{GPU_UUID=\"$g_gpu_uuid\", CARD_MODEL!=\"0x74a1\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
           "legendFormat": "{{GPU_UUID}}",
           "range": true,
           "refId": "A",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "gpu_junction_temperature{GPU_UUID=\"$g_gpu_uuid\", CARD_MODEL=\"0x74a1\"}",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "{{GPU_UUID}}",
+          "range": true,
+          "refId": "B",
           "useBackend": false
         }
       ],
@@ -1340,6 +1362,7 @@
               "mode": "off"
             }
           },
+          "displayName": "Memory Temperature",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1404,7 +1427,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Current temperatures, in celsius:\n- 4 HBM temperatures\n- Edge temperature\n- Junction/hotspot temperature",
+      "description": "Current temperatures, in Celsius:\n- 4 HBM temperatures\n- Edge temperature\n- Junction/hotspot temperature",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1737,6 +1760,6 @@
   "timezone": "browser",
   "title": "GPU",
   "uid": "ae0aj8euc43r4b",
-  "version": 26,
+  "version": 29,
   "weekStart": ""
 }

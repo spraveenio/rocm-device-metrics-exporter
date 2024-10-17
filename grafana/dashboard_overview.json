@@ -592,9 +592,9 @@
           "expr": "topk(5, gpu_used_vram)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "{{GPU_UUID}}",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         }
@@ -1187,7 +1187,7 @@
               "mode": "off"
             }
           },
-          "displayName": "Used VRAM %",
+          "displayName": "Used VRAM",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1423,6 +1423,7 @@
               "mode": "off"
             }
           },
+          "displayName": "GPU Temperature",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1469,17 +1470,41 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "avg(gpu_edge_temperature)",
+          "expr": "avg(gpu_edge_temperature{CARD_MODEL!=\"0x74a1\"})",
           "fullMetaSearch": false,
+          "hide": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "GPU Temperature",
+          "legendFormat": "Edge Temperature",
           "range": true,
           "refId": "A",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "avg(gpu_junction_temperature{CARD_MODEL=\"0x74a1\"})",
+          "fullMetaSearch": false,
+          "hide": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "Junction Temperature",
+          "range": true,
+          "refId": "B",
           "useBackend": false
         }
       ],
       "title": "Average GPU Temperature",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        }
+      ],
       "type": "timeseries"
     },
     {
@@ -1783,6 +1808,6 @@
   "timezone": "browser",
   "title": "Overview",
   "uid": "fe0ayyeeoxvy8f",
-  "version": 31,
+  "version": 34,
   "weekStart": ""
 }
