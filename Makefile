@@ -52,6 +52,10 @@ pkg: pkg-clean
 	mkdir -p ${PKG_PATH}
 	gunzip -c ${ASSETS_PATH}/gpuagent_static.bin.gz > ${PKG_PATH}/gpuagent
 	chmod +x ${PKG_PATH}/gpuagent
+	ls -alsh ${PKG_PATH}/gpuagent
+	#strip prebuilt binaries
+	strip ${PKG_PATH}/gpuagent
+	ls -alsh ${PKG_PATH}/gpuagent
 	cd ${PKG_PATH} && strip ${PKG_PATH}/gpuagent
 	cp -vf ${LUA_PROTO} ${PKG_LUA_PATH}/plugin.proto
 	cp -vf ${ASSETS_PATH}/gpuctl.gobin ${PKG_PATH}/

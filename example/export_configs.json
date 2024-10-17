@@ -1,4 +1,6 @@
 {
+    // ServerPort fields is ignored in operator environment 
+    // as this is set by the operator
     "ServerPort" : 5000,
     "GPUConfig" :{
         "Fields" : [
@@ -72,7 +74,25 @@
             "GPU_XGMI_NBR_2_TX_THRPUT", 
             "GPU_XGMI_NBR_3_TX_THRPUT", 
             "GPU_XGMI_NBR_4_TX_THRPUT", 
-            "GPU_XGMI_NBR_5_TX_THRPUT"
+            "GPU_XGMI_NBR_5_TX_THRPUT",
+            "GPU_USED_VRAM",
+            "GPU_FREE_VRAM",
+            "GPU_TOTAL_VISIBLE_VRAM",
+            "GPU_USED_VISIBLE_VRAM",
+            "GPU_FREE_VISIBLE_VRAM",
+            "GPU_TOTAL_GTT",
+            "GPU_USED_GTT",
+            "GPU_FREE_GTT",
+            "GPU_ECC_CORRECT_MCA",
+            "GPU_ECC_UNCORRECT_MCA",
+            "GPU_ECC_CORRECT_VCN",
+            "GPU_ECC_UNCORRECT_VCN",
+            "GPU_ECC_CORRECT_JPEG",
+            "GPU_ECC_UNCORRECT_JPEG",
+            "GPU_ECC_CORRECT_IH",
+            "GPU_ECC_UNCORRECT_IH",
+            "GPU_ECC_CORRECT_MPIO",
+            "GPU_ECC_UNCORRECT_MPIO"
         ],
         "Labels": [
             "GPU_UUID",
