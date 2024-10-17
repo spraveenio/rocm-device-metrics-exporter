@@ -132,6 +132,21 @@ type metrics struct {
 	gpuTotalGTT prometheus.GaugeVec
 	gpuUsedGTT  prometheus.GaugeVec
 	gpuFreeGTT  prometheus.GaugeVec
+
+	gpuEccCorrectMCA   prometheus.GaugeVec
+	gpuEccUncorrectMCA prometheus.GaugeVec
+
+	gpuEccCorrectVCN   prometheus.GaugeVec
+	gpuEccUncorrectVCN prometheus.GaugeVec
+
+	gpuEccCorrectJPEG   prometheus.GaugeVec
+	gpuEccUncorrectJPEG prometheus.GaugeVec
+
+	gpuEccCorrectIH   prometheus.GaugeVec
+	gpuEccUncorrectIH prometheus.GaugeVec
+
+	gpuEccCorrectMPIO   prometheus.GaugeVec
+	gpuEccUncorrectMPIO prometheus.GaugeVec
 }
 
 func (ga *GPUAgentClient) ResetMetrics() error {
@@ -214,6 +229,16 @@ func (ga *GPUAgentClient) ResetMetrics() error {
 	ga.m.xgmiNbrTxTput3.Reset()
 	ga.m.xgmiNbrTxTput4.Reset()
 	ga.m.xgmiNbrTxTput5.Reset()
+	ga.m.gpuEccCorrectMCA.Reset()
+	ga.m.gpuEccUncorrectMCA.Reset()
+	ga.m.gpuEccCorrectVCN.Reset()
+	ga.m.gpuEccUncorrectVCN.Reset()
+	ga.m.gpuEccCorrectJPEG.Reset()
+	ga.m.gpuEccUncorrectJPEG.Reset()
+	ga.m.gpuEccCorrectIH.Reset()
+	ga.m.gpuEccUncorrectIH.Reset()
+	ga.m.gpuEccCorrectMPIO.Reset()
+	ga.m.gpuEccUncorrectMPIO.Reset()
 	return nil
 }
 
@@ -377,6 +402,16 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		ga.m.gpuTotalGTT,
 		ga.m.gpuUsedGTT,
 		ga.m.gpuFreeGTT,
+		ga.m.gpuEccCorrectMCA,
+		ga.m.gpuEccUncorrectMCA,
+		ga.m.gpuEccCorrectVCN,
+		ga.m.gpuEccUncorrectVCN,
+		ga.m.gpuEccCorrectJPEG,
+		ga.m.gpuEccUncorrectJPEG,
+		ga.m.gpuEccCorrectIH,
+		ga.m.gpuEccUncorrectIH,
+		ga.m.gpuEccCorrectMPIO,
+		ga.m.gpuEccUncorrectMPIO,
 	}
 
 }
@@ -728,6 +763,46 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Name: "xgmi_neighbor_5_tx_throughput",
 		},
 			labels),
+		gpuEccCorrectMCA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_correct_mca",
+		},
+			labels),
+		gpuEccUncorrectMCA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_uncorrect_mca",
+		},
+			labels),
+		gpuEccCorrectVCN: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_correct_vcn",
+		},
+			labels),
+		gpuEccUncorrectVCN: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_uncorrect_vcn",
+		},
+			labels),
+		gpuEccCorrectJPEG: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_correct_jpeg",
+		},
+			labels),
+		gpuEccUncorrectJPEG: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_uncorrect_jpeg",
+		},
+			labels),
+		gpuEccCorrectIH: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_correct_ih",
+		},
+			labels),
+		gpuEccUncorrectIH: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_uncorrect_ih",
+		},
+			labels),
+		gpuEccCorrectMPIO: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_correct_mpio",
+		},
+			labels),
+		gpuEccUncorrectMPIO: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_uncorrect_mpio",
+		},
+			labels),
 	}
 	ga.initFieldMetricsMap()
 
@@ -825,7 +900,7 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]stri
 		if !enabled {
 			continue
 		}
-        key := strings.ToLower(ckey)
+		key := strings.ToLower(ckey)
 		switch ckey {
 		case gpumetrics.GPUMetricLabel_GPU_UUID.String():
 			uuid, _ := uuid.FromBytes(gpu.Spec.Id)
@@ -1004,6 +1079,21 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 	ga.m.gpuEccUncorrectFUSE.With(labels).Set(normalizeUint64(stats.FUSEUncorrectableErrors))
 	ga.m.gpuEccCorrectUMC.With(labels).Set(normalizeUint64(stats.UMCCorrectableErrors))
 	ga.m.gpuEccUncorrectUMC.With(labels).Set(normalizeUint64(stats.UMCUncorrectableErrors))
+
+	ga.m.gpuEccCorrectMCA.With(labels).Set(normalizeUint64(stats.MCACorrectableErrors))
+	ga.m.gpuEccUncorrectMCA.With(labels).Set(normalizeUint64(stats.MCAUncorrectableErrors))
+
+	ga.m.gpuEccCorrectVCN.With(labels).Set(normalizeUint64(stats.VCNCorrectableErrors))
+	ga.m.gpuEccUncorrectVCN.With(labels).Set(normalizeUint64(stats.VCNUncorrectableErrors))
+
+	ga.m.gpuEccCorrectJPEG.With(labels).Set(normalizeUint64(stats.JPEGCorrectableErrors))
+	ga.m.gpuEccUncorrectJPEG.With(labels).Set(normalizeUint64(stats.JPEGUncorrectableErrors))
+
+	ga.m.gpuEccCorrectIH.With(labels).Set(normalizeUint64(stats.IHCorrectableErrors))
+	ga.m.gpuEccUncorrectIH.With(labels).Set(normalizeUint64(stats.IHUncorrectableErrors))
+
+	ga.m.gpuEccCorrectMPIO.With(labels).Set(normalizeUint64(stats.MPIOCorrectableErrors))
+	ga.m.gpuEccUncorrectMPIO.With(labels).Set(normalizeUint64(stats.MPIOUncorrectableErrors))
 
 	ga.m.xgmiNbrNopTx0.With(labels).Set(normalizeUint64(stats.XGMINeighbor0TxNOPs))
 	ga.m.xgmiNbrReqTx0.With(labels).Set(normalizeUint64(stats.XGMINeighbor0TxRequests))

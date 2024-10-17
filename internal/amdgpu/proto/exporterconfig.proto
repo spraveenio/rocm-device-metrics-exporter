@@ -109,6 +109,16 @@ enum GPUMetricField {
     GPU_TOTAL_GTT               = 76;
     GPU_USED_GTT                = 77;
     GPU_FREE_GTT                = 78;
+    GPU_ECC_CORRECT_MCA         = 79;
+    GPU_ECC_UNCORRECT_MCA       = 80;
+    GPU_ECC_CORRECT_VCN         = 81;
+    GPU_ECC_UNCORRECT_VCN       = 82;
+    GPU_ECC_CORRECT_JPEG        = 83;
+    GPU_ECC_UNCORRECT_JPEG      = 84;
+    GPU_ECC_CORRECT_IH          = 85;
+    GPU_ECC_UNCORRECT_IH        = 86;
+    GPU_ECC_CORRECT_MPIO        = 87;
+    GPU_ECC_UNCORRECT_MPIO      = 88;
 }
 
 enum GPUMetricLabel {
