@@ -133,11 +133,20 @@ Usage of bin/amd-metrics-exporter:
         [_internal/amdgpu/proto/fields.proto_**:GPUMetricLabel**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L114)
 
 ### 6. Slurm integration
-Metrics exporter uses SPANK((Slurm Plug-in Architecture for Node and job (K)control)  plugin to collect job metrics
-- Configure SPANK config, plugstack.conf(default) on  worker nodes
-- Copy metrics exporter plugin files from /etc/metrics/slurm to slurm config (/etc/slurm)
-- Restart slurmd service
-- Include JOB_ID in exported labels (config.json)
+There are 2 options to collect job information from slurm
+1. Using Prolog/Epilog,
+   - copy /usr/local/etc/metrics/slurm/slurm-exporter.sh to /etc/slurm/
+   - configure prolog/epilog in slurm.conf,
+   ````
+   prologFlags=Alloc
+   Prolog=/etc/slurm/slurm-exporter.sh
+   Epilog=/etc/slurm/slurm-exporter.sh
+   ```
+2. Metrics exporter using SPANK((Slurm Plug-in Architecture for Node and job (K)control)  plugin to collect job metrics
+   - Configure SPANK config, plugstack.conf(default) on  worker nodes
+   - Copy metrics exporter plugin files from /etc/metrics/slurm to slurm config (/etc/slurm)
+   - Restart slurmd service
+   - Include JOB_ID in exported labels (config.json)
 
 metrics will be reported with slurm JOB_IDs, example
 ```
