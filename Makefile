@@ -123,7 +123,7 @@ amdexporter:
 
 metricutil:
 	@echo "building metrics util"
-	CGO_ENABLED=0 go build -C cmd/metricutil -o $(CURDIR)/bin/metricutil
+	CGO_ENABLED=0 go build -C tools/metricutil -o $(CURDIR)/bin/metricutil
 
 .PHONY: docker-cicd
 docker-cicd: gen amdexporter
