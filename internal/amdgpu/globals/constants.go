@@ -27,4 +27,6 @@ const (
 	GPUAgentPort = 50061
 
 	ZmqPort = "6601"
+
+	SlurmSock = "/var/run/slurm/slurm.sock"
 )

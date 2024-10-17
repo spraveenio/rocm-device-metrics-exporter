@@ -18,6 +18,7 @@ package slurm
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	zmq "github.com/go-zeromq/zmq4"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/gpumetrics"
@@ -26,6 +27,10 @@ import (
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
 	"google.golang.org/protobuf/proto"
 	"io"
+	"net"
+	"os"
+	"path"
+	"strings"
 	"sync"
 )
 
@@ -43,20 +48,29 @@ type JobInfo struct {
 }
 type client struct {
 	sync.Mutex
-	sock    zmq.Socket
-	GpuJobs map[string]JobInfo
+	zmqSock   zmq.Socket
+	slurmSock net.Listener
+	GpuJobs   map[string]JobInfo
 }
 
 func NewClient(ctx context.Context) (JobsService, error) {
 	sock := zmq.NewPull(ctx)
 	logger.Log.Printf("Starting Listen on port %v", globals.ZmqPort)
-	err := sock.Listen(fmt.Sprintf("tcp://*:%v", globals.ZmqPort))
-	if err != nil {
+	if err := sock.Listen(fmt.Sprintf("tcp://*:%v", globals.ZmqPort)); err != nil {
 		return nil, fmt.Errorf("failed to listen on port %v, %v ", globals.ZmqPort, err)
 	}
+
+	os.MkdirAll(path.Dir(globals.SlurmSock), 0644)
+	os.Remove(globals.SlurmSock)
+	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: globals.SlurmSock, Net: "unix"})
+	if err != nil {
+		return nil, fmt.Errorf("failed to listen on  %v, %v ", globals.SlurmSock, err)
+	}
+
 	cl := &client{
-		sock:    sock,
-		GpuJobs: make(map[string]JobInfo),
+		zmqSock:   sock,
+		slurmSock: l,
+		GpuJobs:   make(map[string]JobInfo),
 	}
 
 	var slurmMsg luaplugin.Notification
@@ -115,7 +129,71 @@ func NewClient(ctx context.Context) (JobsService, error) {
 		}
 	}()
 
+	go func() {
+		defer os.Remove(globals.SlurmSock)
+		for {
+			for ctx.Err() == nil {
+				sfd, err := cl.slurmSock.Accept()
+				if err != nil {
+					logger.Log.Printf("failed to accept slurm connection %v", err)
+					continue
+				}
+				logger.Log.Printf("new slurm message")
+				cl.processSlurm(ctx, sfd)
+			}
+		}
+	}()
 	return cl, nil
+}
+
+func (cl *client) processSlurm(ctx context.Context, sfd net.Conn) {
+	defer sfd.Close()
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Log.Printf("context done")
+		default:
+			buff := make([]byte, 4096)
+			len, err := sfd.Read(buff)
+			if err != nil {
+				if err != io.EOF {
+					logger.Log.Printf("could not read message %v", err)
+				}
+				return
+			}
+			var jobEnv map[string]string
+			if err := json.Unmarshal(buff[:len], &jobEnv); err != nil {
+				logger.Log.Printf("could not parse job env %v", err)
+				logger.Log.Printf("job env %v ", string(buff))
+				break
+			}
+			logger.Log.Printf("received job env %+v", jobEnv)
+			switch jobEnv["SLURM_SCRIPT_CONTEXT"] {
+			case "prolog_slurmd":
+				if gpus, ok := jobEnv["CUDA_VISIBLE_DEVICES"]; ok {
+					cl.Lock()
+					for _, allocGPU := range strings.Split(gpus, ",") {
+						cl.GpuJobs[allocGPU] = JobInfo{
+							JobId: fmt.Sprintf("%v", jobEnv["SLURM_JOBID"]),
+						}
+					}
+					cl.Unlock()
+					logger.Log.Printf("updated %v", cl.GpuJobs)
+				}
+
+			case "epilog_slurmd":
+				if gpus, ok := jobEnv["CUDA_VISIBLE_DEVICES"]; ok {
+					cl.Lock()
+					for _, allocGPU := range strings.Split(gpus, ",") {
+						delete(cl.GpuJobs, allocGPU)
+					}
+					cl.Unlock()
+					logger.Log.Printf("updated %v", cl.GpuJobs)
+				}
+			}
+		}
+	}
 }
 
 func (cl *client) ListJobs() map[string]JobInfo {
@@ -136,5 +214,7 @@ func (cl *client) CheckExportLabels(labels map[string]bool) bool {
 	return false
 }
 func (cl *client) Close() error {
-	return cl.sock.Close()
+	cl.zmqSock.Close()
+	cl.slurmSock.Close()
+	return nil
 }
