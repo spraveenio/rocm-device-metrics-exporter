@@ -45,6 +45,10 @@ Usage of bin/amd-metrics-exporter:
     ```
     docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter 		registry.test.pensando.io:5000/device-metrics-exporter/rocm-metrics-exporter:v1 bash
     ```
+    ```
+    # mount /var/run/slurm/  to receive slurm notifications
+    -v /var/run/slurm/:/var/run/slurm/
+    ```
    - ubuntu linux debian package
      - Supported ROCM versions : 6.2.0 and up
      - prerequistes
@@ -136,6 +140,7 @@ Usage of bin/amd-metrics-exporter:
 There are 2 options to collect job information from slurm
 1. Using Prolog/Epilog,
    - copy /usr/local/etc/metrics/slurm/slurm-exporter.sh to /etc/slurm/
+   - chmod +x /etc/slurm/slurm-exporter.sh to add executable permissions
    - configure prolog/epilog in slurm.conf,
    ````
    prologFlags=Alloc

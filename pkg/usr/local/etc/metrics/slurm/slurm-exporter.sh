@@ -28,4 +28,4 @@ MSG=$(cat << EOF
    }
 EOF
 )
-[ -S ${SOCK} ] && echo ${MSG} | nc -UN -w 1 ${SOCK}
+[ -S ${SOCK} ] && echo ${MSG} | nc -UN -w 1 ${SOCK} || true
