@@ -122,11 +122,11 @@ Usage of bin/amd-metrics-exporter:
 ### 4. Custom metrics config
 - To run the exporter with config mount the /etc/metrics/config.json on the
   exporter container 
-	- create your config in config.json
-	- start docker container
-   ```
-  	#docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 -v ./config.json:/etc/metrics/config.json --name exporter registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest bash
-   ```
+    - create your config in directory `config/config.json`
+    - start docker container
+     ```
+     docker run --rm -ltd --privileged -v ./config:/etc/metrics -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
+     ```
 ### 5. Metrics Config formats
 - Json file with the following keys are expected
     - Fields
