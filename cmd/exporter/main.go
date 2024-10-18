@@ -204,6 +204,9 @@ func main() {
 		logger.Log.Fatalf("GPUAgent create failed, %v", err)
 		return
 	}
+	defer func() {
+		os.Remove(globals.SlurmSock)
+	}()
 
 	foreverWatcher()
 }
