@@ -2,7 +2,7 @@
 version: 2.0
 targets:
   copy-device-metrics-exporter-artifacts:
-    commands: ["sh", "-c", "cd /device-metrics-exporter && /exporter-asset-push.sh"]
+    commands: ["sh", "-c", "pwd && cd ./asset-build && ./exporter-asset-push.sh"]
     owners: ["email:prshanmug@amd.com"]
     area:
     sub-area:
@@ -11,6 +11,15 @@ targets:
       - build-debian-package
       - build-device-metrics-exporter-docker
       - build-device-metrics-exporter-docker-mock
+
+  release-docker-hub:
+    commands: ["sh", "-c", "pwd && cd ./asset-build && ./docker-push.sh"]
+    owners: ["email:prshanmug@amd.com"]
+    area:
+    sub-area:
+    feature:
+    build-dependencies:
+      - build-device-metrics-exporter-docker
 
 image:
   bind_dir: "/go/src/github.com/pensando/device-metrics-exporter"
