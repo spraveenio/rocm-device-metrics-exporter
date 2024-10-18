@@ -273,48 +273,16 @@ type amdSMIMetrics struct {
 }
 
 // return number of gpus, and start index for clock system, video, data
-func scanMetrics(exporter map[string]*dto.MetricFamily) (int, int, int, int, error) {
-	var (
-		err        error
-		clockType  string
-		clockIndex int
-	)
-	sys := 1 << 31
-	video := 1 << 31
-	data := 1 << 31
+func scanMetrics(exporter map[string]*dto.MetricFamily) (int, map[string]int, map[string]int, map[string]int, error) {
 	ids := map[string]struct{}{}
-	for k, v := range exporter {
-		switch k {
-		case "gpu_clock":
-			for _, m := range v.Metric {
-				for _, l := range m.GetLabel() {
-					switch l.GetName() {
-					case "GPU_ID":
-						ids[l.GetValue()] = struct{}{}
-					case "clock_type":
-						clockType = l.GetValue()
-					case "clock_index":
-						clockIndex, err = strconv.Atoi(l.GetValue())
-						if err != nil {
-							return 0, 0, 0, 0, err
-						}
-					}
-				}
-				switch clockType {
-				case "GPU_CLOCK_TYPE_SYSTEM":
-					if clockIndex < sys {
-						sys = clockIndex
-					}
-				case "GPU_CLOCK_TYPE_DATA":
-					if clockIndex < data {
-						data = clockIndex
-					}
-				case "GPU_CLOCK_TYPE_VIDEO":
-					if clockIndex < video {
-						video = clockIndex
-					}
+	for _, v := range exporter {
+		for _, m := range v.Metric {
+			for _, l := range m.GetLabel() {
+				if l.GetName() == "GPU_ID" {
+					ids[l.GetValue()] = struct{}{}
 				}
 			}
+
 		}
 	}
 
@@ -323,17 +291,74 @@ func scanMetrics(exporter map[string]*dto.MetricFamily) (int, int, int, int, err
 	for i := 0; i < len(ids); i++ {
 		idExist[i] = struct{}{}
 	}
+
 	for idStr := range ids {
 		id, err := strconv.Atoi(idStr)
 		if err != nil {
-			return 0, 0, 0, 0, err
+			return 0, nil, nil, nil, err
 		}
 		delete(idExist, id)
 	}
 	if len(idExist) > 0 {
-		return 0, 0, 0, 0, fmt.Errorf("GPU_ID %v should exist, but not found", idExist)
+		return 0, nil, nil, nil, fmt.Errorf("GPU_ID %v should exist, but not found", idExist)
 	}
-	return len(ids), sys, video, data, nil
+
+	// init index map
+	sysIndexes := make(map[string]int)
+	videoIndexes := make(map[string]int)
+	dataIndexes := make(map[string]int)
+	for id := range ids {
+		sysIndexes[id] = 1 << 31
+		videoIndexes[id] = 1 << 31
+		dataIndexes[id] = 1 << 31
+	}
+
+	var (
+		err        error
+		clockType  string
+		clockIndex int
+	)
+
+	for k, v := range exporter {
+		switch k {
+		case "gpu_clock":
+			for _, m := range v.Metric {
+				gpuID := ""
+				for _, l := range m.GetLabel() {
+					switch l.GetName() {
+					case "GPU_ID":
+						gpuID = l.GetValue()
+					case "clock_type":
+						clockType = l.GetValue()
+					case "clock_index":
+						clockIndex, err = strconv.Atoi(l.GetValue())
+						if err != nil {
+							return 0, nil, nil, nil, err
+						}
+					}
+				}
+				switch clockType {
+				case "GPU_CLOCK_TYPE_SYSTEM":
+					sys := sysIndexes[gpuID]
+					if clockIndex < sys {
+						sysIndexes[gpuID] = clockIndex
+					}
+				case "GPU_CLOCK_TYPE_DATA":
+					data := dataIndexes[gpuID]
+					if clockIndex < data {
+						dataIndexes[gpuID] = clockIndex
+					}
+				case "GPU_CLOCK_TYPE_VIDEO":
+					video := videoIndexes[gpuID]
+					if clockIndex < video {
+						videoIndexes[gpuID] = clockIndex
+					}
+				}
+			}
+		}
+	}
+
+	return len(ids), sysIndexes, videoIndexes, dataIndexes, nil
 }
 
 func parseMF(reader io.Reader) (map[string]*dto.MetricFamily, error) {
@@ -647,7 +672,7 @@ func createCmpMap(exporter map[string]*dto.MetricFamily, smi []amdSMIMetrics) (m
 		clockType  string
 		clockIndex int
 	)
-	_, sys, video, data, err := scanMetrics(exporter)
+	_, sysIndexes, videoIndexes, dataIndexes, err := scanMetrics(exporter)
 	if err != nil {
 		return nil, err
 	}
@@ -707,8 +732,11 @@ func createCmpMap(exporter map[string]*dto.MetricFamily, smi []amdSMIMetrics) (m
 
 		case "gpu_clock":
 			for _, m := range v.Metric {
+				gpuID := ""
 				for _, l := range m.GetLabel() {
 					switch l.GetName() {
+					case "GPU_ID":
+						gpuID = l.GetValue()
 					case "clock_type":
 						clockType = l.GetValue()
 					case "clock_index":
@@ -720,10 +748,13 @@ func createCmpMap(exporter map[string]*dto.MetricFamily, smi []amdSMIMetrics) (m
 				}
 				switch clockType {
 				case "GPU_CLOCK_TYPE_SYSTEM":
+					sys := sysIndexes[gpuID]
 					setCmpMap("_clock_sys_"+strconv.Itoa(clockIndex-sys), ret, m)
 				case "GPU_CLOCK_TYPE_DATA":
+					data := dataIndexes[gpuID]
 					setCmpMap("_clock_data_"+strconv.Itoa(clockIndex-data), ret, m)
 				case "GPU_CLOCK_TYPE_VIDEO":
+					video := videoIndexes[gpuID]
 					setCmpMap("_clock_video_"+strconv.Itoa(clockIndex-video), ret, m)
 				case "GPU_CLOCK_TYPE_MEMORY":
 					setCmpMap("_clock_mem", ret, m)
