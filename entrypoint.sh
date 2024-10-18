@@ -3,6 +3,8 @@ set -x
 set -euo pipefail
 dir=/usr/src/github.com/pensando/device-metrics-exporter
 netns=/var/run/netns
+dockerdir=/etc/docker
+
 
 term() {
     killall dockerd
@@ -10,6 +12,10 @@ term() {
 }
 
 PATH=/usr/local/go/bin:$PATH
+
+mkdir -p ${dockerdir}
+echo 'DOCKER_OPTS="--config-file=/etc/docker/daemon.json"' >> /etc/default/docker
+echo '{"insecure-registries" : ["registry.test.pensando.io:5000"]}' > ${dockerdir}/daemon.json
 
 dockerd -s vfs &
 
