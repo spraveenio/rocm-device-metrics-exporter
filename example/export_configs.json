@@ -1,6 +1,4 @@
 {
-    // ServerPort fields is ignored in operator environment 
-    // as this is set by the operator
     "ServerPort" : 5000,
     "GPUConfig" :{
         "Fields" : [
