@@ -89,7 +89,7 @@
         "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 3,
         "x": 0,
         "y": 0
@@ -101,7 +101,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "${g_card_vendor}\n\n#### SERIES\n${g_card_series}\n\n#### MODEL\n${g_card_model}",
+        "content": "#### VENDOR\n${g_card_vendor}\n\n#### SERIES\n${g_card_series}\n\n#### MODEL\n${g_card_model}\n\n#### SERIAL\n${g_serial_number}",
         "mode": "markdown"
       },
       "pluginVersion": "11.2.2",
@@ -132,23 +132,23 @@
         "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 3,
         "x": 3,
         "y": 0
       },
-      "id": 25,
+      "id": 33,
       "options": {
         "code": {
           "language": "plaintext",
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "#### VBIOS\n${g_gpu_vbios}\n\n#### DRIVER\n${g_driver}",
+        "content": "#### HOST\n${g_hostname}\n\n#### GPU ID\n${g_gpu_id}",
         "mode": "markdown"
       },
       "pluginVersion": "11.2.2",
-      "title": "Software",
+      "title": "System",
       "type": "text"
     },
     {
@@ -211,11 +211,12 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_package_power{GPU_UUID=\"$g_gpu_uuid\"}",
+          "exemplar": false,
+          "expr": "gpu_package_power{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "{{hostname}}[{{gpu_id}}]",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -283,11 +284,11 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "pcie_max_speed{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "pcie_max_speed{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "{{hostname}}[{{gpu_id}}]",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -356,7 +357,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "pcie_recovery_count{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "pcie_recovery_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -372,7 +373,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "pcie_replay_count{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "pcie_replay_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -389,7 +390,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "pcie_replay_rollover_count{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "pcie_replay_rollover_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -406,7 +407,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "pcie_nack_received_count{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "pcie_nack_received_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -423,7 +424,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "pcie_nack_sent_count{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "pcie_nack_sent_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -528,11 +529,11 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "pcie_bandwidth{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "pcie_bandwidth{gpu_uuid=\"$g_gpu_uuid\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -605,7 +606,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "sum(gpu_used_vram{GPU_UUID=\"$g_gpu_uuid\"})",
+          "expr": "sum(gpu_used_vram{gpu_uuid=\"$g_gpu_uuid\"})",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -621,7 +622,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "sum(gpu_total_vram{GPU_UUID=\"$g_gpu_uuid\"})",
+          "expr": "sum(gpu_total_vram{gpu_uuid=\"$g_gpu_uuid\"})",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -644,6 +645,31 @@
       ],
       "title": "VRAM Usage",
       "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 3,
+        "y": 5
+      },
+      "id": 25,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "#### VBIOS\n${g_gpu_vbios}\n\n#### DRIVER\n${g_driver}",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.2.2",
+      "title": "Software",
+      "type": "text"
     },
     {
       "datasource": {
@@ -704,11 +730,11 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "pcie_bandwidth{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "pcie_bandwidth{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "{{hostname}}[{{gpu_id}}]",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -722,37 +748,13 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "gridPos": {
-        "h": 2,
-        "w": 3,
-        "x": 3,
-        "y": 6
-      },
-      "id": 33,
-      "options": {
-        "code": {
-          "language": "plaintext",
-          "showLineNumbers": false,
-          "showMiniMap": false
-        },
-        "content": "${g_gpu_id}",
-        "mode": "markdown"
-      },
-      "pluginVersion": "11.2.2",
-      "title": "GPU ID",
-      "type": "text"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
       "description": "Accumulated energy consumed",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "displayName": "Energy Consumed",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -792,7 +794,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "auto",
+        "textMode": "value",
         "wideLayout": true
       },
       "pluginVersion": "11.2.2",
@@ -805,12 +807,12 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "gpu_energy_consumed{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "gpu_energy_consumed{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "hide": true,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "{{hostname}}[{{gpu_id}}]",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -828,31 +830,6 @@
       ],
       "title": "Energy Consumed",
       "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 6,
-        "x": 0,
-        "y": 8
-      },
-      "id": 29,
-      "options": {
-        "code": {
-          "language": "plaintext",
-          "showLineNumbers": false,
-          "showMiniMap": false
-        },
-        "content": "${g_gpu_uuid}",
-        "mode": "markdown"
-      },
-      "pluginVersion": "11.2.2",
-      "title": "GPU UUID",
-      "type": "text"
     },
     {
       "datasource": {
@@ -945,11 +922,11 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_gfx_activity{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "gpu_gfx_activity{gpu_uuid=\"$g_gpu_uuid\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1050,7 +1027,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_used_vram{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "gpu_used_vram{gpu_uuid=\"$g_gpu_uuid\"}",
           "fullMetaSearch": false,
           "hide": true,
           "includeNullMetadata": true,
@@ -1067,7 +1044,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "clamp_min(gpu_total_vram{GPU_UUID=\"$g_gpu_uuid\"}, 1)",
+          "expr": "clamp_min(gpu_total_vram{gpu_uuid=\"$g_gpu_uuid\"}, 1)",
           "fullMetaSearch": false,
           "hide": true,
           "includeNullMetadata": true,
@@ -1184,11 +1161,11 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_package_power{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "gpu_package_power{gpu_uuid=\"$g_gpu_uuid\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1288,11 +1265,11 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_edge_temperature{GPU_UUID=\"$g_gpu_uuid\", CARD_MODEL!=\"0x74a1\"}",
+          "expr": "gpu_edge_temperature{gpu_uuid=\"$g_gpu_uuid\", card_model!=\"0x74a1\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1304,12 +1281,12 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_junction_temperature{GPU_UUID=\"$g_gpu_uuid\", CARD_MODEL=\"0x74a1\"}",
+          "expr": "gpu_junction_temperature{gpu_uuid=\"$g_gpu_uuid\", card_model=\"0x74a1\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "B",
           "useBackend": false
@@ -1409,11 +1386,11 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_memory_temperature{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "gpu_memory_temperature{gpu_uuid=\"$g_gpu_uuid\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1512,7 +1489,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_hbm_temperature{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "gpu_hbm_temperature{gpu_uuid=\"$g_gpu_uuid\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -1528,7 +1505,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_edge_temperature{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "gpu_edge_temperature{gpu_uuid=\"$g_gpu_uuid\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -1545,7 +1522,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_junction_temperature{GPU_UUID=\"$g_gpu_uuid\"}",
+          "expr": "gpu_junction_temperature{gpu_uuid=\"$g_gpu_uuid\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -1571,7 +1548,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values(GPU_UUID)",
+        "definition": "label_values(gpu_uuid)",
         "hide": 0,
         "includeAll": false,
         "label": "GPU UUID",
@@ -1580,7 +1557,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(GPU_UUID)",
+          "query": "label_values(gpu_uuid)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -1595,7 +1572,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({GPU_UUID=\"$g_gpu_uuid\"},CARD_SERIES)",
+        "definition": "label_values({gpu_uuid=\"$g_gpu_uuid\"},card_series)",
         "hide": 2,
         "includeAll": false,
         "multi": false,
@@ -1603,7 +1580,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values({GPU_UUID=\"$g_gpu_uuid\"},CARD_SERIES)",
+          "query": "label_values({gpu_uuid=\"$g_gpu_uuid\"},card_series)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -1618,7 +1595,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({GPU_UUID=\"$g_gpu_uuid\"},GPU_ID)",
+        "definition": "label_values({gpu_uuid=\"$g_gpu_uuid\"},gpu_id)",
         "hide": 2,
         "includeAll": false,
         "multi": false,
@@ -1626,7 +1603,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values({GPU_UUID=\"$g_gpu_uuid\"},GPU_ID)",
+          "query": "label_values({gpu_uuid=\"$g_gpu_uuid\"},gpu_id)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -1641,7 +1618,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({GPU_UUID=\"$g_gpu_uuid\"},VBIOS_VERSION)",
+        "definition": "label_values({gpu_uuid=\"$g_gpu_uuid\"},vbios_version)",
         "hide": 2,
         "includeAll": false,
         "multi": false,
@@ -1649,7 +1626,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values({GPU_UUID=\"$g_gpu_uuid\"},VBIOS_VERSION)",
+          "query": "label_values({gpu_uuid=\"$g_gpu_uuid\"},vbios_version)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -1664,7 +1641,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({GPU_UUID=\"$g_gpu_uuid\"},DRIVER_VERSION)",
+        "definition": "label_values({gpu_uuid=\"$g_gpu_uuid\"},driver_version)",
         "hide": 2,
         "includeAll": false,
         "multi": false,
@@ -1672,7 +1649,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values({GPU_UUID=\"$g_gpu_uuid\"},DRIVER_VERSION)",
+          "query": "label_values({gpu_uuid=\"$g_gpu_uuid\"},driver_version)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -1687,30 +1664,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({GPU_UUID=\"$g_gpu_uuid\"},instance)",
-        "hide": 2,
-        "includeAll": false,
-        "multi": false,
-        "name": "g_instance",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values({GPU_UUID=\"$g_gpu_uuid\"},instance)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
-        },
-        "definition": "label_values({GPU_UUID=\"$g_gpu_uuid\"},CARD_VENDOR)",
+        "definition": "label_values({gpu_uuid=\"$g_gpu_uuid\"},card_vendor)",
         "hide": 2,
         "includeAll": false,
         "multi": false,
@@ -1718,7 +1672,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values({GPU_UUID=\"$g_gpu_uuid\"},CARD_VENDOR)",
+          "query": "label_values({gpu_uuid=\"$g_gpu_uuid\"},card_vendor)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -1733,7 +1687,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({GPU_UUID=\"$g_gpu_uuid\"},CARD_MODEL)",
+        "definition": "label_values({gpu_uuid=\"$g_gpu_uuid\"},card_model)",
         "hide": 2,
         "includeAll": false,
         "multi": false,
@@ -1741,7 +1695,45 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values({GPU_UUID=\"$g_gpu_uuid\"},CARD_MODEL)",
+          "query": "label_values({gpu_uuid=\"$g_gpu_uuid\"},card_model)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "definition": "label_values({gpu_uuid=\"$g_gpu_uuid\"},hostname)",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "g_hostname",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values({gpu_uuid=\"$g_gpu_uuid\"},hostname)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "definition": "label_values({gpu_uuid=\"$g_gpu_uuid\"},serial_number)",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "g_serial_number",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values({gpu_uuid=\"$g_gpu_uuid\"},serial_number)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -1760,6 +1752,6 @@
   "timezone": "browser",
   "title": "GPU",
   "uid": "ae0aj8euc43r4b",
-  "version": 29,
+  "version": 5,
   "weekStart": ""
 }

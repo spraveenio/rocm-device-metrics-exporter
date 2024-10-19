@@ -454,7 +454,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Top 5 current GPU GFX Activity",
+      "description": "Top 5 current GPU GFX Activity, labeled with hostname and GPU ID.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -517,7 +517,7 @@
           "includeNullMetadata": true,
           "instant": true,
           "interval": "",
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "{{hostname}} | {{gpu_id}}",
           "range": false,
           "refId": "A",
           "useBackend": false
@@ -531,7 +531,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Top 5 GPUs with highest VRAM used",
+      "description": "Top 5 GPUs with highest VRAM used, labeled with hostname and GPU ID.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -593,7 +593,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
-          "legendFormat": "{{GPU_UUID}}",
+          "legendFormat": "{{hostname}} | {{gpu_id}}",
           "range": false,
           "refId": "A",
           "useBackend": false
@@ -839,7 +839,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "sum(group by(job_id) (gpu_nodes_total{job_id!=\"\"}))",
+          "expr": "sum(group by(job_id) (gpu_gfx_activity{job_id!=\"\"}))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
@@ -1470,7 +1470,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "avg(gpu_edge_temperature{CARD_MODEL!=\"0x74a1\"})",
+          "expr": "avg(gpu_edge_temperature{card_model!=\"0x74a1\"})",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -1487,7 +1487,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "avg(gpu_junction_temperature{CARD_MODEL=\"0x74a1\"})",
+          "expr": "avg(gpu_junction_temperature{card_model=\"0x74a1\"})",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -1808,6 +1808,6 @@
   "timezone": "browser",
   "title": "Overview",
   "uid": "fe0ayyeeoxvy8f",
-  "version": 34,
+  "version": 6,
   "weekStart": ""
 }
