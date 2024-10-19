@@ -39,16 +39,17 @@ const (
 )
 
 type GPUAgentClient struct {
-	conn         *grpc.ClientConn
-	mh           *metricsutil.MetricsHandler
-	client       amdgpu.GPUSvcClient
-	m            *metrics // client specific metrics
-	kubeClient   k8s.PodResourcesService
-	isKubernetes bool
-	slurmClient  slurm.JobsService
 	sync.Mutex
-	cacheGpuids map[string][]byte
-	cachePulls  int
+	conn             *grpc.ClientConn
+	mh               *metricsutil.MetricsHandler
+	client           amdgpu.GPUSvcClient
+	m                *metrics // client specific metrics
+	kubeClient       k8s.PodResourcesService
+	isKubernetes     bool
+	slurmClient      slurm.JobsService
+	cacheGpuids      map[string][]byte
+	cachePulls       int
+	staticHostLabels map[string]string
 }
 
 func NewAgent(ctx context.Context, mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
@@ -82,6 +83,11 @@ func NewAgent(ctx context.Context, mh *metricsutil.MetricsHandler) (*GPUAgentCli
 		ga.slurmClient = cli
 		ga.isKubernetes = false
 	}
+
+	if err := ga.populateStaticHostLabels(); err != nil {
+		return nil, fmt.Errorf("error in populating static host labels, %v", err)
+	}
+
 	logger.Log.Printf("monitor %v jobs", map[bool]string{true: "kubernetes", false: "slurm"}[ga.isKubernetes])
 	ga.cacheGpuids = make(map[string][]byte)
 	mh.RegisterMetricsClient(ga)
