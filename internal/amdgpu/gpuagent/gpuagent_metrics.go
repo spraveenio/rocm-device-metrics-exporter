@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -927,6 +928,8 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]stri
 			labels[key] = gpu.Status.DriverVersion
 		case gpumetrics.GPUMetricLabel_VBIOS_VERSION.String():
 			labels[key] = gpu.Status.VBIOSVersion
+		case gpumetrics.GPUMetricLabel_HOSTNAME.String():
+			labels[key] = ga.staticHostLabels[gpumetrics.GPUMetricLabel_HOSTNAME.String()]
 		default:
 			logger.Log.Printf("Invalid label is ignored %v", key)
 		}
@@ -1126,4 +1129,29 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
 		ga.m.gpuUsedGTT.With(labels).Set(normalizeUint64(vramUsage.UsedGTT))
 		ga.m.gpuFreeGTT.With(labels).Set(normalizeUint64(vramUsage.FreeGTT))
 	}
+}
+
+func (ga *GPUAgentClient) populateStaticHostLabels() error {
+	ga.staticHostLabels = map[string]string{}
+	hostname, err := ga.getHostName()
+	if err != nil {
+		return err
+	}
+	logger.Log.Printf("hostame %v", hostname)
+	ga.staticHostLabels[gpumetrics.GPUMetricLabel_HOSTNAME.String()] = hostname
+	return nil
+}
+
+func (ga *GPUAgentClient) getHostName() (string, error) {
+	hostname := ""
+	var err error
+	if nodeName := os.Getenv("NODE_NAME"); nodeName != "" {
+		hostname = nodeName
+	} else {
+		hostname, err = os.Hostname()
+		if err != nil {
+			return "", err
+		}
+	}
+	return hostname, nil
 }
