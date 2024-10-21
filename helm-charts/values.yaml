@@ -1,0 +1,21 @@
+platform: k8s
+
+nodeSelector: {}
+
+image:
+  repository: registry.test.pensando.io:5000/device-metrics-exporter/exporter
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  ClusterIP:
+    port: 5000
+    targetPort: 5000
+  NodePort:      
+    port: 5000
+    targetPort: 5000
+    nodePort: 32500
+
+configMap: ""
+

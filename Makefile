@@ -6,6 +6,7 @@ export BUILD_CONTAINER ?= registry.test.pensando.io:5000/metrics-exporter-bld:1
 TOP_DIR := $(PWD)
 GEN_DIR := $(TOP_DIR)/internal/amdgpu/
 MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
+HELM_CHARTS_DIR := $(TOP_DIR)/helm-charts
 GOINSECURE='github.com, google.golang.org, golang.org'
 GOFLAGS ='-buildvcs=false'
 BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
@@ -172,6 +173,14 @@ base-image:
 
 copyrights:
 	GOFLAGS=-mod=mod go run tools/build/copyright/main.go && ./tools/build/check-local-files.sh
+
+.PHONY: helm-lint
+helm-lint:
+	cd $(HELM_CHARTS_DIR); helm lint
+
+.PHONY: helm-build
+helm-build: helm-lint
+	helm package helm-charts/ --destination ./helm-charts
 
 .PHONY: slurm-sim
 slurm-sim:

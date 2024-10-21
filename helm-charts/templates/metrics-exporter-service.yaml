@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-amd-metrics-exporter-svc
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  internalTrafficPolicy: Local
+  type: {{ .Values.service.type }}
+  {{- if eq .Values.service.type "NodePort" }}
+  externalTrafficPolicy: Local
+  ports:
+    - protocol: "TCP"
+      port: {{ .Values.service.NodePort.port }}
+      targetPort: {{ .Values.service.NodePort.targetPort }}
+      nodePort: {{ .Values.service.NodePort.nodePort }}
+  {{- end }}
+  {{- if eq .Values.service.type "ClusterIP" }}
+  ports:
+    - protocol: "TCP"
+      port: {{ .Values.service.ClusterIP.port }}
+      targetPort: {{ .Values.service.ClusterIP.targetPort }}
+  {{- end }}

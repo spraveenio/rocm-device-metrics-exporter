@@ -1,0 +1,12 @@
+apiVersion: v2
+name: exporter-charts
+description: A Helm chart for AMD GPU Metric Exporter
+
+type: application
+version: 0.0.1
+appVersion: "0.0.1"
+maintainers:
+- email: prshanmug@amd.com
+  name: Praveen Kumar Shanmugam
+- email: yan.sun3@amd.com
+  name: Yan Sun
