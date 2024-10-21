@@ -54,6 +54,7 @@ KUBECONFIG ?= ~/.kube/config
 TOP_DIR := $(PWD)
 GEN_DIR := $(TOP_DIR)/internal/amdgpu/
 MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
+HELM_CHARTS_DIR := $(TOP_DIR)/helm-charts
 GOINSECURE='github.com, google.golang.org, golang.org'
 GOFLAGS ='-buildvcs=false'
 BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
@@ -419,6 +420,14 @@ e2e:
 .PHOHY: k8s-e2e
 k8s-e2e:
 	TOP_DIR=$(CURDIR) $(MAKE) -C test/k8s-e2e
+
+.PHONY: helm-lint
+helm-lint:
+	cd $(HELM_CHARTS_DIR); helm lint
+
+.PHONY: helm-build
+helm-build: helm-lint
+	helm package helm-charts/ --destination ./helm-charts
 
 .PHONY: helm-lint
 helm-lint:
