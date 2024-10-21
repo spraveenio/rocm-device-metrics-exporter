@@ -138,22 +138,35 @@ Usage of bin/amd-metrics-exporter:
 
 ### 6. Slurm integration
 There are 2 options to collect job information from slurm
-1. Using Prolog/Epilog,
+#### 1. Using slurm Prolog/Epilog,
    - copy /usr/local/etc/metrics/slurm/slurm-exporter.sh to /etc/slurm/
    - chmod +x /etc/slurm/slurm-exporter.sh to add executable permissions
    - configure prolog/epilog in slurm.conf,
-   ````
+ ```
    prologFlags=Alloc
    Prolog=/etc/slurm/slurm-exporter.sh
    Epilog=/etc/slurm/slurm-exporter.sh
    ```
-2. Metrics exporter using SPANK((Slurm Plug-in Architecture for Node and job (K)control)  plugin to collect job metrics
+
+These slurm labels can be configured to export in config.json
+```
+    JOB_ID
+    JOB_USER
+    JOB_PARTITION
+    CLUSTER_NAME
+   ```
+  example metrics
+```
+  gpu_junction_temperature{card_model="0x1002,cluster_name="genoacluster",driver_version="6.8.0-40-generic",gpu_id="0",gpu_uuid="72ff740f-0000-1000-804c-3b58bf67050e",job_id="130",job_partition="LocalQ",job_user="vm",serial_number="692251001124"} 30
+```
+
+#### 2. Metrics exporter using SPANK((Slurm Plug-in Architecture for Node and job (K)control)  plugin to collect job metrics
    - Configure SPANK config, plugstack.conf(default) on  worker nodes
    - Copy metrics exporter plugin files from /etc/metrics/slurm to slurm config (/etc/slurm)
    - Restart slurmd service
    - Include JOB_ID in exported labels (config.json)
 
-metrics will be reported with slurm JOB_IDs, example
+   metrics will be reported with slurm JOB_IDs, example
 ```
 gpu_edge_temperature{CARD_MODEL="0xc34",DRIVER_VERSION="6.8.5",GPU_ID="0",GPU_UUID="0beb0a09-4200-4242-0e05-67bf583b4c72",JOB_ID="32",SERIAL_NUMBER="692251001124"} 32
 ```
