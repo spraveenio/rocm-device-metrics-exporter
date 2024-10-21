@@ -915,7 +915,13 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]stri
 		case gpumetrics.GPUMetricLabel_CONTAINER.String():
 			labels[key] = podInfo.Container
 		case gpumetrics.GPUMetricLabel_JOB_ID.String():
-			labels[key] = fmt.Sprintf("%v", jobInfo.JobId)
+			labels[key] = jobInfo.Id
+		case gpumetrics.GPUMetricLabel_JOB_USER.String():
+			labels[key] = jobInfo.User
+		case gpumetrics.GPUMetricLabel_JOB_PARTITION.String():
+			labels[key] = jobInfo.Partition
+		case gpumetrics.GPUMetricLabel_CLUSTER_NAME.String():
+			labels[key] = jobInfo.Cluster
 		case gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String():
 			labels[key] = gpu.Status.SerialNum
 		case gpumetrics.GPUMetricLabel_CARD_SERIES.String():

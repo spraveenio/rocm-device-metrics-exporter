@@ -44,7 +44,10 @@ type JobsService interface {
 	Close() error
 }
 type JobInfo struct {
-	JobId string
+	Id        string
+	User      string
+	Partition string
+	Cluster   string
 }
 type client struct {
 	sync.Mutex
@@ -106,9 +109,8 @@ func NewClient(ctx context.Context) (JobsService, error) {
 						cl.Lock()
 						for _, allocGPU := range slurmMsg.SData.AllocGPUs {
 							cl.GpuJobs[allocGPU] = JobInfo{
-								JobId: fmt.Sprintf("%v", slurmMsg.SData.JobID),
+								Id: fmt.Sprintf("%v", slurmMsg.SData.JobID),
 							}
-
 						}
 						cl.Unlock()
 					}
@@ -175,7 +177,10 @@ func (cl *client) processSlurm(ctx context.Context, sfd net.Conn) {
 					cl.Lock()
 					for _, allocGPU := range strings.Split(gpus, ",") {
 						cl.GpuJobs[allocGPU] = JobInfo{
-							JobId: fmt.Sprintf("%v", jobEnv["SLURM_JOBID"]),
+							Id:        jobEnv["SLURM_JOB_ID"],
+							User:      jobEnv["SLURM_JOB_USER"],
+							Partition: jobEnv["SLURM_JOB_PARTITION"],
+							Cluster:   jobEnv["SLURM_CLUSTER_NAME"],
 						}
 					}
 					cl.Unlock()

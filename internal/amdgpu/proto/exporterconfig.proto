@@ -131,13 +131,16 @@ enum GPUMetricLabel {
     NAMESPACE          = 4;
     CONTAINER          = 5;
     JOB_ID             = 6;
-    CARD_SERIES        = 7;
+    JOB_USER           = 7;
+    JOB_PARTITION      = 8;
+    CLUSTER_NAME       = 9;
+    CARD_SERIES        = 10;
     // mandator CARD_MODEL cannot be disabled
-    CARD_MODEL         = 8;
-    CARD_VENDOR        = 9;
-    DRIVER_VERSION     = 10;
-    VBIOS_VERSION      = 11;
-    HOSTNAME           = 12;
+    CARD_MODEL         = 11;
+    CARD_VENDOR        = 12;
+    DRIVER_VERSION     = 13;
+    VBIOS_VERSION      = 14;
+    HOSTNAME           = 15;
 }
 
 message GPUMetricConfig {
