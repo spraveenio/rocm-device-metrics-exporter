@@ -454,12 +454,19 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Top 5 current GPU GFX Activity, labeled with hostname and GPU ID.",
+      "description": "Top 5 current GPU GFX Activity, labeled with hostname, GPU ID, and job ID.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to GPU dashboard",
+              "url": "/d/ae0aj8euc43r4b/gpu?orgId=1&var-g_gpu_uuid=${__field.labels.gpu_uuid}"
+            }
+          ],
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -517,7 +524,7 @@
           "includeNullMetadata": true,
           "instant": true,
           "interval": "",
-          "legendFormat": "{{hostname}} | {{gpu_id}}",
+          "legendFormat": "{{hostname}} | {{gpu_id}} | {{job_id}}",
           "range": false,
           "refId": "A",
           "useBackend": false
@@ -1384,7 +1391,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Current edge temperature, in Celsius",
+      "description": "Current temperature, in Celsius",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1808,6 +1815,6 @@
   "timezone": "browser",
   "title": "Overview",
   "uid": "fe0ayyeeoxvy8f",
-  "version": 6,
+  "version": 1,
   "weekStart": ""
 }
