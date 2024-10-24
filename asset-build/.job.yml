@@ -12,15 +12,6 @@ targets:
       - build-device-metrics-exporter-docker
       - build-device-metrics-exporter-docker-mock
 
-  release-docker-hub:
-    commands: ["sh", "-c", "pwd && cd ./asset-build && ./docker-push.sh"]
-    owners: ["email:prshanmug@amd.com"]
-    area:
-    sub-area:
-    feature:
-    build-dependencies:
-      - build-device-metrics-exporter-docker
-
 image:
   bind_dir: "/go/src/github.com/pensando/device-metrics-exporter"
   work_dir: "/go/src/github.com/pensando/device-metrics-exporter"

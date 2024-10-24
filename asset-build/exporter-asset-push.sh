@@ -24,7 +24,7 @@ copy_artifacts () {
     ls -la $BUNDLE_DIR
 }
 
-docker_build_push () {
+docker_push_private () {
     EXPORTER_IMAGE_URL=registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
     docker load -i /device-metrics-exporter/docker/exporter-latest.tar.gz
     docker inspect $EXPORTER_IMAGE_URL | grep "HOURLY"
@@ -34,7 +34,7 @@ docker_build_push () {
 setup () {
     setup_dir
     copy_artifacts
-    docker_build_push
+    docker_push_private
 }
 
 upload () {
@@ -53,4 +53,5 @@ main () {
 }
 
 main
-exit 0
+
+./docker-push-public.sh
