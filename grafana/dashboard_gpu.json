@@ -14,6 +14,13 @@
       "description": "",
       "type": "datasource",
       "pluginId": "__expr__"
+    },
+    {
+      "name": "VAR_G_MI300_MODEL",
+      "type": "constant",
+      "label": "MI300 Model",
+      "value": "102-G30102-0B",
+      "description": ""
     }
   ],
   "__elements": {},
@@ -357,12 +364,13 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
+          "exemplar": false,
           "expr": "pcie_recovery_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "Recovery",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         },
@@ -373,13 +381,14 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
+          "exemplar": false,
           "expr": "pcie_replay_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "Replay",
-          "range": true,
+          "range": false,
           "refId": "B",
           "useBackend": false
         },
@@ -390,13 +399,14 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
+          "exemplar": false,
           "expr": "pcie_replay_rollover_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "Replay Rollover",
-          "range": true,
+          "range": false,
           "refId": "C",
           "useBackend": false
         },
@@ -407,13 +417,14 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
+          "exemplar": false,
           "expr": "pcie_nack_received_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "NACK Received",
-          "range": true,
+          "range": false,
           "refId": "D",
           "useBackend": false
         },
@@ -424,13 +435,14 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
+          "exemplar": false,
           "expr": "pcie_nack_sent_count{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "NACK Sent",
-          "range": true,
+          "range": false,
           "refId": "E",
           "useBackend": false
         }
@@ -804,12 +816,13 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
+          "exemplar": false,
           "expr": "pcie_bandwidth{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "{{hostname}}[{{gpu_id}}]",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         }
@@ -959,9 +972,9 @@
           "fullMetaSearch": false,
           "hide": true,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "{{hostname}}[{{gpu_id}}]",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         },
@@ -1413,7 +1426,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_edge_temperature{gpu_uuid=\"$g_gpu_uuid\", card_model!=\"0x74a1\"}",
+          "expr": "gpu_edge_temperature{gpu_uuid=\"$g_gpu_uuid\", card_model!=\"$g_mi300_model\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -1429,7 +1442,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gpu_junction_temperature{gpu_uuid=\"$g_gpu_uuid\", card_model=\"0x74a1\"}",
+          "expr": "gpu_junction_temperature{gpu_uuid=\"$g_gpu_uuid\", card_model=\"$g_mi300_model\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -1897,6 +1910,26 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "hide": 2,
+        "label": "MI300 Model",
+        "name": "g_mi300_model",
+        "query": "${VAR_G_MI300_MODEL}",
+        "skipUrlSync": false,
+        "type": "constant",
+        "current": {
+          "value": "${VAR_G_MI300_MODEL}",
+          "text": "${VAR_G_MI300_MODEL}",
+          "selected": false
+        },
+        "options": [
+          {
+            "value": "${VAR_G_MI300_MODEL}",
+            "text": "${VAR_G_MI300_MODEL}",
+            "selected": false
+          }
+        ]
       }
     ]
   },
