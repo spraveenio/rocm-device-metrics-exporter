@@ -86,6 +86,7 @@ func NewClient(ctx context.Context) (JobsService, error) {
 					}
 
 					if _, err := strconv.Atoi(path.Base(event.Name)); err != nil {
+						logger.Log.Printf("skip event: %+v", event)
 						continue
 					}
 					logger.Log.Printf("event: %+v", event)
