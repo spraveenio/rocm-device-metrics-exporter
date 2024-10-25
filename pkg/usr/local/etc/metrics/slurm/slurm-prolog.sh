@@ -16,8 +16,9 @@
 #limitations under the License.
 #
 
-SOCK="/var/run/slurm/slurm.sock"
-MSG=$(cat << EOF
+EXPORT_DIR="/var/run/exporter/"
+MSG=$(
+	cat <<EOF
     {
     "SLURM_JOB_ID": "${SLURM_JOB_ID}",
     "SLURM_JOB_USER": "${SLURM_JOB_USER}",
@@ -29,4 +30,8 @@ MSG=$(cat << EOF
    }
 EOF
 )
-[ -S ${SOCK} ] && echo ${MSG} | nc -UN -w 1 ${SOCK} || true
+[ -d ${EXPORT_DIR} ] || exit 0
+GPUS=$(echo ${CUDA_VISIBLE_DEVICES} | tr "," "\n")
+for GPUID in ${GPUS}; do
+	echo ${MSG} >${EXPORT_DIR}/${GPUID}
+done
