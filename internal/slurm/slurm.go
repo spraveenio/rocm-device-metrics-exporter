@@ -20,16 +20,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	zmq "github.com/go-zeromq/zmq4"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/gpumetrics"
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/luaplugin"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
-	"google.golang.org/protobuf/proto"
-	"io"
-	"net"
+	"log"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -51,9 +50,8 @@ type JobInfo struct {
 }
 type client struct {
 	sync.Mutex
-	zmqSock   zmq.Socket
-	slurmSock net.Listener
-	GpuJobs   map[string]JobInfo
+	zmqSock zmq.Socket
+	GpuJobs map[string]JobInfo
 }
 
 func NewClient(ctx context.Context) (JobsService, error) {
@@ -63,141 +61,106 @@ func NewClient(ctx context.Context) (JobsService, error) {
 		return nil, fmt.Errorf("failed to listen on port %v, %v ", globals.ZmqPort, err)
 	}
 
-	os.MkdirAll(path.Dir(globals.SlurmSock), 0644)
-	os.Remove(globals.SlurmSock)
-	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: globals.SlurmSock, Net: "unix"})
-	if err != nil {
-		return nil, fmt.Errorf("failed to listen on  %v, %v ", globals.SlurmSock, err)
-	}
-
 	cl := &client{
-		zmqSock:   sock,
-		slurmSock: l,
-		GpuJobs:   make(map[string]JobInfo),
+		zmqSock: sock,
+		GpuJobs: make(map[string]JobInfo),
 	}
 
-	var slurmMsg luaplugin.Notification
-
 	go func() {
-		for ctx.Err() == nil {
-			select {
-			case <-ctx.Done():
-				logger.Log.Printf("context done")
-			default:
-				logger.Log.Printf("waiting for job notifications")
-				msg, err := sock.Recv()
-				if err != nil {
-					if err != io.EOF {
-						logger.Log.Printf("could not receive message %v", err)
-					}
-					break
-				}
-				if err := proto.Unmarshal(msg.Bytes(), &slurmMsg); err != nil {
-					logger.Log.Printf("could not receive message %v", err)
-					break
-				}
-				logger.Log.Printf("received slurm notification %+v", slurmMsg.String())
-				if slurmMsg.SData == nil {
-					logger.Log.Printf("SData is empty %+v", slurmMsg.SData)
-					break
-				}
+		os.MkdirAll(path.Dir(globals.SlurmDir), 0644)
 
-				logger.Log.Printf("slurm msg type:%v job:%v gpus:%v", slurmMsg.Type, slurmMsg.SData.JobID, slurmMsg.SData.AllocGPUs)
-				switch slurmMsg.Type {
-				case luaplugin.Stages_TaskInit:
-					if slurmMsg.SData.JobID > 0 && len(slurmMsg.SData.AllocGPUs) > 0 {
-						cl.Lock()
-						for _, allocGPU := range slurmMsg.SData.AllocGPUs {
-							cl.GpuJobs[allocGPU] = JobInfo{
-								Id: fmt.Sprintf("%v", slurmMsg.SData.JobID),
-							}
-						}
-						cl.Unlock()
-					}
-
-				case luaplugin.Stages_TaskExit:
-					cl.Lock()
-					for _, allocGPU := range slurmMsg.SData.AllocGPUs {
-						delete(cl.GpuJobs, allocGPU)
-
-					}
-					cl.Unlock()
-				case luaplugin.Stages_TaskEpilog:
-					logger.Log.Printf("ignore msg type %v", slurmMsg.Type)
-				default:
-					logger.Log.Printf("unknown msg type %v", slurmMsg.Type)
-				}
-			}
+		// Create new watcher.
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			logger.Log.Fatal(err)
 		}
-	}()
+		defer watcher.Close()
 
-	go func() {
-		defer os.Remove(globals.SlurmSock)
-		for {
+		// Start listening for events.
+		go func() {
 			for ctx.Err() == nil {
-				sfd, err := cl.slurmSock.Accept()
-				if err != nil {
-					logger.Log.Printf("failed to accept slurm connection %v", err)
-					continue
+				select {
+				case event, ok := <-watcher.Events:
+					if !ok {
+						return
+					}
+
+					if _, err := strconv.Atoi(path.Base(event.Name)); err != nil {
+						continue
+					}
+					logger.Log.Printf("event: %+v", event)
+
+					if event.Has(fsnotify.Create | fsnotify.Write) {
+						logger.Log.Printf("modified file: %v", event.Name)
+						data, err := os.ReadFile(event.Name)
+						if err != nil {
+							logger.Log.Printf("failed to read %v, %v", event.Name, err)
+							continue
+						}
+						cl.processSlurm(fsnotify.Write, path.Base(event.Name), data)
+
+					} else if event.Has(fsnotify.Remove) {
+						logger.Log.Printf("deleted file: %v", event.Name)
+						cl.processSlurm(fsnotify.Remove, path.Base(event.Name), nil)
+					}
+				case err, ok := <-watcher.Errors:
+					if !ok {
+						return
+					}
+					logger.Log.Printf("error: %v", err)
 				}
-				logger.Log.Printf("new slurm message")
-				cl.processSlurm(ctx, sfd)
+			}
+		}()
+
+		// Add a path.
+		err = watcher.Add(globals.SlurmDir)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// read existing
+		if fds, err := os.ReadDir(globals.SlurmDir); err == nil {
+			for _, f := range fds {
+				watcher.Events <- fsnotify.Event{Name: globals.SlurmDir + "/" + f.Name(), Op: fsnotify.Write}
 			}
 		}
+
+		// Block main goroutine forever.
+		<-make(chan struct{})
 	}()
+
 	return cl, nil
 }
 
-func (cl *client) processSlurm(ctx context.Context, sfd net.Conn) {
-	defer sfd.Close()
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Log.Printf("context done")
-		default:
-			buff := make([]byte, 4096)
-			len, err := sfd.Read(buff)
-			if err != nil {
-				if err != io.EOF {
-					logger.Log.Printf("could not read message %v", err)
-				}
-				return
-			}
-			var jobEnv map[string]string
-			if err := json.Unmarshal(buff[:len], &jobEnv); err != nil {
-				logger.Log.Printf("could not parse job env %v", err)
-				logger.Log.Printf("job env %v ", string(buff))
-				break
-			}
-			logger.Log.Printf("received job env %+v", jobEnv)
-			switch jobEnv["SLURM_SCRIPT_CONTEXT"] {
-			case "prolog_slurmd":
-				if gpus, ok := jobEnv["CUDA_VISIBLE_DEVICES"]; ok {
-					cl.Lock()
-					for _, allocGPU := range strings.Split(gpus, ",") {
-						cl.GpuJobs[allocGPU] = JobInfo{
-							Id:        jobEnv["SLURM_JOB_ID"],
-							User:      jobEnv["SLURM_JOB_USER"],
-							Partition: jobEnv["SLURM_JOB_PARTITION"],
-							Cluster:   jobEnv["SLURM_CLUSTER_NAME"],
-						}
-					}
-					cl.Unlock()
-					logger.Log.Printf("updated %v", cl.GpuJobs)
-				}
-
-			case "epilog_slurmd":
-				if gpus, ok := jobEnv["CUDA_VISIBLE_DEVICES"]; ok {
-					cl.Lock()
-					for _, allocGPU := range strings.Split(gpus, ",") {
-						delete(cl.GpuJobs, allocGPU)
-					}
-					cl.Unlock()
-					logger.Log.Printf("updated %v", cl.GpuJobs)
-				}
-			}
+func (cl *client) processSlurm(op fsnotify.Op, name string, buff []byte) {
+	if op.Has(fsnotify.Write) {
+		var jobEnv map[string]string
+		if err := json.Unmarshal(buff, &jobEnv); err != nil {
+			logger.Log.Printf("could not parse job env %v", err)
+			logger.Log.Printf("job env %v ", string(buff))
+			return
 		}
+
+		logger.Log.Printf("received job env %+v", jobEnv)
+		if gpus, ok := jobEnv["CUDA_VISIBLE_DEVICES"]; ok {
+			cl.Lock()
+			for _, allocGPU := range strings.Split(gpus, ",") {
+				cl.GpuJobs[allocGPU] = JobInfo{
+					Id:        jobEnv["SLURM_JOB_ID"],
+					User:      jobEnv["SLURM_JOB_USER"],
+					Partition: jobEnv["SLURM_JOB_PARTITION"],
+					Cluster:   jobEnv["SLURM_CLUSTER_NAME"],
+				}
+			}
+			cl.Unlock()
+			logger.Log.Printf("updated %v", cl.GpuJobs)
+		}
+	} else {
+		cl.Lock()
+		delete(cl.GpuJobs, fmt.Sprintf("%v", name))
+
+		cl.Unlock()
+		logger.Log.Printf("updated gpu %v jobs %v", name, cl.GpuJobs)
 	}
 }
 
@@ -220,6 +183,5 @@ func (cl *client) CheckExportLabels(labels map[string]bool) bool {
 }
 func (cl *client) Close() error {
 	cl.zmqSock.Close()
-	cl.slurmSock.Close()
 	return nil
 }

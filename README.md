@@ -139,13 +139,15 @@ Usage of bin/amd-metrics-exporter:
 ### 6. Slurm integration
 There are 2 options to collect job information from slurm
 #### 1. Using slurm Prolog/Epilog,
-   - copy /usr/local/etc/metrics/slurm/slurm-exporter.sh to /etc/slurm/
-   - chmod +x /etc/slurm/slurm-exporter.sh to add executable permissions
+   - copy /usr/local/etc/metrics/slurm/slurm-prolog.sh to /etc/slurm/
+   - copy /usr/local/etc/metrics/slurm/slurm-epilog.sh to /etc/slurm/
+   - chmod +x /etc/slurm/slurm-*.sh to add executable permissions
+   - remove /var/run/exporter/ to cleanup if there are no active jobs
    - configure prolog/epilog in slurm.conf,
  ```
-   prologFlags=Alloc
-   Prolog=/etc/slurm/slurm-exporter.sh
-   Epilog=/etc/slurm/slurm-exporter.sh
+   PrologFlags=Alloc
+   Prolog=/etc/slurm/slurm-prolog.sh
+   Epilog=/etc/slurm/slurm-epilog.sh
    ```
 
 These slurm labels can be configured to export in config.json

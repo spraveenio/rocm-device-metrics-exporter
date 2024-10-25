@@ -28,5 +28,5 @@ const (
 
 	ZmqPort = "6601"
 
-	SlurmSock = "/var/run/slurm/slurm.sock"
+	SlurmDir = "/var/run/exporter/"
 )
