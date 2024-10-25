@@ -3,5 +3,4 @@
 gen
 bin
 internal/bin
-internal/amdgpu/mock_gen/
 internal/slurm/sim/slurm-sim
