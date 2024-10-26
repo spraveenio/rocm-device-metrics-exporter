@@ -3,6 +3,14 @@
 if [ -z $RELEASE ]
 then
   echo "RELEASE is not set, return"
+
+  if [ -z ${DOCKERHUB_TOKEN-} ]
+  then
+      echo "DOCKERHUB_TOKEN is not set"
+  else
+      echo "DOCKERHUB_TOKEN is set"
+  fi
+
   exit 0
 fi
 
@@ -24,17 +32,26 @@ copy_artifacts () {
     ls -la $BUNDLE_DIR
 }
 
-docker_push_private () {
+docker_push () {
     EXPORTER_IMAGE_URL=registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
     docker load -i /device-metrics-exporter/docker/exporter-latest.tar.gz
     docker inspect $EXPORTER_IMAGE_URL | grep "HOURLY"
     docker push $EXPORTER_IMAGE_URL
+
+    if [ -z $DOCKERHUB_TOKEN ]
+    then
+      echo "DOCKERHUB_TOKEN is not set"
+    else
+      docker tag $EXPORTER_IMAGE_URL amdpsdo/device-metrics-exporter:latest
+      docker login --username=shreyajmeraamd --password-stdin <<< $DOCKERHUB_TOKEN
+      docker push amdpsdo/device-metrics-exporter:latest
+    fi
 }
 
 setup () {
     setup_dir
     copy_artifacts
-    docker_push_private
+    docker_push
 }
 
 upload () {
@@ -53,5 +70,3 @@ main () {
 }
 
 main
-
-./docker-push-public.sh
