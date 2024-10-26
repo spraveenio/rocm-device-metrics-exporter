@@ -19,7 +19,7 @@
       "name": "VAR_G_MI300_MODEL",
       "type": "constant",
       "label": "MI300 Model",
-      "value": "102-G30102-0B",
+      "value": "102-G30211-00",
       "description": ""
     }
   ],
@@ -40,7 +40,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "11.2.2"
+      "version": "11.2.2+security-01"
     },
     {
       "type": "datasource",
@@ -111,7 +111,7 @@
         "content": "#### VENDOR\n${g_card_vendor}\n\n#### SERIES\n${g_card_series}\n\n#### MODEL\n${g_card_model}\n\n#### SERIAL\n${g_serial_number}",
         "mode": "markdown"
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -154,8 +154,7 @@
         "content": "#### HOST\n${g_hostname}\n\n#### GPU ID\n${g_gpu_id}",
         "mode": "markdown"
       },
-      "pluginVersion": "11.2.2",
-      "title": "System",
+      "pluginVersion": "11.2.2+security-01",
       "type": "text"
     },
     {
@@ -200,7 +199,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -209,7 +208,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -230,6 +229,19 @@
         }
       ],
       "title": "GPU Package Power",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "GPU Package Power",
+            "mode": "reduceRow",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": true
+          }
+        }
+      ],
       "type": "gauge"
     },
     {
@@ -237,7 +249,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "estimated maximum PCIe bandwidth over the last second in MB/s",
+      "description": "Current maximum PCIe speed",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -282,7 +294,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -291,6 +303,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
+          "exemplar": false,
           "expr": "pcie_max_speed{gpu_uuid=\"$g_gpu_uuid\", hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -302,6 +315,19 @@
         }
       ],
       "title": "PCIe Max Speed",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "PCIe Max Speed",
+            "mode": "reduceRow",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": true
+          }
+        }
+      ],
       "type": "stat"
     },
     {
@@ -355,7 +381,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -501,7 +527,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -529,7 +555,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Current PCIe bandwidth",
+      "description": "Current PCIe bandwidth over time",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -682,7 +708,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -753,7 +779,7 @@
         "content": "#### VBIOS\n${g_gpu_vbios}\n\n#### DRIVER\n${g_driver}",
         "mode": "markdown"
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "title": "Software",
       "type": "text"
     },
@@ -762,7 +788,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "estimated maximum PCIe bandwidth over the last second in MB/s",
+      "description": "Current PCIe bandwidth",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -807,7 +833,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -881,7 +907,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -958,7 +984,7 @@
         "textMode": "value",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.2",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
