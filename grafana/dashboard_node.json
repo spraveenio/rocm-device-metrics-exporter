@@ -19,7 +19,7 @@
       "name": "VAR_G_MI300_MODEL",
       "type": "constant",
       "label": "MI300 Model",
-      "value": "102-G30102-0B",
+      "value": "102-G30211-00",
       "description": ""
     }
   ],
@@ -34,7 +34,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "11.2.0"
+      "version": "11.2.2+security-01"
     },
     {
       "type": "datasource",
@@ -88,17 +88,21 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to GPU Dashboard",
+              "url": "/d/ae0aj8euc43r4b/gpu"
+            }
+          ],
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -129,7 +133,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -163,6 +167,13 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to Job Dashboard",
+              "url": "/d/ce1x81pyv3dvkb/job"
+            }
+          ],
           "mappings": [],
           "noValue": "0",
           "thresholds": {
@@ -171,10 +182,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -205,7 +212,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -213,16 +220,30 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "exemplar": false,
           "expr": "sum(group by(job_id) (gpu_gfx_activity{hostname=\"$g_hostname\", job_id!=\"\"}))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "Jobs",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(group by(pod) (gpu_gfx_activity{hostname=\"$g_hostname\", pod!=\"\"}))",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "Jobs (Pods)",
+          "range": false,
+          "refId": "B"
         }
       ],
       "title": "Jobs",
@@ -239,7 +260,15 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to GPU Dashboard",
+              "url": "/d/ae0aj8euc43r4b/gpu"
+            }
+          ],
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -276,7 +305,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -340,7 +369,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Estimated maximum PCIe bandwidth over the last second, in MB/s",
+      "description": "Current maximum PCIe speed",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -390,7 +419,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -399,7 +428,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "count_values(\"count\", pcie_max_speed{hostname=\"$g_hostname\"})",
+          "expr": "pcie_max_speed{hostname=\"$g_hostname\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "__auto",
@@ -409,6 +438,19 @@
         }
       ],
       "title": "PCIe Max Speed",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "PCIe Max Speed",
+            "mode": "reduceRow",
+            "reduce": {
+              "reducer": "last"
+            },
+            "replaceFields": true
+          }
+        }
+      ],
       "type": "stat"
     },
     {
@@ -462,7 +504,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -568,6 +610,13 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to Job Dashboard",
+              "url": "/d/ce1x81pyv3dvkb/job?var-g_job_id=${__field.labels.job_id}&var-g_pod=${__field.labels.pod}"
+            }
+          ],
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -610,7 +659,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -644,6 +693,13 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to GPU Dashboard",
+              "url": "/d/ae0aj8euc43r4b/gpu?var-g_gpu_uuid=${__field.labels.gpu_uuid}"
+            }
+          ],
           "mappings": [],
           "noValue": "0",
           "thresholds": {
@@ -687,7 +743,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -764,7 +820,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -834,7 +890,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -852,7 +908,7 @@
           "useBackend": false
         }
       ],
-      "title": "Total PCIe Bandwidth",
+      "title": "Total Current PCIe Bandwidth",
       "type": "stat"
     },
     {
@@ -908,7 +964,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -1112,7 +1168,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -1203,7 +1259,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -1636,7 +1692,32 @@
           },
           "unit": "celsius"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "GPU Temperature"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 6,

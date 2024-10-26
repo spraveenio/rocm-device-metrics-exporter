@@ -19,7 +19,7 @@
       "name": "VAR_G_MI300_MODEL",
       "type": "constant",
       "label": "MI300 Model",
-      "value": "102-G30102-0B",
+      "value": "102-G30211-00",
       "description": ""
     }
   ],
@@ -34,7 +34,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "11.2.0"
+      "version": "11.2.2+security-01"
     },
     {
       "type": "datasource",
@@ -105,7 +105,7 @@
         "content": "${g_job_id}\n${g_pod}",
         "mode": "markdown"
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "title": "Name",
       "type": "text"
     },
@@ -163,7 +163,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -258,7 +258,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "estimated maximum PCIe bandwidth over the last second in MB/s",
+      "description": "Maximum PCIe speed",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -302,7 +302,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -313,9 +313,9 @@
           "exemplar": false,
           "expr": "pcie_max_speed{job_id!=\"\", job_id=\"$g_job_id\"}",
           "hide": false,
-          "instant": true,
+          "instant": false,
           "legendFormat": "{{job_id}}",
-          "range": false,
+          "range": true,
           "refId": "A"
         },
         {
@@ -330,9 +330,9 @@
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
-          "instant": true,
+          "instant": false,
           "legendFormat": "{{pod}}",
-          "range": false,
+          "range": true,
           "refId": "B",
           "useBackend": false
         }
@@ -391,7 +391,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -545,7 +545,15 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to GPU Dashboard",
+              "url": "/d/ae0aj8euc43r4b/gpu?var-g_gpu_uuid=${__field.labels.gpu_uuid}"
+            }
+          ],
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -570,15 +578,16 @@
         "y": 0
       },
       "id": 16,
+      "maxDataPoints": 60,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "max"
           ],
           "fields": "",
           "values": false
@@ -587,7 +596,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -601,9 +610,9 @@
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
-          "instant": true,
+          "instant": false,
           "legendFormat": "{{hostname}} | {{gpu_id}}",
-          "range": false,
+          "range": true,
           "refId": "A",
           "useBackend": false
         },
@@ -619,9 +628,9 @@
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
-          "instant": true,
+          "instant": false,
           "legendFormat": "{{hostname}} | {{gpu_id}}",
-          "range": false,
+          "range": true,
           "refId": "B",
           "useBackend": false
         }
@@ -640,7 +649,15 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to GPU Dashboard",
+              "url": "/d/ae0aj8euc43r4b/gpu?var-g_gpu_uuid=${__field.labels.gpu_uuid}"
+            }
+          ],
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -667,13 +684,13 @@
       "id": 17,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "max"
           ],
           "fields": "",
           "values": false
@@ -682,7 +699,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -695,9 +712,9 @@
           "expr": "topk(5, gpu_used_vram{job_id!=\"\", job_id=\"$g_job_id\"})",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": true,
+          "instant": false,
           "legendFormat": "{{hostname}} | {{gpu_id}}",
-          "range": false,
+          "range": true,
           "refId": "A",
           "useBackend": false
         },
@@ -713,9 +730,9 @@
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
-          "instant": true,
+          "instant": false,
           "legendFormat": "{{hostname}} | {{gpu_id}}",
-          "range": false,
+          "range": true,
           "refId": "B",
           "useBackend": false
         }
@@ -728,7 +745,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total current PCIe bandwidth, in MB/s",
+      "description": "Total current PCIe bandwidth",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -777,7 +794,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -828,7 +845,7 @@
           "refId": "C"
         }
       ],
-      "title": "Total PCIe Bandwidth",
+      "title": "Total Current PCIe Bandwidth",
       "type": "stat"
     },
     {
@@ -842,6 +859,13 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to Compute Node Dashboard",
+              "url": "/d/de1q9vq97fe2oc/compute-node"
+            }
+          ],
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -883,7 +907,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -968,7 +992,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -1012,7 +1036,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total current PCIe bandwidth, in MB/s",
+      "description": "Total PCIe bandwidth over time",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1139,6 +1163,13 @@
           "color": {
             "mode": "thresholds"
           },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "Go to GPU Dashboard",
+              "url": "/d/ae0aj8euc43r4b/gpu"
+            }
+          ],
           "mappings": [],
           "noValue": "0",
           "thresholds": {
@@ -1177,7 +1208,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
@@ -1231,6 +1262,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1271,7 +1303,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.2.2+security-01",
       "targets": [
         {
           "datasource": {
