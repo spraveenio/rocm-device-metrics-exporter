@@ -1822,10 +1822,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -1888,8 +1884,6 @@
         ]
       },
       "pluginVersion": "11.2.2+security-01",
-      "repeat": "g_gpu_uuids",
-      "repeatDirection": "v",
       "targets": [
         {
           "datasource": {
