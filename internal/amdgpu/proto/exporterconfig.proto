@@ -54,7 +54,7 @@ enum GPUMetricField {
     PCIE_NAC_RECEIVED_COUNT     = 23;
     GPU_CLOCK                   = 24;
     GPU_POWER_USAGE             = 25;
-    GPU_TOTAL_MEMORY            = 26;
+    GPU_TOTAL_VRAM              = 26;
     GPU_ECC_CORRECT_TOTAL       = 27;
     GPU_ECC_UNCORRECT_TOTAL     = 28;
     GPU_ECC_CORRECT_SDMA        = 29;
