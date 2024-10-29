@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -24,6 +23,7 @@ import (
 
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/config"
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/internal/amdgpu/globals"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -115,5 +115,7 @@ func (mh *MetricsHandler) GetAgentAddr() string {
 func (mh *MetricsHandler) updateServerPort() {
 	if mh.metricConfig != nil && mh.metricConfig.GetServerPort() != 0 {
 		mh.runConf.SetServerPort(mh.metricConfig.GetServerPort())
+	} else {
+		mh.runConf.SetServerPort(globals.AMDListenPort)
 	}
 }
