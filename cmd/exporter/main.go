@@ -134,15 +134,24 @@ func foreverWatcher() {
 		return fileInfo.ModTime()
 	}()
 
+    configFilePresent := false
+
 	fileChanged := func() bool {
 		fileInfo, err := os.Stat(configPath)
 		if err != nil {
+		    if configFilePresent == true {
+		        // previous file was present and now got deleted
+		        lastChangedTime = time.Now()
+		        configFilePresent = false
+		        return true
+		    }
 			// error not be logged as this is in a timer loop
 			// ignore error
 			return false
 		}
 		modifiedTime := fileInfo.ModTime()
 		if modifiedTime != lastChangedTime {
+		    configFilePresent = true
 			lastChangedTime = modifiedTime
 			return true
 		}

@@ -10,13 +10,13 @@ Usage of bin/amd-metrics-exporter:
 ```
 ## Supported Platforms
   - Ubuntu 22.04
+
 ## RDC version
   - ROCM 6.2
 
 ## Build and Run Instructions
 
-### 1. Build amdexporter application binary
-
+### Build amdexporter application binary
 -  Run the following make target in the TOP directory. This will also generate the required protos to build the amdexporter application
    	binary.
    	```
@@ -25,13 +25,13 @@ Usage of bin/amd-metrics-exporter:
     ```
    	
 
-### 2. Build exporter container
+### Build exporter container
 -  Run the following make target in the TOP directory:
    	```
     cd $TOPDIR
     make docker
     ```
-### 3. Run exporter
+### Run exporter
   - docker environment
     - To run the exporter container after building the container in $TOPDIR/docker, run:
       
@@ -118,8 +118,12 @@ Usage of bin/amd-metrics-exporter:
     onto the slurm plugin directory to job labels on metrics.
     path : `/usr/local/etc/metrics/pensando.lua`
     proto : `/usr/local/etc/metrics/plugin.proto`
+### Default config behavior
+- ServerPort : 5000
+- Labels Defaults : `gpu_uuid, serial_number, card_model`
+- Fields Defaults : all fields supported
 
-### 4. Custom metrics config
+### Custom metrics config
 - To run the exporter with config mount the /etc/metrics/config.json on the
   exporter container 
     - create your config in directory `config/config.json`
@@ -127,18 +131,27 @@ Usage of bin/amd-metrics-exporter:
      ```
      docker run --rm -ltd --privileged -v ./config:/etc/metrics -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
      ```
-### 5. Metrics Config formats
-- Json file with the following keys are expected
-    - Fields
-        array of string specifying what field to be exported
-        present in [_internal/amdgpu/proto/fields.proto_:**GPUMetricField**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L32)
-    - Labels
-        CARD_MODEL, GPU_UUID and SERIAL_NUMBER are always set and cannot be removed. Labels supported are available in
-        [_internal/amdgpu/proto/fields.proto_**:GPUMetricLabel**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L114)
+- The update to config file will take affect graciously without needing the
+  container to be restarted. The new config will take effect in less than 10s interval.
+### Metrics Config formats
+- Json file with the following optional keys are expected
+    - ServerPort : <port number>
+        - this field is ignored when metrics exporter is deployed through
+          gpu-operator as to avoid the service node port config causing issues
+    - GPUConfig :
+        - Fields
+            array of string specifying what field to be exported
+            present in [_internal/amdgpu/proto/fields.proto_:**GPUMetricField**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L32)
+        - Labels
+            CARD_MODEL, GPU_UUID and SERIAL_NUMBER are always set and cannot be removed. Labels supported are available in
+            [_internal/amdgpu/proto/fields.proto_**:GPUMetricLabel**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L114)
 
-### 6. Slurm integration
+- Invalid values in any of the field will be ignored and revert to default
+  behavior for the respective fields.
+
+### Slurm integration
 There are 2 options to collect job information from slurm
-#### 1. Using slurm Prolog/Epilog,
+#### Using slurm Prolog/Epilog,
    - copy /usr/local/etc/metrics/slurm/slurm-prolog.sh to /etc/slurm/
    - copy /usr/local/etc/metrics/slurm/slurm-epilog.sh to /etc/slurm/
    - chmod +x /etc/slurm/slurm-*.sh to add executable permissions
@@ -162,7 +175,7 @@ These slurm labels can be configured to export in config.json
   gpu_junction_temperature{card_model="0x1002,cluster_name="genoacluster",driver_version="6.8.0-40-generic",gpu_id="0",gpu_uuid="72ff740f-0000-1000-804c-3b58bf67050e",job_id="130",job_partition="LocalQ",job_user="vm",serial_number="692251001124"} 30
 ```
 
-#### 2. Metrics exporter using SPANK((Slurm Plug-in Architecture for Node and job (K)control)  plugin to collect job metrics
+#### Metrics exporter using SPANK((Slurm Plug-in Architecture for Node and job (K)control)  plugin to collect job metrics
    - Configure SPANK config, plugstack.conf(default) on  worker nodes
    - Copy metrics exporter plugin files from /etc/metrics/slurm to slurm config (/etc/slurm)
    - Restart slurmd service
@@ -175,11 +188,11 @@ gpu_edge_temperature{CARD_MODEL="0xc34",DRIVER_VERSION="6.8.5",GPU_ID="0",GPU_UU
 
 
 
-### 7. Run prometheus (Testing)
+### Run prometheus (Testing)
    ```
 	docker run -p 9090:9090 -v ./example/prometheus.yml:/etc/prometheus/prometheus.yml -v prometheus-data:/prometheus prom/prometheus
    ```
-### 8. Install Grafana (Testing)
+### Install Grafana (Testing)
 - installation
     ```
     https://grafana.com/docs/grafana/latest/setup-grafana/installation/debian/
@@ -198,7 +211,7 @@ gpu_edge_temperature{CARD_MODEL="0xc34",DRIVER_VERSION="6.8.5",GPU_ID="0",GPU_UU
     sudo systemctl status grafana-server
     ```
 
-### 9. Debian Complete Installation : Ubuntu 22.04
+### Debian Complete Installation : Ubuntu 22.04
   - Installation prerequisites
     - DKMS Installation and Setup
         [DKMS detailed
