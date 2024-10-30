@@ -6,9 +6,12 @@ then
       exit 0
 fi
 
-docker rmi registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
-docker pull registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
-docker tag registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest amdpsdo/device-metrics-exporter:latest
+PUBLIC_TAG=${PUBLIC_TAG:-latest}
+PRIVATE_TAG=${PRIVATE_TAG:-latest}
+
+docker rmi registry.test.pensando.io:5000/device-metrics-exporter/exporter:$PRIVATE_TAG
+docker pull registry.test.pensando.io:5000/device-metrics-exporter/exporter:$PRIVATE_TAG
+docker tag registry.test.pensando.io:5000/device-metrics-exporter/exporter:$PRIVATE_TAG amdpsdo/device-metrics-exporter:$PUBLIC_TAG
 
 docker login --username=shreyajmeraamd --password-stdin <<< $DOCKERHUB_TOKEN
-docker push amdpsdo/device-metrics-exporter:latest
+docker push amdpsdo/device-metrics-exporter:$PUBLIC_TAG
