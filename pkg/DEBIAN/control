@@ -1,5 +1,5 @@
 Package: amdgpu-exporter
-Version: 0.1
+Version: 1.0.0
 Maintainer: AMD Inc.
 Architecture: amd64
 Description: GPU Metrics Exporter
