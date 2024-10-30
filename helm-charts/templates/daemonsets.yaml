@@ -8,11 +8,11 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: amdgpu-metrics-exporter
+      app: {{ .Release.Name }}-amdgpu-metrics-exporter
   template:
     metadata:
       labels:
-        app: amdgpu-metrics-exporter
+        app: {{ .Release.Name }}-amdgpu-metrics-exporter
     spec:
       {{- if .Values.nodeSelector }}
       nodeSelector:
@@ -58,6 +58,10 @@ spec:
             mountPath: /etc/metrics/
           {{- end }}
           workingDir: /root
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+      - name: {{ .Values.image.pullSecrets }}
+      {{- end }}
       volumes:
       - hostPath:
           path: /dev

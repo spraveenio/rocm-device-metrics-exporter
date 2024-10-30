@@ -6,6 +6,7 @@ image:
   repository: registry.test.pensando.io:5000/device-metrics-exporter/exporter
   tag: latest
   pullPolicy: Always
+  pullSecrets: ""
 
 service:
   type: ClusterIP
