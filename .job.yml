@@ -8,7 +8,7 @@ builds:
     sub-area:
     feature:
     artifacts:
-        - /device-metrics-exporter/bin/amdgpu-exporter_0.1_amd64.deb
+        - /device-metrics-exporter/bin/amdgpu-exporter_1.0.0_amd64.deb
 
   build-device-metrics-exporter-docker:
     commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make && \

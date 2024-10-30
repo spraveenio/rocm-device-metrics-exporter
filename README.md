@@ -93,13 +93,11 @@ Usage of bin/amd-metrics-exporter:
 
   - enable on system bootup (Optional)
     ```
-    systemctl enable gpuagent.service
     systemctl enable amd-metrics-exporter.service
     ```
 
   - starting services
     ```
-    systemctl start gpuagent.service
     systemctl start amd-metrics-exporter.service
     ```
 
@@ -252,9 +250,7 @@ gpu_edge_temperature{CARD_MODEL="0xc34",DRIVER_VERSION="6.8.5",GPU_ID="0",GPU_UU
         ```
         dpkg -i amdgpu-exporter_0.1_amd64.deb
 
-        systemctl enable gpuagent.service
         systemctl enable amd-metrics-exporter.service
-        systemctl start gpuagent.service
         systemctl start amd-metrics-exporter.service
         ```
 

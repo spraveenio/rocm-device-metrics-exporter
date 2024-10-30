@@ -1,5 +1,6 @@
 # Add any non-service units required by gpuagent here
-Requires=gpuagent.service
+[Unit]
+Description=AMD GPU Prometheus Exporter Service
 Wants=gpuagent.service
 After=gpuagent.service
 
@@ -7,11 +8,12 @@ After=gpuagent.service
 User=root
 Group=root
 Restart=on-failure
+RestartSec=10
 
 Type=simple
 
 # If we need to start anything before gpuagent, use this
-ExecStartPre=/bin/sleep 10
+ExecStartPre=/bin/sleep 5
 # update-alternative has been run for gpuagent and
 # soft link will be available in usr/bin
 ExecStart=/usr/local/bin/amd-metrics-exporter
