@@ -257,3 +257,37 @@ gpu_edge_temperature{CARD_MODEL="0xc34",DRIVER_VERSION="6.8.5",GPU_ID="0",GPU_UU
         systemctl start gpuagent.service
         systemctl start amd-metrics-exporter.service
         ```
+
+### Helm Charts Deployment for Kubernetes
+- Prerequisites
+  - Kubernetes cluster is up and running
+  - Helm tool is installed on the node with kubectl + kube config file to get access to the cluster
+- Installation
+  - Download the device metrics exporter helm charts .tgz file
+  - Prepare ```values.yaml``` to setup the deployment parameters, for example:
+    ```yaml
+    platform: k8s
+    nodeSelector: {} # add customized nodeSelector for metrics exporter daemonset
+    image:
+      repository: registry.test.pensando.io:5000/device-metrics-exporter/exporter
+      tag: latest
+      pullPolicy: Always
+      pullSecrets: "" # put name of docker-registry secret here if needed for exporter image
+    service:
+      type: NodePort # select NodePort or ClusterIP as metrics exporter's service type
+      ClusterIP:
+        port: 5000 # cluster internal service port
+      NodePort:      
+        port: 5000 # cluster internal service port
+        nodePort: 32500 # external node port 
+    configMap: "" # put name of configmap here if needed for customizing exported stats
+    ```
+  - (Optional) if you want to customize the exported stats, please create a configmap by using ```example/configmap.yaml``` (please modify the namespace to align with helm install command), and put the configmap name into ```values.yaml```.
+  - Run ```helm install``` command to deploy exporter in your Kubernetes cluster:
+    ```helm install exporter ./exporter-charts-v1.0.0.tgz -n mynamespace -f values.yaml```
+- Update config:
+  - Option 1: you can directly modify the Kubernetes resource to modify the config, including modifying configmap, service, rbac or daemonset resources.
+  - Option 2: you can prepare the updated ```values.yaml``` and do a helm chart upgrade: ```helm upgrade exporter -n mynamespace -f updated_values.yaml```
+- Uninstallation
+  - Uninstall the helm charts by running: 
+    ```helm uninstall exporter -n mynamespace```
