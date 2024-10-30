@@ -41,6 +41,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
+          - name: METRICS_EXPORTER_PORT
+            value: "5000"
           ports:
             - containerPort: 5000
               protocol: TCP

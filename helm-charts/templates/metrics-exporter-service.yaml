@@ -12,12 +12,12 @@ spec:
   ports:
     - protocol: "TCP"
       port: {{ .Values.service.NodePort.port }}
-      targetPort: {{ .Values.service.NodePort.targetPort }}
+      targetPort: 5000
       nodePort: {{ .Values.service.NodePort.nodePort }}
   {{- end }}
   {{- if eq .Values.service.type "ClusterIP" }}
   ports:
     - protocol: "TCP"
       port: {{ .Values.service.ClusterIP.port }}
-      targetPort: {{ .Values.service.ClusterIP.targetPort }}
+      targetPort: 5000
   {{- end }}

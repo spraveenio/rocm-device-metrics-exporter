@@ -12,10 +12,8 @@ service:
   type: ClusterIP
   ClusterIP:
     port: 5000
-    targetPort: 5000
   NodePort:      
     port: 5000
-    targetPort: 5000
     nodePort: 32500
 
 configMap: ""
