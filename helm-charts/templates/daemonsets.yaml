@@ -41,11 +41,20 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
+          {{- if eq .Values.service.type "NodePort" }}
           - name: METRICS_EXPORTER_PORT
-            value: "5000"
+            value: "{{ .Values.service.NodePort.port }}"
           ports:
-            - containerPort: 5000
+            - containerPort: {{ .Values.service.NodePort.port }}
               protocol: TCP
+          {{- end }}
+          {{- if eq .Values.service.type "ClusterIP" }}
+          - name: METRICS_EXPORTER_PORT
+            value: "{{ .Values.service.ClusterIP.port }}"
+          ports:
+            - containerPort: {{ .Values.service.ClusterIP.port }}
+              protocol: TCP
+          {{- end }}
           securityContext:
             privileged: true
           volumeMounts:
