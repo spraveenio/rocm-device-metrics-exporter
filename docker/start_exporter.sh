@@ -41,8 +41,12 @@ LOAD_IMAGE=1
 EXPORTER_EXTERNAL_LISTENER_PORT=5000
 EXPORTER_INTERNAL_LISTENER_PORT=5000
 NODE_MGMT_RUN_DIR=$PWD
-DOCKER_IMAGE_NAME="exporter:$VER"
 DOCKER_INSTANCE_NAME="exporter"
+DOCKER_REGISTRY="registry.test.pensando.io:5000/device-metrics-exporter/"
+#TODO : rename to official exporter later
+EXPORTER_IMAGE="exporter"
+
+IMAGE_URL="${DOCKER_REGISTRY}${EXPORTER_IMAGE}:${VER}"
 
 while getopts ":hd:p:sn:" option; do
     case $option in
@@ -69,7 +73,7 @@ if [ "$LOAD_IMAGE" == 1 ]; then
         exit
     fi
     echo "Cleaning up docker image from registry..."
-    docker rmi amd/$DOCKER_IMAGE_NAME -f || true
+    docker image rm $IMAGE_URL -f || true
     echo "Loading up docker image specified into registry..."
     docker load -i $DOCKER_IMAGE
 fi
@@ -83,5 +87,5 @@ MOUNT_OPTS=" --mount type=bind,source=$HOST_DIR/var/run,target=/var/run"
 # bind gpuagent grpc ports to the container
 PORT_OPTS=" -p $EXPORTER_EXTERNAL_LISTENER_PORT:$EXPORTER_INTERNAL_LISTENER_PORT"
 echo "Creating docker container..."
-docker run --rm -itd --privileged --name $DOCKER_INSTANCE_NAME $PORT_OPTS $MOUNT_OPTS -e PATH=$PATH:/home/amd/bin/ amd/$DOCKER_IMAGE_NAME
+docker run --rm -itd --privileged --name $DOCKER_INSTANCE_NAME $PORT_OPTS $MOUNT_OPTS -e PATH=$PATH:/home/amd/bin/ $IMAGE_URL
 exit 0

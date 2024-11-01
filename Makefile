@@ -429,6 +429,15 @@ helm-lint:
 helm-build: helm-lint
 	helm package helm-charts/ --destination ./helm-charts
 
+.PHONY: e2e-test
+e2e-test:
+	$(MAKE) -C test/e2e
+
+.PHONY: e2e
+e2e:
+	$(MAKE) docker-mock
+	$(MAKE) e2e-test
+
 .PHONY: helm-lint
 helm-lint:
 	cd $(HELM_CHARTS_DIR); helm lint

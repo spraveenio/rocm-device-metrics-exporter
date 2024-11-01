@@ -17,8 +17,8 @@ builds:
     artifacts:
         - /device-metrics-exporter/docker/exporter-latest.tar.gz
 
-  build-device-metrics-exporter-docker-mock:
-    commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make docker-mock"]
+  e2e-test-mock-exporter:
+    commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make e2e"]
     owners: ["email:prshanmug@amd.com"]
     artifacts:
         - /device-metrics-exporter/docker/obj/exporter-release-mock-v1.tgz

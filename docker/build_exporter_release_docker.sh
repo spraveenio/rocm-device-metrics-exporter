@@ -36,12 +36,11 @@ print_help () {
 }
 
 VER=v1
-DOCKER_IMAGE_NAME="amd/exporter:$VER"
 SAVE_IMAGE=0
 PUBLISH_IMAGE=0
 DOCKER_REGISTRY="registry.test.pensando.io:5000/device-metrics-exporter/"
 #TODO : rename to official exporter later
-EXPORTER_IMAGE="rocm-metrics-exporter"
+EXPORTER_IMAGE="exporter"
 
 IMAGE_URL="${DOCKER_REGISTRY}${EXPORTER_IMAGE}:${VER}"
 
@@ -96,8 +95,8 @@ if [ $PUBLISH_IMAGE == 1 ]; then
         exit $?
     fi
 else
-    echo "building exporter image to $DOCKER_IMAGE_NAME"
-    docker build -t $DOCKER_IMAGE_NAME . -f Dockerfile.exporter-release && docker save -o exporter-docker-$VER.tar $DOCKER_IMAGE_NAME
+    echo "building exporter image to $IMAGE_URL"
+    docker build -t $IMAGE_URL . -f Dockerfile.exporter-release && docker save -o exporter-docker-$VER.tar $IMAGE_URL
     if [ $? -eq 0 ]; then
         gzip exporter-docker-$VER.tar
         mv exporter-docker-$VER.tar.gz exporter-docker-$VER.tgz
