@@ -178,9 +178,6 @@ func (s *E2ESuite) SetUpSuite(c *C) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	s.exporterClient = &http.Client{Transport: tr}
-	resp, err := s.exporterClient.Get("http://localhost:5000/metrics")
-	assert.Nil(c, err)
-	log.Printf("exporter resp : %+v", resp)
 	// empty config is default
 	err = s.WriteConfig(&gpumetrics.MetricConfig{})
 	assert.Nil(c, err)
