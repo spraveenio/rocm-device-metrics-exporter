@@ -25,8 +25,10 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"path"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -96,9 +98,8 @@ func startMetricsServer(c *config.Config) *http.Server {
 func foreverWatcher() {
 	var srvHandler *http.Server
 	configPath := runConf.GetMetricsConfigPath()
-
-	pollTimer := time.NewTicker(5 * time.Second)
-	defer pollTimer.Stop()
+	directory := path.Dir(configPath)
+	log.Printf("config directory for watch : %v", directory)
 
 	serverRunning := func() bool {
 		return srvHandler != nil
@@ -125,54 +126,56 @@ func foreverWatcher() {
 			srvHandler = nil
 		}
 	}
+	os.MkdirAll(path.Dir(directory), 0644)
 
-	lastChangedTime := func() time.Time {
-		fileInfo, err := os.Stat(configPath)
-		if err != nil {
-			return time.Now()
-		}
-		return fileInfo.ModTime()
-	}()
+    // start server and listen for changes later
+    startServer()
 
-    configFilePresent := false
-
-	fileChanged := func() bool {
-		fileInfo, err := os.Stat(configPath)
-		if err != nil {
-		    if configFilePresent == true {
-		        // previous file was present and now got deleted
-		        lastChangedTime = time.Now()
-		        configFilePresent = false
-		        return true
-		    }
-			// error not be logged as this is in a timer loop
-			// ignore error
-			return false
-		}
-		modifiedTime := fileInfo.ModTime()
-		if modifiedTime != lastChangedTime {
-		    configFilePresent = true
-			lastChangedTime = modifiedTime
-			return true
-		}
-		return false
+	// Create new watcher.
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		logger.Log.Fatal(err)
 	}
+	defer watcher.Close()
 
-	logger.Log.Printf("starting file watcher")
-	startServer()
-
+	ctx := context.Background()
 	// Start listening for events.
 	go func() {
-		for range pollTimer.C {
-			if fileChanged() {
-				logger.Log.Printf("config update detected, loading new config")
-				// stop server if running
-				stopServer()
-				// start server
-				startServer()
+		for ctx.Err() == nil {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				if event.Name != configPath {
+					logger.Log.Printf("skip event: %+v", event)
+					continue
+				}
+				logger.Log.Printf("event: %+v", event)
+
+				if event.Has(fsnotify.Create | fsnotify.Write | fsnotify.Remove | fsnotify.Rename) {
+					logger.Log.Printf("loading new config on %v", configPath)
+					// stop server if running
+					stopServer()
+					// start server
+					startServer()
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				logger.Log.Printf("error: %v", err)
 			}
 		}
 	}()
+
+	// Add a path.
+	err = watcher.Add(directory)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	logger.Log.Printf("starting file watcher for %v", configPath)
 
 	<-make(chan struct{})
 }
