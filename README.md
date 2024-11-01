@@ -147,6 +147,17 @@ Usage of bin/amd-metrics-exporter:
 - Invalid values in any of the field will be ignored and revert to default
   behavior for the respective fields.
 
+### E2e Testing
+- The current testing will exercise only the exporter module part with mocked
+  external entities
+
+- All the tests are under `test/e2e`
+
+- Running test from TOP directory. This will build the necessary components
+  and docker container image packed with mocked dependent services and run all
+  the tests.
+  `make e2e`
+
 ### Slurm integration
 There are 2 options to collect job information from slurm
 #### Using slurm Prolog/Epilog,

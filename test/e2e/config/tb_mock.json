@@ -1,0 +1,5 @@
+{
+    "ExporterName" : "test_exporter",
+    "E2EMode": "EXPORTER_MOCK",
+    "ImageName" : "registry.test.pensando.io:5000/device-metrics-exporter/exporter:v1"
+}

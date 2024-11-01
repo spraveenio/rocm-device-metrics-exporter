@@ -154,7 +154,7 @@ docker-publish:
 
 .PHONY: unit-test
 unit-test:
-	PATH=$$PATH LOGDIR=$(TOP_DIR)/ go test -v -cover -mod=vendor ./...
+	PATH=$$PATH LOGDIR=$(TOP_DIR)/ go test -v -cover -mod=vendor ./internal/...
 
 loadgpu:
 	sudo modprobe amdgpu
@@ -173,6 +173,15 @@ base-image:
 
 copyrights:
 	GOFLAGS=-mod=mod go run tools/build/copyright/main.go && ./tools/build/check-local-files.sh
+
+.PHONY: e2e-test
+e2e-test:
+	$(MAKE) -C test/e2e
+
+.PHONY: e2e
+e2e:
+	$(MAKE) docker-mock
+	$(MAKE) e2e-test
 
 .PHONY: helm-lint
 helm-lint:
