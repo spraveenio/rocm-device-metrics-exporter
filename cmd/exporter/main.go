@@ -99,6 +99,7 @@ func foreverWatcher() {
 	var srvHandler *http.Server
 	configPath := runConf.GetMetricsConfigPath()
 	directory := path.Dir(configPath)
+	os.MkdirAll(directory, 0755)
 	log.Printf("config directory for watch : %v", directory)
 
 	serverRunning := func() bool {
@@ -126,10 +127,9 @@ func foreverWatcher() {
 			srvHandler = nil
 		}
 	}
-	os.MkdirAll(path.Dir(directory), 0644)
 
-    // start server and listen for changes later
-    startServer()
+	// start server and listen for changes later
+	startServer()
 
 	// Create new watcher.
 	watcher, err := fsnotify.NewWatcher()
