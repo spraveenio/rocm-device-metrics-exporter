@@ -20,7 +20,8 @@ set -euo pipefail
 # entry point script run on creating a node management container
 # start rdcd and gpuagent processes
 # start rdcd in the background
-LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib:/opt/rocm-6.2.0/lib/rdc /opt/rocm-6.2.0/bin/rdcd -u &
+# WORKAROUND FIX : rdcd logs are overflowing on stdin move it to null for now
+LD_LIBRARY_PATH=/opt/rocm-6.2.0/lib:/opt/rocm-6.2.0/lib/rdc /opt/rocm-6.2.0/bin/rdcd -u 1>/dev/null 2>&1 &
 # sleep before starting gpuagent
 sleep 10
 # start gpuagent process in the background
