@@ -1,5 +1,5 @@
 #base template file: https://github.com/ROCm/ROCm-docker/blob/master/rocm-terminal/Dockerfile
-ARG BASE_IMAGE=ubuntu:22.04
+ARG BASE_IMAGE=registry.test.pensando.io:5000/ubuntu:22.04
 
 FROM ${BASE_IMAGE}
 

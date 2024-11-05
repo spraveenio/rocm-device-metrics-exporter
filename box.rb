@@ -31,6 +31,11 @@ run "curl -k -LO https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl"
 run "chmod +x kubectl"
 run "mv kubectl /usr/local/bin"
 
+# download and install helm
+run "curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+run "chmod 700 get_helm.sh"
+run "./get_helm.sh"
+
 run "curl -k -o /usr/bin/asset-pull http://pm.test.pensando.io/tools/asset-pull"
 run "chmod +x /usr/bin/asset-pull"
 run "curl -k -o /usr/bin/asset-push http://pm.test.pensando.io/tools/asset-push"

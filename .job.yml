@@ -25,6 +25,15 @@ targets:
     sub-area:
     feature:
 
+  helm-build:
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make helm-build"]
+    owners: ["email:prshanmug@amd.com"]
+    area:
+    sub-area:
+    feature:
+    artifacts:
+        - /device-metrics-exporter/helm-charts/amdgpu-metrics-exporter-charts-*.tgz
+
   device-metrics-unit-test:
     commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && \
                                     make checks && \

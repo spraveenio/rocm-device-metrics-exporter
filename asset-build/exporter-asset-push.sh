@@ -28,6 +28,8 @@ copy_artifacts () {
     cp /device-metrics-exporter/docker/obj/exporter-release-mock-*.tgz  $BUNDLE_DIR/
     # copy debian package
     cp /device-metrics-exporter/bin/amdgpu-exporter_*_amd64.deb  $BUNDLE_DIR/
+    # copy helm charts
+    cp /device-metrics-exporter/helm-charts/amdgpu-metrics-exporter-charts-*.tgz $BUNDLE_DIR/
     # list the artifacts copied out
     ls -la $BUNDLE_DIR
 }
