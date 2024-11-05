@@ -38,7 +38,7 @@ import (
 	testutils "github.com/pensando/device-metrics-exporter/test/e2e/utils"
 )
 
-var skipSetup = flag.Bool("skip-seutp", false, "skip setting up testbed")
+var skipSetup = flag.Bool("skip-setup", false, "skip setting up testbed")
 
 var cleanAfterTest = flag.Bool("clean-after-test", false, "clean testbed resources")
 
@@ -147,6 +147,7 @@ func (s *E2ESuite) SetUpSuite(c *C) {
 	}
 
 	log.Printf("e2econfig : %+v", e2eConfig)
+	s.e2eConfig = &e2eConfig
 
 	s.exporter = NewMockExporter(e2eConfig.ContainerName, e2eConfig.ImageURL)
 	if s.exporter == nil {

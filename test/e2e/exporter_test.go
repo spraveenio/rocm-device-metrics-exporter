@@ -17,9 +17,11 @@
 package e2e
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -273,12 +275,63 @@ func (s *E2ESuite) Test010ServerInvalidPortUpdate(c *C) {
 	assert.Nil(c, err)
 }
 
+func (s *E2ESuite) Test011ContainerWithoutConfig(c *C) {
+	log.Print("creating new server server_noconfig")
+	cname := "server_noconfig"
+	tc := NewMockExporter(cname, s.e2eConfig.ImageURL)
+	assert.NotNil(c, tc)
+
+	log.Printf("cleaning up any old instances of same name %v", cname)
+	_ = tc.Stop()
+	time.Sleep(2)
+
+	pMap := map[int]int{
+		5003: 5000,
+	}
+	tc.SetPortMap(pMap)
+	tc.SkipConfigMount()
+	err := tc.Start()
+	assert.Nil(c, err)
+	log.Printf("waiting for container %v to start", cname)
+	time.Sleep(25 * time.Second)
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	exporterClient := &http.Client{Transport: tr}
+	log.Printf("creation of new container %v done", cname)
+	url := "http://localhost:5003/metrics"
+
+	var response string
+	assert.Eventually(c, func() bool {
+		resp, err := exporterClient.Get(url)
+		if err != nil {
+			return false
+		}
+		bytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return false
+		}
+		response = string(bytes)
+		if response != "" {
+			return true
+		}
+		return false
+	}, 5*time.Second, 1*time.Second)
+
+	// check if we have valid payload
+	_, err = testutils.ParsePrometheusMetrics(response)
+	assert.Nil(c, err)
+	// Stopping newly created container
+	log.Printf("deleting container %v", cname)
+	tc.Stop()
+
+}
+
 func verifyMetricsLablesFields(allgpus map[string]*testutils.GPUMetric, labels []string, fields []string) error {
 	if len(allgpus) == 0 {
 		return fmt.Errorf("invalid input, expecting non empty payload")
 	}
 	for uuid, gpu := range allgpus {
-		totalMetricCount = totalMetricCount + len(gpu.Fields)
 		if len(fields) != 0 {
 			if len(gpu.Fields) != len(fields) {
 				return fmt.Errorf("GPU[%v] expecting total field per gpu %v but got %v", uuid, len(fields), len(gpu.Fields))

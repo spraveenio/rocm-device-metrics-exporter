@@ -27,7 +27,7 @@ import (
 
 var (
 	configPath = "/config_test/"
-	ports      = []string{"5000", "5002"}
+	ports      = []int{5000, 5002}
 )
 
 type MockExporter struct {
@@ -35,6 +35,7 @@ type MockExporter struct {
 	ImageURL   string
 	configPath string
 	tu         *testutils.TestUtils
+	portMap    map[int]int
 }
 
 func NewMockExporter(name, url string) *MockExporter {
@@ -43,21 +44,38 @@ func NewMockExporter(name, url string) *MockExporter {
 		fmt.Println("Error getting current directory:", err)
 		return nil
 	}
+	portMap := make(map[int]int)
+	for _, port := range ports {
+		portMap[port] = port
+	}
 	return &MockExporter{
 		Name:       name,
 		ImageURL:   url,
 		configPath: fmt.Sprintf("%v%v", dir, configPath),
 		tu:         testutils.New(),
+		portMap:    portMap,
 	}
+}
+
+func (m *MockExporter) SetPortMap(pMap map[int]int) error {
+	m.portMap = pMap
+	return nil
+}
+
+func (m *MockExporter) SkipConfigMount() {
+	m.configPath = ""
 }
 
 func (m *MockExporter) Start() error {
 	portsExposed := []string{}
-	for _, port := range ports {
-		dockerPort := fmt.Sprintf(" -p %v:%v", port, port)
+	for hport, cport := range m.portMap {
+		dockerPort := fmt.Sprintf(" -p %v:%v", hport, cport)
 		portsExposed = append(portsExposed, dockerPort)
 	}
-	mountOps := fmt.Sprintf(" -v %v:/etc/metrics ", m.configPath)
+	mountOps := ""
+	if m.configPath != "" {
+		mountOps = fmt.Sprintf(" -v %v:/etc/metrics ", m.configPath)
+	}
 	cmd := fmt.Sprintf("docker run --rm -itd --privileged --name %v %v %v -e PATH=$PATH:/home/amd/bin/ %v", m.Name, strings.Join(portsExposed, " "), mountOps, m.ImageURL)
 	log.Print(cmd)
 	resp := m.tu.LocalCommandOutput(cmd)

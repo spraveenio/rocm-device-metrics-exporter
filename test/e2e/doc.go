@@ -29,6 +29,7 @@ type E2ESuite struct {
 	exporterClient *http.Client
 	tu             *testutils.TestUtils
 	configPath     string
+	e2eConfig      *E2EConfig
 }
 
 type E2EConfig struct {
