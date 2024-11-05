@@ -100,7 +100,7 @@ func foreverWatcher() {
 	configPath := runConf.GetMetricsConfigPath()
 	directory := path.Dir(configPath)
 	os.MkdirAll(directory, 0755)
-	log.Printf("config directory for watch : %v", directory)
+	logger.Log.Printf("config directory for watch : %v", directory)
 
 	serverRunning := func() bool {
 		return srvHandler != nil
@@ -147,12 +147,8 @@ func foreverWatcher() {
 				if !ok {
 					return
 				}
-				if event.Name != configPath {
-					logger.Log.Printf("skip event: %+v", event)
-					continue
-				}
-				logger.Log.Printf("event: %+v", event)
-
+				// k8s has to many cases to handle because of symlink, to be
+				// safe handle all cases
 				if event.Has(fsnotify.Create | fsnotify.Write | fsnotify.Remove | fsnotify.Rename) {
 					logger.Log.Printf("loading new config on %v", configPath)
 					// stop server if running
@@ -162,9 +158,9 @@ func foreverWatcher() {
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
+					logger.Log.Printf("error: %v", err)
 					return
 				}
-				logger.Log.Printf("error: %v", err)
 			}
 		}
 	}()
