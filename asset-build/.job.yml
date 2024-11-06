@@ -10,6 +10,8 @@ targets:
     build-dependencies:
       - build-debian-package
       - build-device-metrics-exporter-docker
+      - build-helm-artifact
+      - build-mock-exporter
 
 image:
   bind_dir: "/go/src/github.com/pensando/device-metrics-exporter"
