@@ -130,7 +130,7 @@ Usage of bin/amd-metrics-exporter:
      docker run --rm -ltd --privileged -v ./config:/etc/metrics -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
      ```
 - The update to config file will take affect graciously without needing the
-  container to be restarted. The new config will take effect in less than 10s interval.
+  container to be restarted. The new config will take effect in less than 1 minute interval.
 ### Metrics Config formats
 - Json file with the following optional keys are expected
     - ServerPort : <port number>
@@ -298,3 +298,10 @@ gpu_edge_temperature{CARD_MODEL="0xc34",DRIVER_VERSION="6.8.5",GPU_ID="0",GPU_UU
 - Uninstallation
   - Uninstall the helm charts by running: 
     ```helm uninstall exporter -n mynamespace```
+
+### tech support collection
+    - run this on master/worker node of k8s
+    - run from TOP_DIR `./tools/techsupport_dump.sh` with necessary arguments
+    ```
+    ./tools/techsupport_dump.sh -r test all
+    ```
