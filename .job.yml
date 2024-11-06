@@ -17,6 +17,21 @@ builds:
     artifacts:
         - /device-metrics-exporter/docker/exporter-latest.tar.gz
 
+  build-mock-exporter:
+    commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make docker-mock"]
+    owners: ["email:prshanmug@amd.com"]
+    artifacts:
+        - /device-metrics-exporter/docker/obj/exporter-release-mock-v1.tgz
+
+  build-helm-artifact:
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make helm-build"]
+    owners: ["email:prshanmug@amd.com"]
+    area:
+    sub-area:
+    feature:
+    artifacts:
+        - /device-metrics-exporter/helm-charts/amdgpu-metrics-exporter-charts-v1.0.0.tgz
+
 targets:
   api-checks:
     commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make checks"]
@@ -31,8 +46,6 @@ targets:
     area:
     sub-area:
     feature:
-    artifacts:
-        - /device-metrics-exporter/helm-charts/amdgpu-metrics-exporter-charts-*.tgz
 
   device-metrics-unit-test:
     commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && \
@@ -55,8 +68,6 @@ targets:
   e2e-test-mock-exporter:
     commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make e2e"]
     owners: ["email:prshanmug@amd.com"]
-    artifacts:
-        - /device-metrics-exporter/docker/obj/exporter-release-mock-v1.tgz
 
 image:
   bind_dir: "/device-metrics-exporter"
