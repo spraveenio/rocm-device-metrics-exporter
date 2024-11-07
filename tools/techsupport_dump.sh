@@ -27,8 +27,6 @@ EXPORTER_RESOURCES="pods daemonsets deployments configmap"
 
 OUTPUT_FORMAT="json"
 WIDE=""
-red='\033[0;31m'
-green='\033[0;32m'
 clr='\033[0m'
 
 usage() {
@@ -41,11 +39,11 @@ usage() {
 }
 
 log() {
-	echo -e "${green}[$(date +%F_%T) techsupport]$* ${clr}"
+	echo -e "[$(date +%F_%T) techsupport]$* ${clr}"
 }
 
 die() {
-	echo -e "${red}$* ${clr}" && exit 1
+	echo -e "$* ${clr}" && exit 1
 }
 
 pod_logs() {

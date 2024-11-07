@@ -16,6 +16,7 @@ builds:
     owners: ["email:prshanmug@amd.com"]
     artifacts:
         - /device-metrics-exporter/docker/exporter-latest.tar.gz
+        - /device-metrics-exporter/tools/techsupport_dump.sh
 
   build-mock-exporter:
     commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make docker-mock"]
