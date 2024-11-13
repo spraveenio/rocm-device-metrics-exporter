@@ -39,9 +39,10 @@ import (
 // local variables
 var (
 	mandatoryLables = []string{
-		gpumetrics.GPUMetricLabel_GPU_UUID.String(),
+		gpumetrics.GPUMetricLabel_GPU_ID.String(),
 		gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String(),
 		gpumetrics.GPUMetricLabel_CARD_MODEL.String(),
+		gpumetrics.GPUMetricLabel_HOSTNAME.String(),
 	}
 	exportLables    map[string]bool
 	exportFieldMap  map[string]bool

@@ -1,6 +1,5 @@
 *.log
 .cache
-gen
 *.tgz
 *.tar.gz
 *.tar

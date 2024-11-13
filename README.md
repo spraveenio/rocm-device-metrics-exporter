@@ -118,7 +118,7 @@ Usage of bin/amd-metrics-exporter:
     proto : `/usr/local/etc/metrics/plugin.proto`
 ### Default config behavior
 - ServerPort : 5000
-- Labels Defaults : `gpu_uuid, serial_number, card_model`
+- Labels Defaults : `gpu_id, serial_number, card_model, hostname`
 - Fields Defaults : all fields supported
 
 ### Custom metrics config
@@ -141,7 +141,7 @@ Usage of bin/amd-metrics-exporter:
             array of string specifying what field to be exported
             present in [_internal/amdgpu/proto/fields.proto_:**GPUMetricField**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L32)
         - Labels
-            CARD_MODEL, GPU_UUID and SERIAL_NUMBER are always set and cannot be removed. Labels supported are available in
+            CARD_MODEL, GPU_ID, HOSTNAME and SERIAL_NUMBER are always set and cannot be removed. Labels supported are available in
             [_internal/amdgpu/proto/fields.proto_**:GPUMetricLabel**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L114)
 
 - Invalid values in any of the field will be ignored and revert to default

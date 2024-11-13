@@ -34,7 +34,7 @@ import (
 var (
 	maxMockGpuNodes  = 16
 	totalMetricCount = 0
-	mandatoryLables  = []string{"gpu_uuid", "serial_number", "card_model"}
+	mandatoryLables  = []string{"gpu_id", "serial_number", "card_model", "hostname"}
 	previousFields   = []string{}
 	previousLabels   = []string{}
 )
@@ -68,7 +68,7 @@ func (s *E2ESuite) Test001FirstDeplymentDefaults(c *C) {
 
 func (s *E2ESuite) Test002NonMandatoryLabelUpdate(c *C) {
 	log.Print("Testing non mandatatory label update")
-	labels := []string{"gpu_id"}
+	labels := []string{"gpu_uuid"}
 	err := s.SetLabels(labels)
 	assert.Nil(c, err)
 	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
@@ -331,10 +331,10 @@ func verifyMetricsLablesFields(allgpus map[string]*testutils.GPUMetric, labels [
 	if len(allgpus) == 0 {
 		return fmt.Errorf("invalid input, expecting non empty payload")
 	}
-	for uuid, gpu := range allgpus {
+	for id, gpu := range allgpus {
 		if len(fields) != 0 {
 			if len(gpu.Fields) != len(fields) {
-				return fmt.Errorf("GPU[%v] expecting total field per gpu %v but got %v", uuid, len(fields), len(gpu.Fields))
+				return fmt.Errorf("GPU[%v] expecting total field per gpu %v but got %v", id, len(fields), len(gpu.Fields))
 			}
 
 			for _, metricFieldData := range gpu.Fields {
