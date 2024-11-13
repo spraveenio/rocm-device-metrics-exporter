@@ -99,16 +99,16 @@ func ParsePrometheusMetrics(payload string) (map[string]*GPUMetric, error) {
 			return metrics, err
 		}
 		// filter only exporter metrics, with labels
-		gpu_uuid, ok := labels["gpu_uuid"]
+		gpu_id, ok := labels["gpu_id"]
 		if !ok {
 			continue
 		}
-		if _, ok := metrics[gpu_uuid]; !ok {
-			metrics[gpu_uuid] = &GPUMetric{
+		if _, ok := metrics[gpu_id]; !ok {
+			metrics[gpu_id] = &GPUMetric{
 				Fields: make(map[string]MetricData),
 			}
 		}
-		metric := metrics[gpu_uuid]
+		metric := metrics[gpu_id]
 		metric.Fields[metricName] = MetricData{
 			Labels: labels,
 		}

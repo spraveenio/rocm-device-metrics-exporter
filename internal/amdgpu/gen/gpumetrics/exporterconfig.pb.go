@@ -352,10 +352,10 @@ func (GPUMetricField) EnumDescriptor() ([]byte, []int) {
 type GPUMetricLabel int32
 
 const (
-	// mandatory field GPU_UUID cannot be disabled
 	GPUMetricLabel_GPU_UUID GPUMetricLabel = 0
 	// mandatory SERIAL_NUMBER cannot be disabled
 	GPUMetricLabel_SERIAL_NUMBER GPUMetricLabel = 1
+	// mandatory field GPU_ID cannot be disabled
 	GPUMetricLabel_GPU_ID        GPUMetricLabel = 2
 	GPUMetricLabel_POD           GPUMetricLabel = 3
 	GPUMetricLabel_NAMESPACE     GPUMetricLabel = 4
@@ -370,7 +370,8 @@ const (
 	GPUMetricLabel_CARD_VENDOR    GPUMetricLabel = 12
 	GPUMetricLabel_DRIVER_VERSION GPUMetricLabel = 13
 	GPUMetricLabel_VBIOS_VERSION  GPUMetricLabel = 14
-	GPUMetricLabel_HOSTNAME       GPUMetricLabel = 15
+	// mandatory field HOSTNAME cannot be disabled
+	GPUMetricLabel_HOSTNAME GPUMetricLabel = 15
 )
 
 // Enum value maps for GPUMetricLabel.
