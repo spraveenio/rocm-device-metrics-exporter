@@ -195,7 +195,13 @@ These slurm labels can be configured to export in config.json
 gpu_edge_temperature{CARD_MODEL="0xc34",DRIVER_VERSION="6.8.5",GPU_ID="0",GPU_UUID="0beb0a09-4200-4242-0e05-67bf583b4c72",JOB_ID="32",SERIAL_NUMBER="692251001124"} 32
 ```
 
-
+### Grafana Dashboards
+Set of dashboards are provided for exporting onto grafana which displays GPU metrics collected from device-metrics-exporter via a metric endpoint added to Prometheus.
+All dashboard json are provided under directory `grafana`
+1. _dashboard_overview.json_ - Gives a high level bird eye view of the cluster of GPUs.
+2. _dashboard_gpu.json_ - Gives detailed view of each GPU specific to associated host.
+3. _dashboard_job.json_ - Gives job level GPU usage detailed view in SLURM and Kubernetes enrivonments.
+4. _dashboard_node.json_ - Gives host level GPU usage detailed view.
 
 ### Run prometheus (Testing)
    ```
