@@ -19,7 +19,7 @@ package e2e
 import (
 	"net/http"
 
-	testutils "github.com/pensando/device-metrics-exporter/test/e2e/utils"
+	testutils "github.com/pensando/device-metrics-exporter/test/utils"
 )
 
 // E2ESuite e2e config

@@ -158,6 +158,19 @@ Usage of bin/amd-metrics-exporter:
   the tests.
   `make e2e`
 
+### E2e Kubenetes Testing
+- The test expects kubeconfig to run the actual exporter on the amd gpu server
+  to test all functionality
+
+- Running test from TOP direcotry.
+  `KUBECONFIG=~/.kube/config  make k8s-e2e
+
+- to set more configuration options for the e2e test, run as per below example
+  from TOPDIR/test/k8s-e2e
+  ```
+  go test -helmchart TOPDIR/helm-charts/ -registry 10.11.18.9:5000/amd/exporter -imagetag test -kubeconfig kubeconfig  -namespace test-exporter -v
+  ```
+
 ### Slurm integration
 There are 2 options to collect job information from slurm
 #### Using slurm Prolog/Epilog,

@@ -12,6 +12,7 @@ GOFLAGS ='-buildvcs=false'
 BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
 GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
 VERSION ?=$(RELEASE)
+KUBECONFIG ?= ~/.kube/config
 
 export ${GOROOT}
 export ${GOPATH}
@@ -19,6 +20,7 @@ export ${OUT_DIR}
 export ${TOP_DIR}
 export ${GOFLAGS}
 export ${GOINSECURE}
+export ${KUBECONFIG}
 
 ASSETS_PATH :=${TOP_DIR}/assets
 GPUAGENT_LIBS := ${ASSETS_PATH}/amd_smi_lib/x86_64/lib
@@ -182,6 +184,10 @@ e2e-test:
 e2e:
 	$(MAKE) docker-mock
 	$(MAKE) e2e-test
+
+.PHOHY: k8s-e2e
+k8s-e2e:
+	PATH=$$PATH KUBECONFIG=$$KUBECONFIG TOP_DIR=$(TOP_DIR) $(MAKE) -C test/k8s-e2e all
 
 .PHONY: helm-lint
 helm-lint:

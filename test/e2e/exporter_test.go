@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	. "gopkg.in/check.v1"
 
-	testutils "github.com/pensando/device-metrics-exporter/test/e2e/utils"
+	testutils "github.com/pensando/device-metrics-exporter/test/utils"
 )
 
 var (

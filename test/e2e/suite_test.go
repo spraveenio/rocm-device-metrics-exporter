@@ -35,7 +35,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/gpumetrics"
-	testutils "github.com/pensando/device-metrics-exporter/test/e2e/utils"
+	testutils "github.com/pensando/device-metrics-exporter/test/utils"
 )
 
 var skipSetup = flag.Bool("skip-setup", false, "skip setting up testbed")
