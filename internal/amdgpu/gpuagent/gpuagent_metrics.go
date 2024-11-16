@@ -1162,3 +1162,7 @@ func (ga *GPUAgentClient) getHostName() (string, error) {
 	}
 	return hostname, nil
 }
+
+func GetGPUAgentMandatoryLabels() []string {
+	return mandatoryLables
+}
