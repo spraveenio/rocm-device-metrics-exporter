@@ -29,12 +29,4 @@ const (
 	ZmqPort = "6601"
 
 	SlurmDir = "/var/run/exporter/"
-
-	MetricsSocketPath = "/var/lib/amd-metrics-exporter/amdgpu_device_metrics_exporter_grpc.socket"
-
-	//PodResourceSocket - k8s pod grpc socket
-	PodResourceSocket = "/var/lib/kubelet/pod-resources/kubelet.sock"
-
-	// AMDGPUResourceLabel - k8s AMD gpu resource label
-	AMDGPUResourceLabel = "amd.com/gpu"
 )

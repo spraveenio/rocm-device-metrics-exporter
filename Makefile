@@ -52,8 +52,8 @@ VERSION ?=$(RELEASE)
 KUBECONFIG ?= ~/.kube/config
 
 TOP_DIR := $(PWD)
-GEN_DIR := $(TOP_DIR)/internal/amdgpu/
-MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
+GEN_DIR := $(TOP_DIR)/pkg/amdgpu/
+MOCK_DIR := ${TOP_DIR}/pkg/amdgpu/mock_gen
 HELM_CHARTS_DIR := $(TOP_DIR)/helm-charts
 GOINSECURE='github.com, google.golang.org, golang.org'
 GOFLAGS ='-buildvcs=false'
@@ -220,7 +220,7 @@ pkg: pkg-clean
 	cp -vf ${ASSETS_PATH}/gpuctl.gobin ${PKG_PATH}/
 	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
 	cd ${TOP_DIR}
-	dpkg-deb --build pkg ${TOP_DIR}/bin
+	dpkg-deb --build debian ${TOP_DIR}/bin
 	#remove copied files
 	rm -rf ${PKG_LIB_PATH}
 	rm -rf ${PKG_LUA_PATH}/plugin.proto

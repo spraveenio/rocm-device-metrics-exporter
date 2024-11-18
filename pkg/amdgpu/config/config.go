@@ -1,3 +1,4 @@
+
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -17,43 +18,33 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 )
 
-// Config - holds dynamic value changes to the config file
 type Config struct {
-	serverPort    uint32
-	metricsConfig *gpumetrics.MetricConfig
+	serverPort        uint32
+	agentGRPCPort     int
+	metricsConfigPath string
 }
 
-func NewConfig() *Config {
+func NewConfig(mPath string) *Config {
 	c := &Config{
-		serverPort:    globals.AMDListenPort,
-		metricsConfig: &gpumetrics.MetricConfig{},
+		serverPort:        globals.AMDListenPort,
+		metricsConfigPath: mPath,
 	}
+	logger.Log.Printf("Running Config :%+v", mPath)
 	return c
 }
 
-func (c *Config) Update(newConfig *gpumetrics.MetricConfig) error {
-	c.serverPort = globals.AMDListenPort
-	if newConfig != nil && newConfig.GetServerPort() != 0 {
-		c.serverPort = newConfig.GetServerPort()
-	}
-	// reset to default
-	c.metricsConfig = &gpumetrics.MetricConfig{}
-	if newConfig != nil {
-		c.metricsConfig = newConfig
-	}
+func (c *Config) SetServerPort(port uint32) error {
+	logger.Log.Printf("Server reconfigured from config file to %v", port)
+	c.serverPort = port
 	return nil
-}
-
-func (c *Config) GetConfig() *gpumetrics.MetricConfig {
-	return c.metricsConfig
 }
 
 func (c *Config) GetServerPort() uint32 {
@@ -67,4 +58,22 @@ func (c *Config) GetServerPort() uint32 {
 		return uint32(number)
 	}
 	return c.serverPort
+}
+
+func (c *Config) GetAgentAddr() string {
+	return fmt.Sprintf("0.0.0.0:%v", c.agentGRPCPort)
+}
+
+// SetAgentPort : set gpuagent pkg grpc port
+func (c *Config) SetAgentPort(grpcPort int) {
+	if grpcPort > 0 {
+		c.agentGRPCPort = grpcPort
+	} else {
+		logger.Log.Printf("invalid grpcPort set %v, ignoring", grpcPort)
+		c.agentGRPCPort = globals.GPUAgentPort
+	}
+}
+
+func (c *Config) GetMetricsConfigPath() string {
+	return c.metricsConfigPath
 }

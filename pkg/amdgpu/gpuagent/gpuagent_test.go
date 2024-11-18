@@ -1,3 +1,4 @@
+
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -30,7 +31,7 @@ func TestGpuAgent(t *testing.T) {
 	defer ga.Close()
 	t.Logf("gpuagent : %+v", ga)
 
-	req, err := ga.getGPUs()
+	req, err := ga.getMetrics()
 	assert.Assert(t, err == nil, "expecting nil response")
 
 	t.Logf("req :%+v", req)
@@ -43,8 +44,5 @@ func TestGpuAgent(t *testing.T) {
 
 	err = ga.UpdateMetricsStats()
 	assert.Assert(t, err == nil, "expecting success config init")
-
-	err = ga.processHealthValidation()
-	assert.Assert(t, err == nil, "expecting success health validation")
 
 }

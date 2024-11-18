@@ -22,212 +22,132 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/scheduler"
+	"github.com/pensando/device-metrics-exporter/pkg/slurm"
 
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/logger"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/metricsutil"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/utils"
-	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
+	"github.com/pensando/device-metrics-exporter/pkg/k8s"
+
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
 	// cachgpuid are updated after this many pull request
-	refreshInterval = 30 * time.Second
-	queryTimeout    = 10 * time.Second
+	refreshInterval = 10
 )
 
 type GPUAgentClient struct {
 	sync.Mutex
-	conn                   *grpc.ClientConn
-	mh                     *metricsutil.MetricsHandler
-	gpuclient              amdgpu.GPUSvcClient
-	evtclient              amdgpu.EventSvcClient
-	m                      *metrics // client specific metrics
-	k8sLabelClient         *k8sclient.K8sClient
-	schedulerCl            scheduler.SchedulerClient
-	isKubernetes           bool
-	enableZmq              bool
-	staticHostLabels       map[string]string
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	healthState            map[string]*metricssvc.GPUState
-	mockEccField           map[string]map[string]uint32 // gpuid->fields->count
-	computeNodeHealthState bool
+	conn             *grpc.ClientConn
+	mh               *metricsutil.MetricsHandler
+	client           amdgpu.GPUSvcClient
+	m                *metrics // client specific metrics
+	kubeClient       k8s.PodResourcesService
+	isKubernetes     bool
+	slurmClient      slurm.JobsService
+	cacheGpuids      map[string][]byte
+	cachePulls       int
+	staticHostLabels map[string]string
 }
 
-func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclient amdgpu.GPUSvcClient, evtclient amdgpu.EventSvcClient, err error) {
+func NewAgent(ctx context.Context, mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
 	agentAddr := mh.GetAgentAddr()
 	logger.Log.Printf("Agent connecting to %v", agentAddr)
-	conn, err = grpc.NewClient(agentAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(agentAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Log.Printf("err :%v", err)
-		return
+		return nil, err
 	}
-	gpuclient = amdgpu.NewGPUSvcClient(conn)
-	evtclient = amdgpu.NewEventSvcClient(conn)
-	return
-}
+	client := amdgpu.NewGPUSvcClient(conn)
 
-func initScheduler(ctx context.Context, enableZmq bool) (scheduler.SchedulerClient, error) {
-	if utils.IsKubernetes() {
-		logger.Log.Printf("NewKubernetesClient creating")
-		return scheduler.NewKubernetesClient(ctx)
-	}
-	logger.Log.Printf("NewSlurmClient creating")
-	return scheduler.NewSlurmClient(ctx, enableZmq)
-}
-
-func NewAgent(mh *metricsutil.MetricsHandler, enableZmq bool) *GPUAgentClient {
-	ga := &GPUAgentClient{mh: mh, enableZmq: enableZmq, computeNodeHealthState: true}
-	ga.healthState = make(map[string]*metricssvc.GPUState)
-	ga.mockEccField = make(map[string]map[string]uint32)
-	mh.RegisterMetricsClient(ga)
-	return ga
-}
-
-func (ga *GPUAgentClient) Init() error {
-	ga.Lock()
-	defer ga.Unlock()
-	ga.initializeContext()
-	conn, gpuclient, evtclient, err := initclients(ga.mh)
-	if err != nil {
-		logger.Log.Printf("gpu client init failure err :%v", err)
-		return err
+	ga := &GPUAgentClient{
+		conn:   conn,
+		client: client,
+		mh:     mh,
 	}
 
-	ga.conn = conn
-	ga.gpuclient = gpuclient
-	ga.evtclient = evtclient
-
-	schedulerCl, err := initScheduler(ga.ctx, ga.enableZmq)
-	if err != nil {
-		logger.Log.Printf("gpu client init failure err :%v", err)
-		return err
-	}
-	ga.schedulerCl = schedulerCl
-	if utils.IsKubernetes() {
+	if k8s.IsKubernetes() {
+		kubeClient, err := k8s.NewClient()
+		if err != nil {
+			return nil, fmt.Errorf("error in kubelet client, %v", err)
+		}
 		ga.isKubernetes = true
-		ga.k8sLabelClient = k8sclient.NewClient(ga.ctx)
+		ga.kubeClient = kubeClient
+	} else {
+		cli, err := slurm.NewClient(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error in slurm client, %v", err)
+		}
+		ga.slurmClient = cli
+		ga.isKubernetes = false
 	}
 
 	if err := ga.populateStaticHostLabels(); err != nil {
-		return fmt.Errorf("error in populating static host labels, %v", err)
+		return nil, fmt.Errorf("error in populating static host labels, %v", err)
 	}
 
 	logger.Log.Printf("monitor %v jobs", map[bool]string{true: "kubernetes", false: "slurm"}[ga.isKubernetes])
+	ga.cacheGpuids = make(map[string][]byte)
+	mh.RegisterMetricsClient(ga)
 
-	return nil
-}
-
-func (ga *GPUAgentClient) initializeContext() {
-	ctx, cancel := context.WithCancel(context.Background())
-	ga.ctx = ctx
-	ga.cancel = cancel
-}
-
-func (ga *GPUAgentClient) reconnect() error {
-	ga.Close()
-	return ga.Init()
-}
-
-func (ga *GPUAgentClient) isActive() bool {
-	ga.Lock()
-	defer ga.Unlock()
-	return ga.gpuclient != nil
-}
-
-func (ga *GPUAgentClient) StartMonitor() {
-	logger.Log.Printf("GPUAgent monitor started")
-	ga.initializeContext()
-	pollTimer := time.NewTicker(refreshInterval)
-	defer pollTimer.Stop()
-
-	for {
-		select {
-		case <-ga.ctx.Done():
-			logger.Log.Printf("gpuagent client connection closing")
-			ga.Close()
-			return
-		case <-pollTimer.C:
-			if !ga.isActive() {
-				if err := ga.reconnect(); err != nil {
-					logger.Log.Printf("gpuagent connection failed %v", err)
-					continue
-				}
-			}
-			ga.processHealthValidation()
-			ga.sendNodeLabelUpdate()
-		}
-	}
-}
-
-func (ga *GPUAgentClient) sendNodeLabelUpdate() error {
-	if !ga.isKubernetes {
-		return nil
-	}
-	// send update to label , reconnect logic tbd
-	nodeName := utils.GetNodeName()
-	if nodeName == "" {
-		logger.Log.Printf("error getting node name on k8s deployment, skip label update")
-		return fmt.Errorf("node name not found")
-	}
-	gpuHealthStates := make(map[string]string)
-	ga.Lock()
-	for gpuid, hs := range ga.healthState {
-		gpuHealthStates[gpuid] = hs.Health
-	}
-	ga.Unlock()
-	_ = ga.k8sLabelClient.UpdateHealthLabel(nodeName, gpuHealthStates)
-	return nil
+	return ga, nil
 }
 
 func (ga *GPUAgentClient) getMetricsAll() error {
 	// send the req to gpuclient
-	resp, err := ga.getGPUs()
+	resp, err := ga.getMetrics()
 	if err != nil {
+		// crash to let service restart
+		logger.Log.Fatalf("err :%v", err)
 		return err
 	}
 	if resp != nil && resp.ApiStatus != 0 {
 		logger.Log.Printf("resp status :%v", resp.ApiStatus)
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
-	wls, _ := ga.schedulerCl.ListWorkloads()
 	for _, gpu := range resp.Response {
-		ga.updateGPUInfoToMetrics(wls, gpu)
+		ga.updateGPUInfoToMetrics(gpu)
 	}
 
 	return nil
 }
 
-func (ga *GPUAgentClient) getGPUs() (*amdgpu.GPUGetResponse, error) {
-	if !ga.isActive() {
-		ga.reconnect()
+func (ga *GPUAgentClient) getMetricsBulkReq() error {
+	// create multiple workers
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
+	defer cancel()
+	responses, err := NewWokerRequest(ctx, ga.client, ga.cacheGpuids)
+	if err != nil {
+		logger.Log.Printf("worker request errored: %v", err)
+		return err
+	}
+	for _, gpuRes := range responses {
+		ga.updateGPUInfoToMetrics(gpuRes.Response[0])
+	}
+	// this handle gpu dynamically being added to the system
+	// to refresh the cachedgpu ids
+	ga.cachePulls++
+	if ga.cachePulls == refreshInterval {
+		ga.cachePulls = 0
+		go ga.UpdateStaticMetrics()
+	}
+	return nil
+}
+
+func (ga *GPUAgentClient) getMetrics() (*amdgpu.GPUGetResponse, error) {
+	ga.Lock()
+	defer ga.Unlock()
+	if ga.client == nil {
+		return nil, fmt.Errorf("client closed")
 	}
 
-	ctx, cancel := context.WithTimeout(ga.ctx, queryTimeout)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	req := &amdgpu.GPUGetRequest{}
-	res, err := ga.gpuclient.GPUGet(ctx, req)
-	return res, err
-}
-
-func (ga *GPUAgentClient) getEvents(severity amdgpu.EventSeverity) (*amdgpu.EventResponse, error) {
-	req := &amdgpu.EventRequest{}
-	if severity != amdgpu.EventSeverity_EVENT_SEVERITY_NONE {
-		req.Filter = &amdgpu.EventFilter{
-			Filter: &amdgpu.EventFilter_MatchAttrs{
-				MatchAttrs: &amdgpu.EventMatchAttrs{
-					Severity: severity,
-				},
-			},
-		}
-	}
-	res, err := ga.evtclient.EventGet(ga.ctx, req)
+	res, err := ga.client.GPUGet(ctx, req)
 	return res, err
 }
 
@@ -235,14 +155,15 @@ func (ga *GPUAgentClient) Close() {
 	ga.Lock()
 	defer ga.Unlock()
 	if ga.conn != nil {
-		logger.Log.Printf("gpuagent client closing")
 		ga.conn.Close()
-		ga.gpuclient = nil
-		ga.conn = nil
+		ga.client = nil
 	}
-	if ga.schedulerCl != nil {
-		logger.Log.Printf("gpuagent scheduler closing")
-		ga.schedulerCl.Close()
-		ga.schedulerCl = nil
+	if ga.isKubernetes {
+		ga.kubeClient.Close()
+		ga.kubeClient = nil
+
+	} else {
+		ga.slurmClient.Close()
+		ga.slurmClient = nil
 	}
 }
