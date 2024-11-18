@@ -23,7 +23,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gpuagent"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gpuagent"
 	"github.com/stretchr/testify/assert"
 	. "gopkg.in/check.v1"
 	corev1 "k8s.io/api/core/v1"

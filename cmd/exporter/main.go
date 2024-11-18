@@ -32,11 +32,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/config"
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/globals"
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gpuagent"
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/logger"
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/metricsutil"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/config"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gpuagent"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
 )
 
 // single instance handlers

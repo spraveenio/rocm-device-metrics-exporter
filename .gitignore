@@ -4,5 +4,5 @@
 *.tar.gz
 *.tar
 bin
-internal/bin
-internal/slurm/sim/slurm-sim
+pkg/bin
+pkg/slurm/sim/slurm-sim

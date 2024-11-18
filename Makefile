@@ -1,11 +1,11 @@
-TO_GEN := internal/amdgpu/proto
-TO_MOCK := internal/amdgpu/mock
+TO_GEN := pkg/amdgpu/proto
+TO_MOCK := pkg/amdgpu/mock
 OUT_DIR := bin
 export BUILD_CONTAINER ?= registry.test.pensando.io:5000/metrics-exporter-bld:1
 
 TOP_DIR := $(PWD)
-GEN_DIR := $(TOP_DIR)/internal/amdgpu/
-MOCK_DIR := ${TOP_DIR}/internal/amdgpu/mock_gen
+GEN_DIR := $(TOP_DIR)/pkg/amdgpu/
+MOCK_DIR := ${TOP_DIR}/pkg/amdgpu/mock_gen
 HELM_CHARTS_DIR := $(TOP_DIR)/helm-charts
 GOINSECURE='github.com, google.golang.org, golang.org'
 GOFLAGS ='-buildvcs=false'
@@ -25,10 +25,10 @@ export ${KUBECONFIG}
 ASSETS_PATH :=${TOP_DIR}/assets
 GPUAGENT_LIBS := ${ASSETS_PATH}/amd_smi_lib/x86_64/lib
 THIRDPARTY_LIBS := ${ASSETS_PATH}/thirdparty/x86_64-linux-gnu/lib
-PKG_PATH := ${TOP_DIR}/pkg/usr/local/bin
-PKG_LIB_PATH := ${TOP_DIR}/pkg/usr/local/metrics/
-LUA_PROTO := ${TOP_DIR}/internal/amdgpu/proto/luaplugin.proto
-PKG_LUA_PATH := ${TOP_DIR}/pkg/usr/local/etc/metrics/slurm
+PKG_PATH := ${TOP_DIR}/debian/usr/local/bin
+PKG_LIB_PATH := ${TOP_DIR}/debian/usr/local/metrics/
+LUA_PROTO := ${TOP_DIR}/pkg/amdgpu/proto/luaplugin.proto
+PKG_LUA_PATH := ${TOP_DIR}/debian/usr/local/etc/metrics/slurm
 
 .PHONY: all
 all:
@@ -64,14 +64,14 @@ pkg: pkg-clean
 	cp -vf ${ASSETS_PATH}/gpuctl.gobin ${PKG_PATH}/
 	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
 	cd ${TOP_DIR}
-	dpkg-deb --build pkg ${TOP_DIR}/bin
+	dpkg-deb --build debian ${TOP_DIR}/bin
 	#remove copied files
 	rm -rf ${PKG_LIB_PATH}
 	rm -rf ${PKG_LUA_PATH}/plugin.proto
 
 .PHONY:clean
 clean: pkg-clean
-	rm -rf internal/amdgpu/gen
+	rm -rf pkg/amdgpu/gen
 	rm -rf bin
 	rm -rf docker/obj
 	rm -rf docker/*.tgz
@@ -156,7 +156,7 @@ docker-publish:
 
 .PHONY: unit-test
 unit-test:
-	PATH=$$PATH LOGDIR=$(TOP_DIR)/ go test -v -cover -mod=vendor ./internal/...
+	PATH=$$PATH LOGDIR=$(TOP_DIR)/ go test -v -cover -mod=vendor ./pkg/...
 
 loadgpu:
 	sudo modprobe amdgpu
@@ -165,6 +165,9 @@ mod:
 	@echo "setting up go mod packages"
 	@go mod tidy
 	@go mod vendor
+
+docker-shell:
+	docker run -it --user $(shell id -u):$(shell id -g) --privileged -e "GIT_COMMIT=${GIT_COMMIT}" -e "GIT_VERSION=${GIT_VERSION}" -e "BUILD_DATE=${BUILD_DATE}" -e "GOPATH=/import" -e GOCACHE=/import/src/github.com/pensando/device-metrics-exporter/.cache --rm -v${PWD}/../../../../:/import/ -w /import/src/github.com/pensando/device-metrics-exporter ${BUILD_CONTAINER} bash
 
 docker-compile:
 	docker run --user $(shell id -u):$(shell id -g) --privileged -e "GIT_COMMIT=${GIT_COMMIT}" -e "GIT_VERSION=${GIT_VERSION}" -e "BUILD_DATE=${BUILD_DATE}" -e "GOPATH=/import" -e GOCACHE=/import/src/github.com/pensando/device-metrics-exporter/.cache --rm -v${PWD}/../../../../:/import/ ${BUILD_CONTAINER} bash -c "cd /import/src/github.com/pensando/device-metrics-exporter && make all"
@@ -199,4 +202,4 @@ helm-build: helm-lint
 
 .PHONY: slurm-sim
 slurm-sim:
-	${MAKE} -C internal/slurm/sim
+	${MAKE} -C pkg/slurm/sim

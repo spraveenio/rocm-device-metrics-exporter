@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	. "gopkg.in/check.v1"
 
-	"github.com/pensando/device-metrics-exporter/internal/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
 	testutils "github.com/pensando/device-metrics-exporter/test/utils"
 )
 
