@@ -1,0 +1,114 @@
+/*
+*
+# Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the \"License\");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an \"AS IS\" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+*
+*/
+
+package testrunner
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	types "github.com/pensando/device-metrics-exporter/internal/testrunner/interface"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+)
+
+// TestRunner is a test framework for testing GPUs
+type TestRunner struct {
+	// binaryLocation is the location where the test framework binary is present
+	binaryLocation string
+
+	// logDir represents the path where all the test run logs will be available
+	logDir string
+
+	// logger is the logger for the test runner process
+	logger *log.Logger
+
+	// testsuiteDir
+	testSuitesDir string
+
+	// testsuites
+	testSuites map[string]bool
+}
+
+// GetTestHandler returns test handler for the given test and params
+func (rts *TestRunner) GetTestHandler(testName string, params types.TestParams) (types.TestHandlerInterface, error) {
+	if _, ok := rts.testSuites[testName]; !ok {
+		return nil, fmt.Errorf("testsuite %v not found", testName)
+	}
+	cmdArgs := []string{}
+	cmdArgs = append(cmdArgs, rts.binaryLocation)
+	confFile := fmt.Sprintf("%v/%v.conf", rts.testSuitesDir, testName)
+	cmdArgs = append(cmdArgs, "-c", confFile)
+
+	if len(params.DeviceIDs) > 0 {
+		cmdArgs = append(cmdArgs, "-i", strings.Join(params.DeviceIDs, ","))
+	}
+
+	if len(params.ExtraArgs) > 0 {
+		cmdArgs = append(cmdArgs, "-j")
+		cmdArgs = append(cmdArgs, params.ExtraArgs...)
+	}
+	var options []types.TOption
+	if params.Timeout > 0 {
+		options = append(options, types.TestWithTimeout(params.Timeout))
+	}
+	return types.NewTestHandler(testName, rts.logger, cmdArgs, options...), nil
+}
+
+// loadTestSuites loads the testsuite info
+func (rts *TestRunner) loadTestSuites() error {
+	files, err := os.ReadDir(rts.testSuitesDir)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".conf") {
+			// Add the testsuite to the map
+			testSuiteName := strings.Split(file.Name(), ".")[0]
+			fmt.Println(testSuiteName)
+			rts.testSuites[testSuiteName] = true
+		}
+	}
+	return nil
+}
+
+// NewRvsTestRunner returns instance of RvsTestRunner
+func NewRvsTestRunner(rvsBinPath, testConfDir, logDir string) (types.TestRunner, error) {
+	if len(rvsBinPath) == 0 {
+		return nil, fmt.Errorf("rocm path is not set")
+	}
+
+	if logger.Log == nil {
+		return nil, fmt.Errorf("test runner logger is not initialized")
+	}
+
+	obj := &TestRunner{
+		binaryLocation: rvsBinPath,
+		logDir:         logDir,
+		logger:         logger.Log,
+		testSuites:     make(map[string]bool),
+		testSuitesDir:  testConfDir,
+	}
+
+	err := obj.loadTestSuites()
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
+}

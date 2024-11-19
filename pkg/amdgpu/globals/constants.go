@@ -31,4 +31,13 @@ const (
 	SlurmDir = "/var/run/exporter/"
 
 	MetricsSocketPath = "/sockets/metrics_grpc.socket"
+
+	// rvs binary path
+	RVSPath = "/opt/rocm/bin/rvs"
+
+	// gpu test runner configuration file path
+	AMDTestCaseDir = "/opt/rocm/share/rocm-validation-suite/conf/"
+
+	// AMDTestCfgPath path to the test runner config parameters
+	AMDTestCfgPath = "/etc/rvs/config.json"
 )
