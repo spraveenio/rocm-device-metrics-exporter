@@ -25,3 +25,4 @@ chmod +x $TOP_DIR/docker/gpuagent
 cp -r $TOP_DIR/assets/amd_smi_lib/x86_64/lib $TOP_DIR/docker/smilib
 ln -f $TOP_DIR/assets/gpuctl.gobin $TOP_DIR/docker/gpuctl
 ln -f $TOP_DIR/bin/amd-metrics-exporter $TOP_DIR/docker/amd-metrics-exporter
+ln -f $TOP_DIR/bin/metricsclient $TOP_DIR/docker/metricsclient

@@ -29,4 +29,6 @@ const (
 	ZmqPort = "6601"
 
 	SlurmDir = "/var/run/exporter/"
+
+	MetricsSocketPath = "/sockets/metrics_grpc.socket"
 )

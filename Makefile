@@ -124,13 +124,17 @@ amdexporter-lite:
 	@echo "building lite version of metrics exporter"
 	go build -C cmd/exporter -ldflags "-s -w -X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" -o $(CURDIR)/bin/amd-metrics-exporter
 
-amdexporter:
+amdexporter: metricsclient
 	@echo "building amd metrics exporter"
 	CGO_ENABLED=0 go build  -C cmd/exporter -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" -o $(CURDIR)/bin/amd-metrics-exporter
 
 metricutil:
 	@echo "building metrics util"
 	CGO_ENABLED=0 go build -C tools/metricutil -o $(CURDIR)/bin/metricutil
+
+metricsclient:
+	@echo "building metrics client"
+	CGO_ENABLED=0 go build -C tools/metricsclient -o $(CURDIR)/bin/metricsclient
 
 .PHONY: docker-cicd
 docker-cicd: gen amdexporter
