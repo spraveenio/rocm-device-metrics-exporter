@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -18,27 +17,44 @@
 package logger
 
 import (
-	"github.com/pensando/device-metrics-exporter/pkg/k8s"
 	"log"
 	"os"
 	"sync"
+
+	"github.com/pensando/device-metrics-exporter/pkg/k8s"
 )
 
 var (
-	Log     *log.Logger
-	logdir  = "/var/run/"
-	logpath = "exporter.log"
-	once    sync.Once
+	Log       *log.Logger
+	logdir    = "/var/run/"
+	logfile   = "exporter.log"
+	logPrefix = "exporter "
+	once      sync.Once
 )
+
+// SetLogPrefix sets prefix in the log to be exporter or testrunner
+func SetLogPrefix(prefix string) {
+	logPrefix = prefix
+}
+
+// SetLogFile sets the log file name
+func SetLogFile(file string) {
+	logfile = file
+}
+
+// SetLogDir sets the path to the directory of logs
+func SetLogDir(dir string) {
+	logdir = dir
+}
 
 func initLogger() {
 	if k8s.IsKubernetes() {
-		Log = log.New(os.Stdout, "exporter ", log.Lmsgprefix)
+		Log = log.New(os.Stdout, logPrefix, log.Lmsgprefix)
 	} else {
 		if os.Getenv("LOGDIR") != "" {
 			logdir = os.Getenv("LOGDIR")
 		}
-		outfile, _ := os.Create(logdir + logpath)
+		outfile, _ := os.Create(logdir + logfile)
 		Log = log.New(outfile, "", 0)
 	}
 
