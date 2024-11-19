@@ -37,6 +37,7 @@ import (
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gpuagent"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
+	metricsserver "github.com/pensando/device-metrics-exporter/pkg/amdgpu/svc"
 )
 
 // single instance handlers
@@ -178,7 +179,6 @@ func foreverWatcher() {
 
 func main() {
 	logger.Init()
-	var err error
 	var (
 		metricsConfig = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
 		agentGrpcPort = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
@@ -197,6 +197,13 @@ func main() {
 	logger.Log.Printf("BuildDate: %v", BuildDate)
 	logger.Log.Printf("GitCommit: %v", GitCommit)
 
+	go func() {
+		logger.Log.Printf("metrics service starting")
+		metricsserver.Run()
+		logger.Log.Printf("metrics service stopped")
+		os.Exit(0)
+	}()
+
 	runConf = config.NewConfig(*metricsConfig)
 	runConf.SetAgentPort(*agentGrpcPort)
 
@@ -207,7 +214,9 @@ func main() {
 	// config changes
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	var err error
 	gpuclient, err = gpuagent.NewAgent(ctx, mh)
+
 	if err != nil {
 		logger.Log.Fatalf("GPUAgent create failed, %v", err)
 		return

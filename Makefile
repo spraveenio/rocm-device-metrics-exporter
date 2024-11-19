@@ -349,6 +349,10 @@ metricutil:
 	@echo "building metrics util"
 	CGO_ENABLED=0 go build -C tools/metricutil -o $(CURDIR)/bin/metricutil
 
+metricsclient:
+	@echo "building metrics client"
+	CGO_ENABLED=0 go build -C tools/metricsclient -o $(CURDIR)/bin/metricsclient
+
 .PHONY: docker-cicd
 docker-cicd: gen amdexporter
 	echo "Building cicd docker for publish"
