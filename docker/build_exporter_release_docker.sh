@@ -88,7 +88,7 @@ cd $TOP_DIR/docker
 rm -rf exporter-docker*.tgz
 if [ $PUBLISH_IMAGE == 1 ]; then
     echo "publishing exporter image to $IMAGE_URL"
-    docker build -t $IMAGE_URL . -f Dockerfile.exporter-release && docker push $IMAGE_URL
+    docker build --build-arg BASE_IMAGE=registry.test.pensando.io:5000/ubi9/ubi-minimal:9.4 -t $IMAGE_URL . -f Dockerfile.exporter-release && docker push $IMAGE_URL
     if [ $? -eq 0 ]; then
         echo "Successfully published image $IMAGE_URL"
     else
@@ -97,7 +97,7 @@ if [ $PUBLISH_IMAGE == 1 ]; then
     fi
 else
     echo "building exporter image to $IMAGE_URL"
-    docker build -t $IMAGE_URL . -f Dockerfile.exporter-release && docker save -o exporter-docker-$VER.tar $IMAGE_URL
+    docker build --build-arg BASE_IMAGE=registry.test.pensando.io:5000/ubi9/ubi-minimal:9.4 -t $IMAGE_URL . -f Dockerfile.exporter-release && docker save -o exporter-docker-$VER.tar $IMAGE_URL
     if [ $? -eq 0 ]; then
         gzip exporter-docker-$VER.tar
         mv exporter-docker-$VER.tar.gz exporter-docker-$VER.tgz

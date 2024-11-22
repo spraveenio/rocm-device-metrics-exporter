@@ -26,7 +26,7 @@ docker-cicd:
 	@echo "building cicd docker for local publish"
 	@echo "HOURLY_TAG : $(HOURLY_TAG_LABEL)"
 	TOP_DIR=$(TOP_DIR) ./build_prep_docker.sh
-	docker build -t $(IMG) --label HOURLY_TAG=$(HOURLY_TAG_LABEL) . -f Dockerfile.exporter-release
+	docker build --build-arg BASE_IMAGE=registry.test.pensando.io:5000/ubi9/ubi-minimal:9.4 -t $(IMG) --label HOURLY_TAG=$(HOURLY_TAG_LABEL) . -f Dockerfile.exporter-release
 	TOP_DIR=$(TOP_DIR) ./build_post_docker.sh
 
 .PHONY: docker-save

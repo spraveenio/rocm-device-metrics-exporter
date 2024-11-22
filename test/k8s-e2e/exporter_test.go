@@ -57,6 +57,7 @@ func (s *E2ESuite) Test001FirstDeplymentDefaults(c *C) {
 		fmt.Sprintf("service.type=NodePort"),
 		fmt.Sprintf("service.NodePort.nodePort=%d", nodePort),
 		fmt.Sprintf("configMap=%v", configmapName),
+		"image.pullPolicy=IfNotPresent",
 	}
     config := exporterConfig{}
     cfgData, err := json.Marshal(config)
