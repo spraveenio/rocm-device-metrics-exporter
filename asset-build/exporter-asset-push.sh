@@ -14,7 +14,16 @@ then
   exit 0
 fi
 
-echo "Copying device-metrics-exporter artifacts..."
+tag_prefix="${RELEASE%-*}"
+
+if [ "$tag_prefix" == "exporter-0.0.1" ]; then
+  tag="latest"
+else
+  tag="$tag_prefix"
+fi
+
+echo "Copying device-metrics-exporter artifacts and pushing docker image with tag:$tag"
+
 setup_dir () {
     ls -al /device-metrics-exporter/
     BUNDLE_DIR=/device-metrics-exporter/output/
@@ -37,18 +46,19 @@ copy_artifacts () {
 }
 
 docker_push () {
-    EXPORTER_IMAGE_URL=registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
+    EXPORTER_IMAGE_URL=registry.test.pensando.io:5000/device-metrics-exporter/exporter
     docker load -i /device-metrics-exporter/docker/exporter-latest.tar.gz
-    docker inspect $EXPORTER_IMAGE_URL | grep "HOURLY"
-    docker push $EXPORTER_IMAGE_URL
+    docker inspect $EXPORTER_IMAGE_URL:latest | grep "HOURLY"
+    docker tag $EXPORTER_IMAGE_URL:latest $EXPORTER_IMAGE_URL:$tag
+    docker push $EXPORTER_IMAGE_URL:$tag
 
     if [ -z $DOCKERHUB_TOKEN ]
     then
       echo "DOCKERHUB_TOKEN is not set"
     else
-      docker tag $EXPORTER_IMAGE_URL amdpsdo/device-metrics-exporter:latest
+      docker tag $EXPORTER_IMAGE_URL:latest amdpsdo/device-metrics-exporter:$tag
       docker login --username=shreyajmeraamd --password-stdin <<< $DOCKERHUB_TOKEN
-      docker push amdpsdo/device-metrics-exporter:latest
+      docker push amdpsdo/device-metrics-exporter:$tag
     fi
 }
 
