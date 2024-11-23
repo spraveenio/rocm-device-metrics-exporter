@@ -26,9 +26,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	grpc "google.golang.org/grpc"
-
 	amdgpu "github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	grpc "google.golang.org/grpc"
 )
 
 // MockGPUSvcClient is a mock of GPUSvcClient interface.

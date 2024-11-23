@@ -197,9 +197,10 @@ func main() {
 	logger.Log.Printf("BuildDate: %v", BuildDate)
 	logger.Log.Printf("GitCommit: %v", GitCommit)
 
+    svcHandler := metricsserver.NewMetricsServer()
 	go func() {
 		logger.Log.Printf("metrics service starting")
-		metricsserver.Run()
+		svcHandler.Run()
 		logger.Log.Printf("metrics service stopped")
 		os.Exit(0)
 	}()
@@ -210,17 +211,12 @@ func main() {
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()
 
-	// do it only once, keep the same connection no need to reconnect for
-	// config changes
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	var err error
-	gpuclient, err = gpuagent.NewAgent(ctx, mh)
+	gpuclient := gpuagent.NewAgent(mh)
+	defer gpuclient.Close()
 
-	if err != nil {
-		logger.Log.Fatalf("GPUAgent create failed, %v", err)
-		return
-	}
+	go gpuclient.StartMonitor()
+
+	svcHandler.RegisterHealthClient(gpuclient)
 
 	foreverWatcher()
 }

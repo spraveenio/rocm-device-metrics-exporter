@@ -35,72 +35,143 @@ import (
 
 const (
 	// cachgpuid are updated after this many pull request
-	refreshInterval = 10
+	refreshInterval = 5 * time.Second
 )
 
 type GPUAgentClient struct {
 	sync.Mutex
 	conn             *grpc.ClientConn
 	mh               *metricsutil.MetricsHandler
-	client           amdgpu.GPUSvcClient
+	gpuclient        amdgpu.GPUSvcClient
+	evtclient        amdgpu.EventSvcClient
 	m                *metrics // client specific metrics
 	kubeClient       k8s.PodResourcesService
 	isKubernetes     bool
 	slurmClient      slurm.JobsService
-	cacheGpuids      map[string][]byte
-	cachePulls       int
 	staticHostLabels map[string]string
+	ctx              context.Context
+	cancel           context.CancelFunc
+	healthState      map[string]string
 }
 
-func NewAgent(ctx context.Context, mh *metricsutil.MetricsHandler) (*GPUAgentClient, error) {
+func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclient amdgpu.GPUSvcClient, evtclient amdgpu.EventSvcClient, err error) {
 	agentAddr := mh.GetAgentAddr()
 	logger.Log.Printf("Agent connecting to %v", agentAddr)
-	conn, err := grpc.NewClient(agentAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err = grpc.NewClient(agentAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Log.Printf("err :%v", err)
-		return nil, err
+		return
 	}
-	client := amdgpu.NewGPUSvcClient(conn)
+	gpuclient = amdgpu.NewGPUSvcClient(conn)
+	evtclient = amdgpu.NewEventSvcClient(conn)
+	return
+}
 
-	ga := &GPUAgentClient{
-		conn:   conn,
-		client: client,
-		mh:     mh,
-	}
-
+func initSchedulers(ctx context.Context) (kubeClient k8s.PodResourcesService, slurmClient slurm.JobsService, err error) {
 	if k8s.IsKubernetes() {
-		kubeClient, err := k8s.NewClient()
+		kubeClient, err = k8s.NewClient()
 		if err != nil {
-			return nil, fmt.Errorf("error in kubelet client, %v", err)
+			return nil, nil, fmt.Errorf("error in kubelet client, %v", err)
 		}
-		ga.isKubernetes = true
-		ga.kubeClient = kubeClient
 	} else {
-		cli, err := slurm.NewClient(ctx)
+		slurmClient, err = slurm.NewClient(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("error in slurm client, %v", err)
+			return nil, nil, fmt.Errorf("error in slurm client, %v", err)
 		}
-		ga.slurmClient = cli
+	}
+	return
+}
+
+func NewAgent(mh *metricsutil.MetricsHandler) *GPUAgentClient {
+	ga := &GPUAgentClient{mh: mh}
+	ga.healthState = make(map[string]string)
+	mh.RegisterMetricsClient(ga)
+	return ga
+}
+
+func (ga *GPUAgentClient) init() error {
+	ga.Lock()
+	defer ga.Unlock()
+	ga.initializeContext()
+	ga.healthState = make(map[string]string)
+	conn, gpuclient, evtclient, err := initclients(ga.mh)
+	if err != nil {
+		logger.Log.Printf("gpu client init failure err :%v", err)
+		return err
+	}
+
+	ga.conn = conn
+	ga.gpuclient = gpuclient
+	ga.evtclient = evtclient
+
+	k8c, sc, err := initSchedulers(ga.ctx)
+	if err != nil {
+		logger.Log.Printf("gpu client init failure err :%v", err)
+		return err
+	}
+
+	if k8c != nil {
+		ga.isKubernetes = true
+		ga.kubeClient = k8c
+	} else {
 		ga.isKubernetes = false
+		ga.slurmClient = sc
 	}
 
 	if err := ga.populateStaticHostLabels(); err != nil {
-		return nil, fmt.Errorf("error in populating static host labels, %v", err)
+		return fmt.Errorf("error in populating static host labels, %v", err)
 	}
 
 	logger.Log.Printf("monitor %v jobs", map[bool]string{true: "kubernetes", false: "slurm"}[ga.isKubernetes])
-	ga.cacheGpuids = make(map[string][]byte)
-	mh.RegisterMetricsClient(ga)
 
-	return ga, nil
+	return nil
+}
+
+func (ga *GPUAgentClient) initializeContext() {
+	ctx, cancel := context.WithCancel(context.Background())
+	ga.ctx = ctx
+	ga.cancel = cancel
+}
+
+func (ga *GPUAgentClient) reconnect() error {
+	ga.Close()
+	return ga.init()
+}
+
+func (ga *GPUAgentClient) isActive() bool {
+	ga.Lock()
+	defer ga.Unlock()
+	return ga.gpuclient != nil
+}
+
+func (ga *GPUAgentClient) StartMonitor() {
+	logger.Log.Printf("GPUAgent monitor started")
+	ga.initializeContext()
+	pollTimer := time.NewTicker(refreshInterval)
+	defer pollTimer.Stop()
+
+	for {
+		select {
+		case <-ga.ctx.Done():
+			logger.Log.Printf("gpuagent client connection closing")
+			ga.Close()
+			return
+		case <-pollTimer.C:
+			if !ga.isActive() {
+				if err := ga.reconnect(); err != nil {
+					logger.Log.Printf("gpuagent connection failed %v", err)
+					continue
+				}
+			}
+			ga.processHealthValidation()
+		}
+	}
 }
 
 func (ga *GPUAgentClient) getMetricsAll() error {
 	// send the req to gpuclient
 	resp, err := ga.getMetrics()
 	if err != nil {
-		// crash to let service restart
-		logger.Log.Fatalf("err :%v", err)
 		return err
 	}
 	if resp != nil && resp.ApiStatus != 0 {
@@ -114,40 +185,34 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 	return nil
 }
 
-func (ga *GPUAgentClient) getMetricsBulkReq() error {
-	// create multiple workers
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
-	defer cancel()
-	responses, err := NewWokerRequest(ctx, ga.client, ga.cacheGpuids)
-	if err != nil {
-		logger.Log.Printf("worker request errored: %v", err)
-		return err
-	}
-	for _, gpuRes := range responses {
-		ga.updateGPUInfoToMetrics(gpuRes.Response[0])
-	}
-	// this handle gpu dynamically being added to the system
-	// to refresh the cachedgpu ids
-	ga.cachePulls++
-	if ga.cachePulls == refreshInterval {
-		ga.cachePulls = 0
-		go ga.UpdateStaticMetrics()
-	}
-	return nil
-}
-
 func (ga *GPUAgentClient) getMetrics() (*amdgpu.GPUGetResponse, error) {
-	ga.Lock()
-	defer ga.Unlock()
-	if ga.client == nil {
-		return nil, fmt.Errorf("client closed")
+	if !ga.isActive() {
+		ga.reconnect()
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	req := &amdgpu.GPUGetRequest{}
-	res, err := ga.client.GPUGet(ctx, req)
+	res, err := ga.gpuclient.GPUGet(ctx, req)
+	return res, err
+}
+
+func (ga *GPUAgentClient) getEvents(severity amdgpu.EventSeverity) (*amdgpu.EventResponse, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	req := &amdgpu.EventRequest{}
+	if severity != amdgpu.EventSeverity_EVENT_SEVERITY_NONE {
+		req.Filter = &amdgpu.EventFilter{
+			Filter: &amdgpu.EventFilter_MatchAttrs{
+				MatchAttrs: &amdgpu.EventMatchAttrs{
+					Severity: severity,
+				},
+			},
+		}
+	}
+	res, err := ga.evtclient.EventGet(ctx, req)
 	return res, err
 }
 
@@ -156,13 +221,15 @@ func (ga *GPUAgentClient) Close() {
 	defer ga.Unlock()
 	if ga.conn != nil {
 		ga.conn.Close()
-		ga.client = nil
+		ga.gpuclient = nil
+		ga.conn = nil
 	}
-	if ga.isKubernetes {
+	if ga.kubeClient != nil {
 		ga.kubeClient.Close()
 		ga.kubeClient = nil
+	}
 
-	} else {
+	if ga.slurmClient != nil {
 		ga.slurmClient.Close()
 		ga.slurmClient = nil
 	}

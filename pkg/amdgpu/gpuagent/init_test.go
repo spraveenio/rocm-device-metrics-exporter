@@ -17,10 +17,10 @@
 package gpuagent
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
@@ -30,15 +30,16 @@ import (
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/mock_gen"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gotest.tools/assert"
 )
 
 var (
-	mock_resp *amdgpu.GPUGetResponse
-	mockCtl   *gomock.Controller
-	gpuMockCl *mock_gen.MockGPUSvcClient
-	mh        *metricsutil.MetricsHandler
-	mConfig   *config.Config
+	mockCtl     *gomock.Controller
+	gpuMockCl   *mock_gen.MockGPUSvcClient
+	eventMockCl *mock_gen.MockEventSvcClient
+	mh          *metricsutil.MetricsHandler
+	mConfig     *config.Config
 )
 
 func setupTest(t *testing.T) func(t *testing.T) {
@@ -51,8 +52,9 @@ func setupTest(t *testing.T) func(t *testing.T) {
 	mockCtl = gomock.NewController(t)
 
 	gpuMockCl = mock_gen.NewMockGPUSvcClient(mockCtl)
+	eventMockCl = mock_gen.NewMockEventSvcClient(mockCtl)
 
-	mock_resp = &amdgpu.GPUGetResponse{
+	gpumock_resp := &amdgpu.GPUGetResponse{
 		ApiStatus: amdgpu.ApiStatus_API_STATUS_OK,
 		Response: []*amdgpu.GPU{
 			{
@@ -80,8 +82,22 @@ func setupTest(t *testing.T) func(t *testing.T) {
 		},
 	}
 
+	event_mockcriticalresp := &amdgpu.EventResponse{
+		ApiStatus: amdgpu.ApiStatus_API_STATUS_OK,
+		Event: []*amdgpu.Event{
+			{
+				Id:       1,
+				Category: 1,
+				Severity: 4,
+				Time:     timestamppb.New(time.Now()),
+				GPU:      []byte("72ff740f-0000-1000-804c-3b58bf67050e"),
+			},
+		},
+	}
+
 	gomock.InOrder(
-		gpuMockCl.EXPECT().GPUGet(gomock.Any(), gomock.Any()).Return(mock_resp, nil).AnyTimes(),
+		gpuMockCl.EXPECT().GPUGet(gomock.Any(), gomock.Any()).Return(gpumock_resp, nil).AnyTimes(),
+		eventMockCl.EXPECT().EventGet(gomock.Any(), gomock.Any()).Return(event_mockcriticalresp, nil).AnyTimes(),
 	)
 
 	mConfig = config.NewConfig("config.json")
@@ -97,8 +113,19 @@ func setupTest(t *testing.T) func(t *testing.T) {
 }
 
 func getNewAgent(t *testing.T) *GPUAgentClient {
-	ga, err := NewAgent(context.Background(), mh)
+    // setup zmq mock port
+	ga := NewAgent(mh)
+	ga.initializeContext()
+	ga.gpuclient = gpuMockCl
+	ga.evtclient = eventMockCl
+	k8c, sc, err := initSchedulers(ga.ctx)
 	assert.Assert(t, err == nil, "error creating new agent : %v", err)
-	ga.client = gpuMockCl
+	if k8c != nil {
+		ga.isKubernetes = true
+		ga.kubeClient = k8c
+	} else {
+		ga.isKubernetes = false
+		ga.slurmClient = sc
+	}
 	return ga
 }

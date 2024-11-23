@@ -93,7 +93,14 @@ func send(socketPath string) error {
 		return err
 	}
 
+	// send an metricssvcrequest
+	resp, err := client.GetGPUState(context.Background(),
+		&metricssvc.GPUGetRequest{ID: gpuReq.ID})
+	if err != nil {
+		return err
+	}
 	prettyPrintGPUState(resp)
+
 	return nil
 }
 
@@ -283,7 +290,13 @@ func main() {
 		if err != nil {
 			log.Fatalf("request failed :%v", err)
 		}
-	}
+	} else if *getOpt {
+		err := get(*socketPath, *setId)
+		if err != nil {
+			log.Fatalf("request failed :%v", err)
+		}
+		return
+	} else {
 
 	if *podRes {
 		getPodResources()
