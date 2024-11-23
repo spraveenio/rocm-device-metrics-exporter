@@ -52,8 +52,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MetricsServiceClient interface {
 	// GPUState get API
-	GetGPUState(ctx context.Context, in *GPUStateRequest, opts ...grpc.CallOption) (*GPUStateResponse, error)
-	SetGPUHealth(ctx context.Context, in *GPUUpdateRequest, opts ...grpc.CallOption) (*GPUStateResponse, error)
+	GetGPUState(ctx context.Context, in *GPUGetRequest, opts ...grpc.CallOption) (*GPUStateResponse, error)
+	SetGPUHealth(ctx context.Context, in *GPUUpdateRequest, opts ...grpc.CallOption) (*GPUUpdateRequest, error)
 	List(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GPUStateResponse, error)
 }
 
@@ -65,7 +65,7 @@ func NewMetricsServiceClient(cc grpc.ClientConnInterface) MetricsServiceClient {
 	return &metricsServiceClient{cc}
 }
 
-func (c *metricsServiceClient) GetGPUState(ctx context.Context, in *GPUStateRequest, opts ...grpc.CallOption) (*GPUStateResponse, error) {
+func (c *metricsServiceClient) GetGPUState(ctx context.Context, in *GPUGetRequest, opts ...grpc.CallOption) (*GPUStateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GPUStateResponse)
 	err := c.cc.Invoke(ctx, MetricsService_GetGPUState_FullMethodName, in, out, cOpts...)
@@ -75,9 +75,9 @@ func (c *metricsServiceClient) GetGPUState(ctx context.Context, in *GPUStateRequ
 	return out, nil
 }
 
-func (c *metricsServiceClient) SetGPUHealth(ctx context.Context, in *GPUUpdateRequest, opts ...grpc.CallOption) (*GPUStateResponse, error) {
+func (c *metricsServiceClient) SetGPUHealth(ctx context.Context, in *GPUUpdateRequest, opts ...grpc.CallOption) (*GPUUpdateRequest, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GPUStateResponse)
+	out := new(GPUUpdateRequest)
 	err := c.cc.Invoke(ctx, MetricsService_SetGPUHealth_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -100,8 +100,8 @@ func (c *metricsServiceClient) List(ctx context.Context, in *emptypb.Empty, opts
 // for forward compatibility.
 type MetricsServiceServer interface {
 	// GPUState get API
-	GetGPUState(context.Context, *GPUStateRequest) (*GPUStateResponse, error)
-	SetGPUHealth(context.Context, *GPUUpdateRequest) (*GPUStateResponse, error)
+	GetGPUState(context.Context, *GPUGetRequest) (*GPUStateResponse, error)
+	SetGPUHealth(context.Context, *GPUUpdateRequest) (*GPUUpdateRequest, error)
 	List(context.Context, *emptypb.Empty) (*GPUStateResponse, error)
 	mustEmbedUnimplementedMetricsServiceServer()
 }
@@ -113,10 +113,10 @@ type MetricsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMetricsServiceServer struct{}
 
-func (UnimplementedMetricsServiceServer) GetGPUState(context.Context, *GPUStateRequest) (*GPUStateResponse, error) {
+func (UnimplementedMetricsServiceServer) GetGPUState(context.Context, *GPUGetRequest) (*GPUStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGPUState not implemented")
 }
-func (UnimplementedMetricsServiceServer) SetGPUHealth(context.Context, *GPUUpdateRequest) (*GPUStateResponse, error) {
+func (UnimplementedMetricsServiceServer) SetGPUHealth(context.Context, *GPUUpdateRequest) (*GPUUpdateRequest, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetGPUHealth not implemented")
 }
 func (UnimplementedMetricsServiceServer) List(context.Context, *emptypb.Empty) (*GPUStateResponse, error) {
@@ -144,7 +144,7 @@ func RegisterMetricsServiceServer(s grpc.ServiceRegistrar, srv MetricsServiceSer
 }
 
 func _MetricsService_GetGPUState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GPUStateRequest)
+	in := new(GPUGetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func _MetricsService_GetGPUState_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: MetricsService_GetGPUState_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricsServiceServer).GetGPUState(ctx, req.(*GPUStateRequest))
+		return srv.(MetricsServiceServer).GetGPUState(ctx, req.(*GPUGetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

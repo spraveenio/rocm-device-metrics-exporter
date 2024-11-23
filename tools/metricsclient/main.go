@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -31,6 +32,15 @@ import (
 )
 
 func prettyPrintGPUState(resp *metricssvc.GPUStateResponse) {
+	if *jout {
+		jsonData, err := json.Marshal(resp)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		fmt.Println(string(jsonData))
+		return
+	}
 	fmt.Println("ID\tHealth\tAssociated Workload\t")
 	fmt.Println("------------------------------------------------")
 	for _, gs := range resp.GPUState {
@@ -39,8 +49,7 @@ func prettyPrintGPUState(resp *metricssvc.GPUStateResponse) {
 	fmt.Println("------------------------------------------------")
 }
 
-func send() error {
-	socketPath := globals.MetricsSocketPath
+func send(socketPath string) error {
 	conn, err := grpc.Dial(
 		"unix:"+socketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
@@ -53,7 +62,7 @@ func send() error {
 	// create a new gRPC echo client through the compiled stub
 	client := metricssvc.NewMetricsServiceClient(conn)
 
-    resp, err := client.List(context.Background(), &emptypb.Empty{})
+	resp, err := client.List(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -62,8 +71,40 @@ func send() error {
 	return nil
 }
 
-func set(id, state string) error {
-	socketPath := globals.MetricsSocketPath
+func get(socketPath, id string) error {
+	conn, err := grpc.Dial(
+		"unix:"+socketPath,
+		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
+	)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// create a new gRPC echo client through the compiled stub
+	client := metricssvc.NewMetricsServiceClient(conn)
+
+	// send an metricssvcrequest
+	gpuReq := &metricssvc.GPUGetRequest{
+		ID: []string{id},
+	}
+	_, err = client.GetGPUState(context.Background(), gpuReq)
+	if err != nil {
+		return err
+	}
+
+	// send an metricssvcrequest
+	resp, err := client.GetGPUState(context.Background(),
+		&metricssvc.GPUGetRequest{ID: gpuReq.ID})
+	if err != nil {
+		return err
+	}
+	prettyPrintGPUState(resp)
+
+	return nil
+}
+
+func set(socketPath, id, state string) error {
 	conn, err := grpc.Dial(
 		"unix:"+socketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
@@ -88,7 +129,7 @@ func set(id, state string) error {
 
 	// send an metricssvcrequest
 	resp, err := client.GetGPUState(context.Background(),
-		&metricssvc.GPUStateRequest{ID: gpuUpdate.ID})
+		&metricssvc.GPUGetRequest{ID: gpuUpdate.ID})
 	if err != nil {
 		return err
 	}
@@ -97,23 +138,34 @@ func set(id, state string) error {
 	return nil
 }
 
+var jout = flag.Bool("json", false, "output in json format")
+
 func main() {
 	var (
-		setOpt   = flag.Bool("set", false, "send set req")
-		setId    = flag.String("id", "1", "send gpu id")
-		setState = flag.String("state", "healthy", "[healthy, unhealthy, unknown]")
+		socketPath = flag.String("socket", globals.MetricsSocketPath, "metrics grpc socket path")
+		setOpt     = flag.Bool("set", false, "send set req")
+		getOpt     = flag.Bool("get", false, "send get req")
+		setId      = flag.String("id", "1", "send gpu id")
+		setState   = flag.String("state", "healthy", "[healthy, unhealthy, '']")
 	)
 	flag.Parse()
 
 	if *setOpt {
-		err := set(*setId, *setState)
+		err := set(*socketPath, *setId, *setState)
 		if err != nil {
-			log.Fatalf("send failed")
+			log.Fatalf("request failed :%v", err)
 		}
-	}
+	} else if *getOpt {
+		err := get(*socketPath, *setId)
+		if err != nil {
+			log.Fatalf("request failed :%v", err)
+		}
+		return
+	} else {
 
-	err := send()
-	if err != nil {
-		log.Fatalf("send failed")
+		err := send(*socketPath)
+		if err != nil {
+			log.Fatalf("request failed :%v", err)
+		}
 	}
 }

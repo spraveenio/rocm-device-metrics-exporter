@@ -844,23 +844,12 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	// send the req to gpuclient
 	resp, err := ga.getMetrics()
 	if err != nil {
-		// crash to let service restart
-		logger.Log.Fatalf("err :%v", err)
 		return err
 	}
 	if resp != nil && resp.ApiStatus != 0 {
 		logger.Log.Printf("resp status :%v", resp.ApiStatus)
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
-	/* disable multiple request to gpuagent, getting wrong responses
-	ga.Lock()
-	ga.cacheGpuids = make(map[string][]byte)
-	for _, gpu := range resp.Response {
-		uuid, _ := uuid.FromBytes(gpu.Spec.Id)
-		ga.cacheGpuids[uuid.String()] = gpu.Spec.Id
-	}
-	ga.Unlock()
-	*/
 	ga.m.gpuNodesTotal.Set(float64(len(resp.Response)))
 	for _, gpu := range resp.Response {
 		ga.updateGPUInfoToMetrics(gpu)

@@ -47,7 +47,7 @@ message GPUState {
     repeated string AssociatedWorkload = 3;
 } 
 
-message GPUStateRequest {
+message GPUGetRequest {
     // list of id of the GPU
     repeated string ID = 1;
 }
@@ -66,9 +66,9 @@ message GPUStateResponse {
 
 service MetricsService {
     // GPUState get API
-    rpc GetGPUState(GPUStateRequest) returns (GPUStateResponse) {}
+    rpc GetGPUState(GPUGetRequest) returns (GPUStateResponse) {}
 
-    rpc SetGPUHealth(GPUUpdateRequest) returns (GPUStateResponse) {}
+    rpc SetGPUHealth(GPUUpdateRequest) returns (GPUUpdateRequest) {}
 
     rpc List(google.protobuf.Empty) returns (GPUStateResponse) {}
 }

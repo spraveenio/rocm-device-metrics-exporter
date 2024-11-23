@@ -45,4 +45,7 @@ func TestGpuAgent(t *testing.T) {
 	err = ga.UpdateMetricsStats()
 	assert.Assert(t, err == nil, "expecting success config init")
 
+	err = ga.processHealthValidation()
+	assert.Assert(t, err == nil, "expecting success health validation")
+
 }

@@ -33,48 +33,71 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type metricsSvcImpl struct {
+type MetricsSvcImpl struct {
 	sync.Mutex
 	gpuState map[string]string
+	grpc     *grpc.Server
 	metricssvc.UnimplementedMetricsServiceServer
+	clients []HealthInterface
 }
 
-func (m *metricsSvcImpl) GetGPUState(ctx context.Context, req *metricssvc.GPUStateRequest) (*metricssvc.GPUStateResponse, error) {
+func (m *MetricsSvcImpl) GetGPUState(ctx context.Context, req *metricssvc.GPUGetRequest) (*metricssvc.GPUStateResponse, error) {
 	m.Lock()
 	defer m.Unlock()
-	logger.Log.Printf("Got GetReq : %+v", req)
+	//logger.Log.Printf("Got GetReq : %+v", req)
 	resp := &metricssvc.GPUStateResponse{
 		GPUState: []*metricssvc.GPUState{},
 	}
-	// mock it for now
-	for _, gpu := range req.ID {
-		gstate := &metricssvc.GPUState{
-			ID:     gpu,
-			Health: m.gpuState[gpu],
+	for _, client := range m.clients {
+		gpuState, err := client.GetGPUHealthStates()
+		if err != nil {
+			return nil, err
 		}
-		resp.GPUState = append(resp.GPUState, gstate)
+        for _, id := range req.ID {
+            if gstate, ok := gpuState[id]; ok {
+                state := &metricssvc.GPUState{
+                    ID:     id,
+                    Health: gstate,
+                }
+                // if mock is set override that state
+                if mstate, ok := m.gpuState[id]; ok {
+                    state.Health = mstate
+                }
+                resp.GPUState = append(resp.GPUState, state)
+            }
+        }
 	}
 	return resp, nil
 }
 
-func (m *metricsSvcImpl) List(ctx context.Context, e *emptypb.Empty) (*metricssvc.GPUStateResponse, error) {
+func (m *MetricsSvcImpl) List(ctx context.Context, e *emptypb.Empty) (*metricssvc.GPUStateResponse, error) {
 	m.Lock()
 	defer m.Unlock()
-	logger.Log.Printf("Got ListReq")
+	//logger.Log.Printf("Got ListReq")
 	resp := &metricssvc.GPUStateResponse{
 		GPUState: []*metricssvc.GPUState{},
 	}
-	// mock it for now
-	for gpu, state := range m.gpuState {
-		gstate := &metricssvc.GPUState{
-			ID:     gpu,
-			Health: state,
+
+	for _, client := range m.clients {
+		gpuState, err := client.GetGPUHealthStates()
+		if err != nil {
+			return nil, err
 		}
-		resp.GPUState = append(resp.GPUState, gstate)
+		for gpu, state := range gpuState {
+			gstate := &metricssvc.GPUState{
+				ID:     gpu,
+				Health: state,
+			}
+            // if mock is set override that state
+            if mstate, ok := m.gpuState[gpu]; ok {
+                gstate.Health = mstate
+            }
+			resp.GPUState = append(resp.GPUState, gstate)
+		}
 	}
 	return resp, nil
 }
-func (m *metricsSvcImpl) SetGPUHealth(ctx context.Context, req *metricssvc.GPUUpdateRequest) (*metricssvc.GPUStateResponse, error) {
+func (m *MetricsSvcImpl) SetGPUHealth(ctx context.Context, req *metricssvc.GPUUpdateRequest) (*metricssvc.GPUUpdateRequest, error) {
 	m.Lock()
 	defer m.Unlock()
 	logger.Log.Printf("Got SetReq : %+v", req)
@@ -82,38 +105,34 @@ func (m *metricsSvcImpl) SetGPUHealth(ctx context.Context, req *metricssvc.GPUUp
 		return nil, fmt.Errorf("invalid config mismatching id and state encountered")
 	}
 	for i, gpu := range req.ID {
-		m.gpuState[gpu] = strings.ToLower(req.Health[i])
+	    if len(req.Health[i]) == 0 {
+	        delete(m.gpuState, gpu)
+        } else {
+            m.gpuState[gpu] = strings.ToLower(req.Health[i])
+        }
 	}
 
-	resp := &metricssvc.GPUStateResponse{
-		GPUState: []*metricssvc.GPUState{},
-	}
-	// mock it for now
-	for _, gpu := range req.ID {
-		gstate := &metricssvc.GPUState{
-			ID:     gpu,
-			Health: m.gpuState[gpu],
-		}
-		resp.GPUState = append(resp.GPUState, gstate)
-	}
-	return resp, nil
+	return req, nil
 
 }
 
-func (m *metricsSvcImpl) mustEmbedUnimplementedMetricsServiceServer() {}
+func (m *MetricsSvcImpl) mustEmbedUnimplementedMetricsServiceServer() {}
 
-func NewMetricsServer() *grpc.Server {
-	gsrv := grpc.NewServer()
-	srv := &metricsSvcImpl{}
-	srv.gpuState = make(map[string]string)
-	for i := 1; i <= 16; i = i + 1 {
-		srv.gpuState[fmt.Sprintf("%d", i)] = strings.ToLower(metricssvc.GPUHealth_HEALTHY.String())
+func NewMetricsServer() *MetricsSvcImpl {
+	msrv := &MetricsSvcImpl{
+		grpc:     grpc.NewServer(),
+		clients:  []HealthInterface{},
+		gpuState: make(map[string]string),
 	}
-	metricssvc.RegisterMetricsServiceServer(gsrv, srv)
-	return gsrv
+	return msrv
 }
 
-func Run() {
+func (m *MetricsSvcImpl) RegisterHealthClient(client HealthInterface) error {
+	m.clients = append(m.clients, client)
+	return nil
+}
+
+func (m *MetricsSvcImpl) Run() {
 	socketPath := globals.MetricsSocketPath
 	// Remove any existing socket file
 	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
@@ -128,9 +147,8 @@ func Run() {
 		log.Fatalf("failed to listen on port: %v", err)
 	}
 	logger.Log.Printf("Listening on socket %v", socketPath)
-	srv := NewMetricsServer()
-
-	if err := srv.Serve(lis); err != nil {
+	metricssvc.RegisterMetricsServiceServer(m.grpc, m)
+	if err := m.grpc.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
