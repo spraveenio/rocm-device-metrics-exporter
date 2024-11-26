@@ -23,9 +23,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/k8sclient"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -141,12 +144,14 @@ func set(socketPath, id, state string) error {
 var jout = flag.Bool("json", false, "output in json format")
 
 func main() {
+	logger.Init()
 	var (
-		socketPath = flag.String("socket", globals.MetricsSocketPath, "metrics grpc socket path")
-		setOpt     = flag.Bool("set", false, "send set req")
-		getOpt     = flag.Bool("get", false, "send get req")
-		setId      = flag.String("id", "1", "send gpu id")
-		setState   = flag.String("state", "healthy", "[healthy, unhealthy, '']")
+		socketPath   = flag.String("socket", globals.MetricsSocketPath, "metrics grpc socket path")
+		setOpt       = flag.Bool("set", false, "send set req")
+		getOpt       = flag.Bool("get", false, "send get req")
+		setId        = flag.String("id", "1", "send gpu id")
+		setState     = flag.String("state", "healthy", "[healthy, unhealthy, '']")
+		getNodeLabel = flag.Bool("label", false, "get k8s node label")
 	)
 	flag.Parse()
 
@@ -160,12 +165,26 @@ func main() {
 		if err != nil {
 			log.Fatalf("request failed :%v", err)
 		}
-		return
 	} else {
 
 		err := send(*socketPath)
 		if err != nil {
 			log.Fatalf("request failed :%v", err)
 		}
+	}
+
+	if *getNodeLabel {
+		nodeName := os.Getenv("NODE_NAME")
+		if nodeName == "" {
+		    fmt.Println("not a k8s deployment")
+		    return
+		}
+		kc := k8sclient.NewClient()
+		labels, err := kc.GetNodelLabel(nodeName)
+		if err != nil {
+			fmt.Printf("err: %+v", err)
+			return
+		}
+		fmt.Printf("node[%v] labels[%+v]", nodeName, labels)
 	}
 }

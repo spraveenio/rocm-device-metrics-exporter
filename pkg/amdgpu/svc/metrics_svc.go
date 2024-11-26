@@ -35,8 +35,7 @@ import (
 
 type MetricsSvcImpl struct {
 	sync.Mutex
-	gpuState map[string]string
-	grpc     *grpc.Server
+	grpc *grpc.Server
 	metricssvc.UnimplementedMetricsServiceServer
 	clients []HealthInterface
 }
@@ -53,19 +52,15 @@ func (m *MetricsSvcImpl) GetGPUState(ctx context.Context, req *metricssvc.GPUGet
 		if err != nil {
 			return nil, err
 		}
-        for _, id := range req.ID {
-            if gstate, ok := gpuState[id]; ok {
-                state := &metricssvc.GPUState{
-                    ID:     id,
-                    Health: gstate,
-                }
-                // if mock is set override that state
-                if mstate, ok := m.gpuState[id]; ok {
-                    state.Health = mstate
-                }
-                resp.GPUState = append(resp.GPUState, state)
-            }
-        }
+		for _, id := range req.ID {
+			if gstate, ok := gpuState[id]; ok {
+				state := &metricssvc.GPUState{
+					ID:     id,
+					Health: gstate,
+				}
+				resp.GPUState = append(resp.GPUState, state)
+			}
+		}
 	}
 	return resp, nil
 }
@@ -88,15 +83,12 @@ func (m *MetricsSvcImpl) List(ctx context.Context, e *emptypb.Empty) (*metricssv
 				ID:     gpu,
 				Health: state,
 			}
-            // if mock is set override that state
-            if mstate, ok := m.gpuState[gpu]; ok {
-                gstate.Health = mstate
-            }
 			resp.GPUState = append(resp.GPUState, gstate)
 		}
 	}
 	return resp, nil
 }
+
 func (m *MetricsSvcImpl) SetGPUHealth(ctx context.Context, req *metricssvc.GPUUpdateRequest) (*metricssvc.GPUUpdateRequest, error) {
 	m.Lock()
 	defer m.Unlock()
@@ -105,11 +97,9 @@ func (m *MetricsSvcImpl) SetGPUHealth(ctx context.Context, req *metricssvc.GPUUp
 		return nil, fmt.Errorf("invalid config mismatching id and state encountered")
 	}
 	for i, gpu := range req.ID {
-	    if len(req.Health[i]) == 0 {
-	        delete(m.gpuState, gpu)
-        } else {
-            m.gpuState[gpu] = strings.ToLower(req.Health[i])
-        }
+		for _, client := range m.clients {
+			_ = client.SetMockGPUHealthState(gpu, strings.ToLower(req.Health[i]))
+		}
 	}
 
 	return req, nil
@@ -120,9 +110,8 @@ func (m *MetricsSvcImpl) mustEmbedUnimplementedMetricsServiceServer() {}
 
 func NewMetricsServer() *MetricsSvcImpl {
 	msrv := &MetricsSvcImpl{
-		grpc:     grpc.NewServer(),
-		clients:  []HealthInterface{},
-		gpuState: make(map[string]string),
+		grpc:    grpc.NewServer(),
+		clients: []HealthInterface{},
 	}
 	return msrv
 }

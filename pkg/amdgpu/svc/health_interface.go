@@ -20,6 +20,9 @@ package metricsserver
 type HealthInterface interface {
     // Get health update of clients
     GetGPUHealthStates() (map[string]string, error)
+
+    // debug/mock
+    SetMockGPUHealthState(gpuid, state string) error
 }
 
 type HealthSvcServer interface {

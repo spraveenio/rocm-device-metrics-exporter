@@ -18,10 +18,12 @@ package gpuagent
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 )
 
@@ -35,7 +37,7 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 	ga.healthState = make(map[string]string)
 	ga.Unlock()
 
-    gpuUUIDMap := make(map[string]string)
+	gpuUUIDMap := make(map[string]string)
 	gpuHealthState := make(map[string]bool)
 	metricErrCheck := func(gpuid string, count float64) {
 		if count > 0 {
@@ -52,12 +54,12 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 		logger.Log.Printf("evt id=%v gpuid=%v severity=%v TimeStamp=%v Description=%v",
 			e.Id, gpuuid, e.Severity, ts, e.Description)
 		if e.Severity == amdgpu.EventSeverity_EVENT_SEVERITY_CRITICAL {
-            if gpuid, ok := gpuUUIDMap[gpuuid]; ok {
-                gpuHealthState[gpuid] = false
-                logger.Log.Printf("gpuid[%v] is set to unhealthy for evt[%+v]", gpuid, e)
-            } else {
-                logger.Log.Printf("ignoring invalid gpuid[%v] is set to unhealthy for evt[%+v]", gpuuid, e)
-            }
+			if gpuid, ok := gpuUUIDMap[gpuuid]; ok {
+				gpuHealthState[gpuid] = false
+				logger.Log.Printf("gpuid[%v] is set to unhealthy for evt[%+v]", gpuid, e)
+			} else {
+				logger.Log.Printf("ignoring invalid gpuid[%v] is set to unhealthy for evt[%+v]", gpuuid, e)
+			}
 		}
 	}
 
@@ -70,7 +72,7 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 		// reset for every gpu state
 		for _, gpu := range gpumetrics.Response {
 			uuid, _ := uuid.FromBytes(gpu.Spec.Id)
-            gpuid := fmt.Sprintf("%v", gpu.Status.Index)
+			gpuid := fmt.Sprintf("%v", gpu.Status.Index)
 			gpuuid := uuid.String()
 			gpuUUIDMap[gpuuid] = gpuid
 			gpuHealthState[gpuid] = true
@@ -141,6 +143,11 @@ ret:
 
 	ga.Lock()
 	for gpuid, healthy := range gpuHealthState {
+		// override mock stats
+		if mhealth, ok := ga.mockHealthState[gpuid]; ok {
+			ga.healthState[gpuid] = mhealth
+			continue
+		}
 		if healthy {
 			ga.healthState[gpuid] = "healthy"
 		} else {
@@ -149,6 +156,19 @@ ret:
 	}
 	ga.Unlock()
 
+	// logger.Log.Printf("health process update done :%+v", ga.healthState)
+
+	return nil
+}
+
+func (ga *GPUAgentClient) SetMockGPUHealthState(gpuid, state string) error {
+	ga.Lock()
+	defer ga.Unlock()
+	if _, ok := metricssvc.GPUHealth_value[strings.ToUpper(state)]; !ok {
+		delete(ga.mockHealthState, gpuid)
+	} else {
+		ga.mockHealthState[gpuid] = state
+	}
 	return nil
 }
 
