@@ -270,6 +270,7 @@ func getPodResources() {
 var jout = flag.Bool("json", false, "output in json format")
 
 func main() {
+	logger.Init()
 	var (
 		socketPath   = flag.String("socket", fmt.Sprintf("unix://%v", globals.MetricsSocketPath), "metrics grpc socket path")
 		getOpt       = flag.Bool("get", false, "get health status of gpu")
@@ -295,7 +296,6 @@ func main() {
 		if err != nil {
 			log.Fatalf("request failed :%v", err)
 		}
-		return
 	} else {
 
 	if *podRes {
@@ -320,5 +320,20 @@ func main() {
 
 	if *eccFile != "" {
 		setError(*socketPath, *eccFile)
+	}
+
+	if *getNodeLabel {
+		nodeName := os.Getenv("NODE_NAME")
+		if nodeName == "" {
+		    fmt.Println("not a k8s deployment")
+		    return
+		}
+		kc := k8sclient.NewClient()
+		labels, err := kc.GetNodelLabel(nodeName)
+		if err != nil {
+			fmt.Printf("err: %+v", err)
+			return
+		}
+		fmt.Printf("node[%v] labels[%+v]", nodeName, labels)
 	}
 }

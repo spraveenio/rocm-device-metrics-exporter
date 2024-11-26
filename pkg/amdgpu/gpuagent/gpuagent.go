@@ -19,6 +19,7 @@ package gpuagent
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/pensando/device-metrics-exporter/pkg/k8s"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/k8sclient"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
 	"google.golang.org/grpc"
@@ -35,7 +37,7 @@ import (
 
 const (
 	// cachgpuid are updated after this many pull request
-	refreshInterval = 5 * time.Second
+	refreshInterval = 30 * time.Second
 )
 
 type GPUAgentClient struct {
@@ -46,12 +48,14 @@ type GPUAgentClient struct {
 	evtclient        amdgpu.EventSvcClient
 	m                *metrics // client specific metrics
 	kubeClient       k8s.PodResourcesService
+	k8sLabelClient   *k8sclient.K8sClient
 	isKubernetes     bool
 	slurmClient      slurm.JobsService
 	staticHostLabels map[string]string
 	ctx              context.Context
 	cancel           context.CancelFunc
 	healthState      map[string]string
+	mockHealthState  map[string]string
 }
 
 func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclient amdgpu.GPUSvcClient, evtclient amdgpu.EventSvcClient, err error) {
@@ -85,6 +89,7 @@ func initSchedulers(ctx context.Context) (kubeClient k8s.PodResourcesService, sl
 func NewAgent(mh *metricsutil.MetricsHandler) *GPUAgentClient {
 	ga := &GPUAgentClient{mh: mh}
 	ga.healthState = make(map[string]string)
+	ga.mockHealthState = make(map[string]string)
 	mh.RegisterMetricsClient(ga)
 	return ga
 }
@@ -113,6 +118,7 @@ func (ga *GPUAgentClient) init() error {
 	if k8c != nil {
 		ga.isKubernetes = true
 		ga.kubeClient = k8c
+		ga.k8sLabelClient = k8sclient.NewClient()
 	} else {
 		ga.isKubernetes = false
 		ga.slurmClient = sc
@@ -164,8 +170,29 @@ func (ga *GPUAgentClient) StartMonitor() {
 				}
 			}
 			ga.processHealthValidation()
+			ga.sendNodeLabelUpdate()
 		}
 	}
+}
+
+func (ga *GPUAgentClient) sendNodeLabelUpdate() error {
+	if !ga.isKubernetes {
+		return nil
+	}
+	// send update to label , reconnect logic tbd
+	nodeName := os.Getenv("NODE_NAME")
+	if nodeName == "" {
+		logger.Log.Printf("error getting node name on k8s deployment, skip label update")
+		return fmt.Errorf("node name not found")
+	}
+	gpuHealthStates := make(map[string]string)
+	ga.Lock()
+	for gpuid, state := range ga.healthState {
+		gpuHealthStates[gpuid] = state
+	}
+	ga.Unlock()
+	_ = ga.k8sLabelClient.UpdateHealthLabel(nodeName, gpuHealthStates)
+	return nil
 }
 
 func (ga *GPUAgentClient) getMetricsAll() error {
