@@ -43,7 +43,7 @@ Usage of bin/amd-metrics-exporter:
       
     - To run the exporter from docker registery
     ```
-    docker run --rm -itd --privileged --mount type=bind,source=./,target=/var/run -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter 		registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest bash
+    docker run -itd --device=/dev/dri --device=/dev/kfd -p 5000:5000 --name exporter rocm/device-metrics-exporter:v1.0.0
     ```
     ```
     # mount /var/run/slurm/  to receive slurm notifications
@@ -127,7 +127,7 @@ Usage of bin/amd-metrics-exporter:
     - create your config in directory `config/config.json`
     - start docker container
      ```
-     docker run --rm -ltd --privileged -v ./config:/etc/metrics -e PATH=$PATH:/home/amd/bin/ -p 5000:5000 --name exporter registry.test.pensando.io:5000/device-metrics-exporter/exporter:latest
+     docker run -itd --device=/dev/dri --device=/dev/kfd -v ./config:/etc/metrics -p 5000:5000 --name exporter rocm/device-metrics-exporter:v1.0.0
      ```
 - The update to config file will take affect graciously without needing the
   container to be restarted. The new config will take effect in less than 1 minute interval.
