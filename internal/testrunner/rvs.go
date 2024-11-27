@@ -89,11 +89,13 @@ func (rts *TestRunner) loadTestSuites() error {
 }
 
 // NewRvsTestRunner returns instance of RvsTestRunner
-func NewRvsTestRunner(rvsBinPath, testConfDir, logDir string) (types.TestRunner, error) {
+func NewRvsTestRunner(rvsBinPath, testSuitesDir, logDir string) (types.TestRunner, error) {
 	if len(rvsBinPath) == 0 {
 		return nil, fmt.Errorf("rocm path is not set")
 	}
-
+	if _, err := os.Stat(rvsBinPath); err != nil {
+		return nil, fmt.Errorf("failed to get rvs binary from %+v err %+v", rvsBinPath, err)
+	}
 	if logger.Log == nil {
 		return nil, fmt.Errorf("test runner logger is not initialized")
 	}
@@ -103,7 +105,7 @@ func NewRvsTestRunner(rvsBinPath, testConfDir, logDir string) (types.TestRunner,
 		logDir:         logDir,
 		logger:         logger.Log,
 		testSuites:     make(map[string]bool),
-		testSuitesDir:  testConfDir,
+		testSuitesDir:  testSuitesDir,
 	}
 
 	err := obj.loadTestSuites()
