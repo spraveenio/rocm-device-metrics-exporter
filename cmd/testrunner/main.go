@@ -55,6 +55,7 @@ func main() {
 		exporterSocketPath   = flag.String("exporter-socket-path", globals.MetricsSocketPath, "Path to exporter metrics server socket")
 		versionOpt           = flag.Bool("version", false, "show version")
 	)
+
 	flag.Parse()
 
 	if *versionOpt {
@@ -63,6 +64,46 @@ func main() {
 		fmt.Printf("GitCommit: %v\n", GitCommit)
 		os.Exit(0)
 	}
+	defer conn.Close()
+	c := metricssvc.NewMetricsServiceClient(conn)
+
+	timer := time.NewTicker(gpuStateWatchFreq)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			ctx, cancel := context.WithTimeout(context.Background(), gpuStateReqTimeout)
+			r, err := c.List(ctx, &emptypb.Empty{})
+			if err != nil {
+				logger.Log.Fatalf("could not list GPU state: %v", err)
+				cancel()
+				return
+			}
+			logger.Log.Printf("GPU State: %s", r.String())
+			cancel()
+
+			unHealthyGPUIDs := []string{}
+			if r != nil {
+				for _, state := range r.GPUState {
+					// if any GPU is not healthy, start a test against those GPUs
+					if state.Health != metricssvc.GPUHealth_HEALTHY.String() {
+						unHealthyGPUIDs = append(unHealthyGPUIDs, state.ID)
+					}
+				}
+			}
+
+			// start test on unhealthy GPU
+			if len(globalTestConfig.DeviceIDs) > 0 {
+				logger.Log.Printf("test config force to run test for GPU %+v", globalTestConfig.DeviceIDs)
+				go testGPU(globalTestConfig.DeviceIDs)
+			} else if len(unHealthyGPUIDs) > 0 {
+				logger.Log.Printf("found GPU with unhealthy state %+v", unHealthyGPUIDs)
+				go testGPU(unHealthyGPUIDs)
+			}
+		}
+	}
+}
 
 	testCategory := strings.ToUpper(getStrFromEnvOrDefault(testCategoryEnv, globals.DefaultTestCategory))
 	testTrigger := strings.ToUpper(getStrFromEnvOrDefault(testTriggerEnv, globals.DefaultTestTrigger))
