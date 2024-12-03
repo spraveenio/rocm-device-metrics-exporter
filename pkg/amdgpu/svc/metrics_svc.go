@@ -19,23 +19,16 @@ package metricsserver
 import (
 	"context"
 	"fmt"
-	"log"
-	"net"
-	"os"
-	"path"
 	"strings"
 	"sync"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type MetricsSvcImpl struct {
 	sync.Mutex
-	grpc *grpc.Server
 	metricssvc.UnimplementedMetricsServiceServer
 	clients []HealthInterface
 }
@@ -108,9 +101,8 @@ func (m *MetricsSvcImpl) SetGPUHealth(ctx context.Context, req *metricssvc.GPUUp
 
 func (m *MetricsSvcImpl) mustEmbedUnimplementedMetricsServiceServer() {}
 
-func NewMetricsServer() *MetricsSvcImpl {
+func newMetricsServer() *MetricsSvcImpl {
 	msrv := &MetricsSvcImpl{
-		grpc:    grpc.NewServer(),
 		clients: []HealthInterface{},
 	}
 	return msrv
@@ -119,25 +111,4 @@ func NewMetricsServer() *MetricsSvcImpl {
 func (m *MetricsSvcImpl) RegisterHealthClient(client HealthInterface) error {
 	m.clients = append(m.clients, client)
 	return nil
-}
-
-func (m *MetricsSvcImpl) Run() {
-	socketPath := globals.MetricsSocketPath
-	// Remove any existing socket file
-	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
-		log.Fatalf("Failed to remove socket file: %v", err)
-	}
-
-	os.MkdirAll(path.Dir(socketPath), 0755)
-
-	logger.Log.Printf("starting listening on socket : %v", socketPath)
-	lis, err := net.Listen("unix", socketPath)
-	if err != nil {
-		log.Fatalf("failed to listen on port: %v", err)
-	}
-	logger.Log.Printf("Listening on socket %v", socketPath)
-	metricssvc.RegisterMetricsServiceServer(m.grpc, m)
-	if err := m.grpc.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
 }

@@ -26,6 +26,7 @@ import (
 	"os"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/testsvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/k8sclient"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
@@ -50,6 +51,16 @@ func prettyPrintGPUState(resp *metricssvc.GPUStateResponse) {
 		fmt.Printf("%v\t%v\t%+v\t\r\n", gs.ID, gs.Health, gs.AssociatedWorkload)
 	}
 	fmt.Println("------------------------------------------------")
+}
+
+func prettyPrintTestResponse(resp *testsvc.TestGetResponse) {
+	jsonData, err := json.Marshal(resp)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(string(jsonData))
+	return
 }
 
 func send(socketPath string) error {
@@ -107,6 +118,55 @@ func get(socketPath, id string) error {
 	return nil
 }
 
+func sendTestResult(socketPath string) error {
+	conn, err := grpc.Dial(
+		"unix:"+socketPath,
+		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
+	)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// create a new gRPC echo client through the compiled stub
+	client := testsvc.NewTestServiceClient(conn)
+
+	req := &testsvc.TestPostRequest{
+		ID:   "uuid",
+		Name: "mock_test",
+	}
+	resp, err := client.SubmitTestResult(context.Background(), req)
+	if err != nil {
+		return err
+	}
+	prettyPrintTestResponse(resp)
+
+	return nil
+
+}
+
+func listTestResult(socketPath string) error {
+	conn, err := grpc.Dial(
+		"unix:"+socketPath,
+		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
+	)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// create a new gRPC echo client through the compiled stub
+	client := testsvc.NewTestServiceClient(conn)
+
+	resp, err := client.List(context.Background(), &emptypb.Empty{})
+	if err != nil {
+		return err
+	}
+	prettyPrintTestResponse(resp)
+
+	return nil
+
+}
 func set(socketPath, id, state string) error {
 	conn, err := grpc.Dial(
 		"unix:"+socketPath,
@@ -152,6 +212,8 @@ func main() {
 		setId        = flag.String("id", "1", "send gpu id")
 		setState     = flag.String("state", "healthy", "[healthy, unhealthy, '']")
 		getNodeLabel = flag.Bool("label", false, "get k8s node label")
+		sendTest     = flag.Bool("test", false, "send mock test result")
+		listTest     = flag.Bool("list", false, "list all test results from server")
 	)
 	flag.Parse()
 
@@ -176,8 +238,8 @@ func main() {
 	if *getNodeLabel {
 		nodeName := os.Getenv("NODE_NAME")
 		if nodeName == "" {
-		    fmt.Println("not a k8s deployment")
-		    return
+			fmt.Println("not a k8s deployment")
+			return
 		}
 		kc := k8sclient.NewClient()
 		labels, err := kc.GetNodelLabel(nodeName)
@@ -186,5 +248,13 @@ func main() {
 			return
 		}
 		fmt.Printf("node[%v] labels[%+v]", nodeName, labels)
+	}
+
+	if *sendTest {
+		sendTestResult(*socketPath)
+	}
+
+	if *listTest {
+		listTestResult(*socketPath)
 	}
 }

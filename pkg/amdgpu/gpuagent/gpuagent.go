@@ -226,9 +226,6 @@ func (ga *GPUAgentClient) getMetrics() (*amdgpu.GPUGetResponse, error) {
 }
 
 func (ga *GPUAgentClient) getEvents(severity amdgpu.EventSeverity) (*amdgpu.EventResponse, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	req := &amdgpu.EventRequest{}
 	if severity != amdgpu.EventSeverity_EVENT_SEVERITY_NONE {
 		req.Filter = &amdgpu.EventFilter{
@@ -239,7 +236,7 @@ func (ga *GPUAgentClient) getEvents(severity amdgpu.EventSeverity) (*amdgpu.Even
 			},
 		}
 	}
-	res, err := ga.evtclient.EventGet(ctx, req)
+	res, err := ga.evtclient.EventGet(ga.ctx, req)
 	return res, err
 }
 
