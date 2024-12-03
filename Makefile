@@ -146,6 +146,11 @@ docker-cicd: gen amdexporter
 docker: gen amdexporter
 	${MAKE} -C docker TOP_DIR=$(CURDIR) MOCK=$(MOCK)
 
+.PHONY: docker-azure
+docker-azure: gen amdexporter
+	${MAKE} -C docker TOP_DIR=$(CURDIR) MOCK=$(MOCK) azure
+	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
+
 .PHONY: docker-mock
 docker-mock:
 	${MAKE} docker MOCK=1

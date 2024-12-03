@@ -33,3 +33,10 @@ docker-cicd:
 docker-save: ## save the container
 	docker save $(IMG) | gzip > $(DOCKER_CONTAINER_IMG).tar.gz
 
+.PHONY: azure
+azure:
+	@echo "building cicd docker for local publish"
+	@echo "HOURLY_TAG : $(HOURLY_TAG_LABEL)"
+	TOP_DIR=$(TOP_DIR) ./build_prep_docker.sh
+	docker build -t $(IMG) --label HOURLY_TAG=$(HOURLY_TAG_LABEL) . -f Dockerfile.azure.linux3.exporter-release
+	TOP_DIR=$(TOP_DIR) ./build_post_docker.sh
