@@ -325,8 +325,8 @@ func main() {
 	if *getNodeLabel {
 		nodeName := os.Getenv("NODE_NAME")
 		if nodeName == "" {
-		    fmt.Println("not a k8s deployment")
-		    return
+			fmt.Println("not a k8s deployment")
+			return
 		}
 		kc := k8sclient.NewClient()
 		labels, err := kc.GetNodelLabel(nodeName)
@@ -335,5 +335,13 @@ func main() {
 			return
 		}
 		fmt.Printf("node[%v] labels[%+v]", nodeName, labels)
+	}
+
+	if *sendTest {
+		sendTestResult(*socketPath)
+	}
+
+	if *listTest {
+		listTestResult(*socketPath)
 	}
 }

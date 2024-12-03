@@ -26,6 +26,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -50,10 +51,18 @@ var (
 	runConf   *config.Config
 )
 
+const (
+	metricsHandlerPrefix = "/metrics"
+)
+
 // get the info from gpu agent and update the current metrics registery
 func prometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = mh.UpdateMetrics()
+		url := r.URL.String()
+		if strings.Contains(strings.ToLower(url), metricsHandlerPrefix) {
+			// pull metrics only for metrics handler
+			_ = mh.UpdateMetrics()
+		}
 		next.ServeHTTP(w, r)
 	})
 }
@@ -66,7 +75,7 @@ func startMetricsServer(c *config.Config) *http.Server {
 	router.Use(prometheusMiddleware)
 
 	reg := mh.GetRegistry()
-	router.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+	router.Handle(metricsHandlerPrefix, promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
 	// pprof
 	router.Methods("GET").Subrouter().Handle("/debug/vars", expvar.Handler())
 	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/", pprof.Index)
@@ -85,6 +94,7 @@ func startMetricsServer(c *config.Config) *http.Server {
 		Addr:    fmt.Sprintf(":%v", serverPort),
 		Handler: router,
 	}
+
 	go func() {
 		logger.Log.Printf("serving requests on port %v", serverPort)
 		err := srv.ListenAndServe()
@@ -186,6 +196,13 @@ func main() {
 	)
 	flag.Parse()
 
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Log.Printf("panic occured: %+v", r)
+			os.Exit(1)
+		}
+	}()
+
 	if *versionOpt {
 		fmt.Printf("Version : %v\n", Version)
 		fmt.Printf("BuildDate: %v\n", BuildDate)
@@ -197,7 +214,7 @@ func main() {
 	logger.Log.Printf("BuildDate: %v", BuildDate)
 	logger.Log.Printf("GitCommit: %v", GitCommit)
 
-    svcHandler := metricsserver.NewMetricsServer()
+	svcHandler := metricsserver.InitSvcs()
 	go func() {
 		logger.Log.Printf("metrics service starting")
 		svcHandler.Run()
