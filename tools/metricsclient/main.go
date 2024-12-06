@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/testsvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/k8sclient"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -53,7 +53,17 @@ func prettyPrintGPUState(resp *metricssvc.GPUStateResponse) {
 	fmt.Println("------------------------------------------------")
 }
 
-func prettyPrintTestResponse(resp *testsvc.TestGetResponse) {
+func prettyPrint(resp interface{}) {
+	jsonData, err := json.Marshal(resp)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(string(jsonData))
+	return
+}
+
+func prettyPrintErrResponse(resp *metricssvc.GPUErrorResponse) {
 	jsonData, err := json.Marshal(resp)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -139,7 +149,7 @@ func sendTestResult(socketPath string) error {
 	if err != nil {
 		return err
 	}
-	prettyPrintTestResponse(resp)
+	prettyPrint(resp)
 
 	return nil
 
@@ -162,12 +172,27 @@ func listTestResult(socketPath string) error {
 	if err != nil {
 		return err
 	}
-	prettyPrintTestResponse(resp)
+	prettyPrint(resp)
 
 	return nil
 
 }
-func set(socketPath, id, state string) error {
+func setError(socketPath, filepath string) error {
+
+	// send an metricssvcrequest
+	gpuUpdate := &metricssvc.GPUErrorRequest{}
+	eccConfigs, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		fmt.Printf("err: %+v", err)
+		return err
+	} else {
+		err = json.Unmarshal(eccConfigs, gpuUpdate)
+		if err != nil {
+			fmt.Printf("err: %+v", err)
+			return err
+		}
+	}
+
 	conn, err := grpc.Dial(
 		"unix:"+socketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
@@ -180,23 +205,12 @@ func set(socketPath, id, state string) error {
 	// create a new gRPC echo client through the compiled stub
 	client := metricssvc.NewMetricsServiceClient(conn)
 
-	// send an metricssvcrequest
-	gpuUpdate := &metricssvc.GPUUpdateRequest{
-		ID:     []string{id},
-		Health: []string{state},
-	}
-	_, err = client.SetGPUHealth(context.Background(), gpuUpdate)
+	resp, err := client.SetError(context.Background(), gpuUpdate)
 	if err != nil {
 		return err
 	}
 
-	// send an metricssvcrequest
-	resp, err := client.GetGPUState(context.Background(),
-		&metricssvc.GPUGetRequest{ID: gpuUpdate.ID})
-	if err != nil {
-		return err
-	}
-	prettyPrintGPUState(resp)
+	prettyPrintErrResponse(resp)
 
 	return nil
 }
@@ -204,31 +218,24 @@ func set(socketPath, id, state string) error {
 var jout = flag.Bool("json", false, "output in json format")
 
 func main() {
-	logger.Init()
 	var (
 		socketPath   = flag.String("socket", globals.MetricsSocketPath, "metrics grpc socket path")
-		setOpt       = flag.Bool("set", false, "send set req")
-		getOpt       = flag.Bool("get", false, "send get req")
-		setId        = flag.String("id", "1", "send gpu id")
-		setState     = flag.String("state", "healthy", "[healthy, unhealthy, '']")
+		getOpt       = flag.Bool("get", false, "get health status of gpu")
+		setId        = flag.String("id", "1", "gpu id")
 		getNodeLabel = flag.Bool("label", false, "get k8s node label")
-		sendTest     = flag.Bool("test", false, "send mock test result")
-		listTest     = flag.Bool("list", false, "list all test results from server")
+		//sendTest     = flag.Bool("test", false, "send mock test result")
+		//listTest     = flag.Bool("list", false, "list all test results from server")
+		setEcc       = flag.Bool("ecc", false, "set mock ecc error")
+		eccFile      = flag.String("ecc-file-path", "", "json ecc err file")
 	)
 	flag.Parse()
 
-	if *setOpt {
-		err := set(*socketPath, *setId, *setState)
-		if err != nil {
-			log.Fatalf("request failed :%v", err)
-		}
-	} else if *getOpt {
+	if *getOpt {
 		err := get(*socketPath, *setId)
 		if err != nil {
 			log.Fatalf("request failed :%v", err)
 		}
 	} else {
-
 		err := send(*socketPath)
 		if err != nil {
 			log.Fatalf("request failed :%v", err)
@@ -250,11 +257,22 @@ func main() {
 		fmt.Printf("node[%v] labels[%+v]", nodeName, labels)
 	}
 
+	/*
 	if *sendTest {
 		sendTestResult(*socketPath)
 	}
 
 	if *listTest {
 		listTestResult(*socketPath)
+	}
+	*/
+
+	if *setEcc {
+		if *eccFile == "" {
+			fmt.Println("invalid ecc error file path")
+			return
+
+		}
+		setError(*socketPath, *eccFile)
 	}
 }

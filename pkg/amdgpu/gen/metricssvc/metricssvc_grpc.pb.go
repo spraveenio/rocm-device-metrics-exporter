@@ -42,9 +42,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MetricsService_GetGPUState_FullMethodName  = "/metricssvc.MetricsService/GetGPUState"
-	MetricsService_SetGPUHealth_FullMethodName = "/metricssvc.MetricsService/SetGPUHealth"
-	MetricsService_List_FullMethodName         = "/metricssvc.MetricsService/List"
+	MetricsService_GetGPUState_FullMethodName = "/metricssvc.MetricsService/GetGPUState"
+	MetricsService_List_FullMethodName        = "/metricssvc.MetricsService/List"
+	MetricsService_SetError_FullMethodName    = "/metricssvc.MetricsService/SetError"
 )
 
 // MetricsServiceClient is the client API for MetricsService service.
@@ -53,8 +53,8 @@ const (
 type MetricsServiceClient interface {
 	// GPUState get API
 	GetGPUState(ctx context.Context, in *GPUGetRequest, opts ...grpc.CallOption) (*GPUStateResponse, error)
-	SetGPUHealth(ctx context.Context, in *GPUUpdateRequest, opts ...grpc.CallOption) (*GPUUpdateRequest, error)
 	List(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GPUStateResponse, error)
+	SetError(ctx context.Context, in *GPUErrorRequest, opts ...grpc.CallOption) (*GPUErrorResponse, error)
 }
 
 type metricsServiceClient struct {
@@ -75,20 +75,20 @@ func (c *metricsServiceClient) GetGPUState(ctx context.Context, in *GPUGetReques
 	return out, nil
 }
 
-func (c *metricsServiceClient) SetGPUHealth(ctx context.Context, in *GPUUpdateRequest, opts ...grpc.CallOption) (*GPUUpdateRequest, error) {
+func (c *metricsServiceClient) List(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GPUStateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GPUUpdateRequest)
-	err := c.cc.Invoke(ctx, MetricsService_SetGPUHealth_FullMethodName, in, out, cOpts...)
+	out := new(GPUStateResponse)
+	err := c.cc.Invoke(ctx, MetricsService_List_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *metricsServiceClient) List(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GPUStateResponse, error) {
+func (c *metricsServiceClient) SetError(ctx context.Context, in *GPUErrorRequest, opts ...grpc.CallOption) (*GPUErrorResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GPUStateResponse)
-	err := c.cc.Invoke(ctx, MetricsService_List_FullMethodName, in, out, cOpts...)
+	out := new(GPUErrorResponse)
+	err := c.cc.Invoke(ctx, MetricsService_SetError_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +101,8 @@ func (c *metricsServiceClient) List(ctx context.Context, in *emptypb.Empty, opts
 type MetricsServiceServer interface {
 	// GPUState get API
 	GetGPUState(context.Context, *GPUGetRequest) (*GPUStateResponse, error)
-	SetGPUHealth(context.Context, *GPUUpdateRequest) (*GPUUpdateRequest, error)
 	List(context.Context, *emptypb.Empty) (*GPUStateResponse, error)
+	SetError(context.Context, *GPUErrorRequest) (*GPUErrorResponse, error)
 	mustEmbedUnimplementedMetricsServiceServer()
 }
 
@@ -116,11 +116,11 @@ type UnimplementedMetricsServiceServer struct{}
 func (UnimplementedMetricsServiceServer) GetGPUState(context.Context, *GPUGetRequest) (*GPUStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGPUState not implemented")
 }
-func (UnimplementedMetricsServiceServer) SetGPUHealth(context.Context, *GPUUpdateRequest) (*GPUUpdateRequest, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetGPUHealth not implemented")
-}
 func (UnimplementedMetricsServiceServer) List(context.Context, *emptypb.Empty) (*GPUStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+func (UnimplementedMetricsServiceServer) SetError(context.Context, *GPUErrorRequest) (*GPUErrorResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetError not implemented")
 }
 func (UnimplementedMetricsServiceServer) mustEmbedUnimplementedMetricsServiceServer() {}
 func (UnimplementedMetricsServiceServer) testEmbeddedByValue()                        {}
@@ -161,24 +161,6 @@ func _MetricsService_GetGPUState_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MetricsService_SetGPUHealth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GPUUpdateRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MetricsServiceServer).SetGPUHealth(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MetricsService_SetGPUHealth_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricsServiceServer).SetGPUHealth(ctx, req.(*GPUUpdateRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _MetricsService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -197,6 +179,24 @@ func _MetricsService_List_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MetricsService_SetError_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GPUErrorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricsServiceServer).SetError(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MetricsService_SetError_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricsServiceServer).SetError(ctx, req.(*GPUErrorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MetricsService_ServiceDesc is the grpc.ServiceDesc for MetricsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -209,12 +209,12 @@ var MetricsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MetricsService_GetGPUState_Handler,
 		},
 		{
-			MethodName: "SetGPUHealth",
-			Handler:    _MetricsService_SetGPUHealth_Handler,
-		},
-		{
 			MethodName: "List",
 			Handler:    _MetricsService_List_Handler,
+		},
+		{
+			MethodName: "SetError",
+			Handler:    _MetricsService_SetError_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

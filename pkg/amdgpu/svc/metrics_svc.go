@@ -19,7 +19,6 @@ package metricsserver
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
@@ -82,21 +81,21 @@ func (m *MetricsSvcImpl) List(ctx context.Context, e *emptypb.Empty) (*metricssv
 	return resp, nil
 }
 
-func (m *MetricsSvcImpl) SetGPUHealth(ctx context.Context, req *metricssvc.GPUUpdateRequest) (*metricssvc.GPUUpdateRequest, error) {
+func (m *MetricsSvcImpl) SetError(ctx context.Context, req *metricssvc.GPUErrorRequest) (*metricssvc.GPUErrorResponse, error) {
 	m.Lock()
 	defer m.Unlock()
-	logger.Log.Printf("Got SetReq : %+v", req)
-	if len(req.ID) != len(req.Health) {
-		return nil, fmt.Errorf("invalid config mismatching id and state encountered")
+	logger.Log.Printf("Got SetError : %+v", req)
+	if len(req.Fields) != len(req.Counts) {
+		return nil, fmt.Errorf("invalid request, fields must be set")
 	}
-	for i, gpu := range req.ID {
-		for _, client := range m.clients {
-			_ = client.SetMockGPUHealthState(gpu, strings.ToLower(req.Health[i]))
-		}
+	for _, client := range m.clients {
+		_ = client.SetError(req.ID, req.Fields, req.Counts)
 	}
-
-	return req, nil
-
+	resp := &metricssvc.GPUErrorResponse{
+		ID:     req.ID,
+		Fields: req.Fields,
+	}
+	return resp, nil
 }
 
 func (m *MetricsSvcImpl) mustEmbedUnimplementedMetricsServiceServer() {}

@@ -55,7 +55,7 @@ type GPUAgentClient struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
 	healthState      map[string]string
-	mockHealthState  map[string]string
+	mockEccField     map[string]map[string]uint32 // gpuid->fields->count
 }
 
 func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclient amdgpu.GPUSvcClient, evtclient amdgpu.EventSvcClient, err error) {
@@ -89,7 +89,7 @@ func initSchedulers(ctx context.Context) (kubeClient k8s.PodResourcesService, sl
 func NewAgent(mh *metricsutil.MetricsHandler) *GPUAgentClient {
 	ga := &GPUAgentClient{mh: mh}
 	ga.healthState = make(map[string]string)
-	ga.mockHealthState = make(map[string]string)
+	ga.mockEccField = make(map[string]map[string]uint32)
 	mh.RegisterMetricsClient(ga)
 	return ga
 }

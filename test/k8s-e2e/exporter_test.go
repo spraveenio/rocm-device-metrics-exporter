@@ -32,7 +32,6 @@ import (
 var (
 	maxMockGpuNodes  = 16
 	totalMetricCount = 0
-	mandatoryLables  = []string{"gpu_uuid", "serial_number", "card_model"}
 	nodePort         = 32100
 	exporterPod      *corev1.Pod
 	exporterEp       *corev1.Endpoints
@@ -40,8 +39,8 @@ var (
 )
 
 type gpuconfig struct {
-    Fields []string `json:"Fields"`
-    Labels []string `json:"Labels"`
+	Fields []string `json:"Fields"`
+	Labels []string `json:"Labels"`
 }
 
 type exporterConfig struct {
@@ -57,10 +56,12 @@ func (s *E2ESuite) Test001FirstDeplymentDefaults(c *C) {
 		fmt.Sprintf("service.type=NodePort"),
 		fmt.Sprintf("service.NodePort.nodePort=%d", nodePort),
 		fmt.Sprintf("configMap=%v", configmapName),
+		fmt.Sprintf("platform=%v", s.platform),
 		"image.pullPolicy=IfNotPresent",
 	}
-    config := exporterConfig{}
-    cfgData, err := json.Marshal(config)
+
+	config := exporterConfig{}
+	cfgData, err := json.Marshal(config)
 	if err != nil {
 		assert.Fail(c, err.Error())
 		return
@@ -179,7 +180,7 @@ func (s *E2ESuite) Test005HelmUninstall(c *C) {
 		return
 	}
 	ctx := context.Background()
-	err= s.k8sclient.DeleteConfigMap(ctx, s.ns, configmapName)
+	err = s.k8sclient.DeleteConfigMap(ctx, s.ns, configmapName)
 	if err != nil {
 		assert.Fail(c, err.Error())
 		return
@@ -194,6 +195,8 @@ func (s *E2ESuite) Test006SecondDeplymentNoConfigMap(c *C) {
 		fmt.Sprintf("image.tag=%v", s.imageTag),
 		fmt.Sprintf("service.type=NodePort"),
 		fmt.Sprintf("service.NodePort.nodePort=%d", nodePort),
+		fmt.Sprintf("platform=%v", s.platform),
+		"image.pullPolicy=IfNotPresent",
 	}
 	rel, err := s.helmClient.InstallChart(ctx, s.helmChart, values)
 	if err != nil {

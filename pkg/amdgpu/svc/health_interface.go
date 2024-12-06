@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -18,14 +17,14 @@
 package metricsserver
 
 type HealthInterface interface {
-    // Get health update of clients
-    GetGPUHealthStates() (map[string]string, error)
+	// Get health update of clients
+	GetGPUHealthStates() (map[string]string, error)
 
-    // debug/mock
-    SetMockGPUHealthState(gpuid, state string) error
+	// debug/mock
+	SetError(gpuid string, fields []string, values []uint32) error
 }
 
 type HealthSvcServer interface {
-    // client Registration to the metrics svc server
-    RegisterHealthClient(HealthInterface) error
+	// client Registration to the metrics svc server
+	RegisterHealthClient(HealthInterface) error
 }

@@ -119,6 +119,28 @@ enum GPUMetricField {
     GPU_ECC_UNCORRECT_MPIO      = 88;
 }
 
+message GPUHealthThresholds {
+    uint32 GPU_ECC_UNCORRECT_SDMA = 1;
+    uint32 GPU_ECC_UNCORRECT_GFX = 2;
+    uint32 GPU_ECC_UNCORRECT_MMHUB = 3;
+    uint32 GPU_ECC_UNCORRECT_ATHUB = 4;
+    uint32 GPU_ECC_UNCORRECT_BIF = 5;
+    uint32 GPU_ECC_UNCORRECT_HDP = 6;
+    uint32 GPU_ECC_UNCORRECT_XGMI_WAFL = 7;
+    uint32 GPU_ECC_UNCORRECT_DF = 8;
+    uint32 GPU_ECC_UNCORRECT_SMN = 9;
+    uint32 GPU_ECC_UNCORRECT_SEM = 10;
+    uint32 GPU_ECC_UNCORRECT_MP0 = 11;
+    uint32 GPU_ECC_UNCORRECT_MP1 = 12;
+    uint32 GPU_ECC_UNCORRECT_FUSE= 13;
+    uint32 GPU_ECC_UNCORRECT_UMC = 14;
+    uint32 GPU_ECC_UNCORRECT_MCA = 15;
+    uint32 GPU_ECC_UNCORRECT_VCN = 16;
+    uint32 GPU_ECC_UNCORRECT_JPEG = 17;
+    uint32 GPU_ECC_UNCORRECT_IH = 18;
+    uint32 GPU_ECC_UNCORRECT_MPIO = 19;
+}
+
 enum GPUMetricLabel {
     GPU_UUID           = 0;
     // mandatory SERIAL_NUMBER cannot be disabled
@@ -152,6 +174,8 @@ message GPUMetricConfig {
     // list of labels to be exported
     repeated string Labels = 3;
 
+    // GPU Health Thresholds
+    GPUHealthThresholds HealthThresholds = 4;
 }
 
 message MetricConfig {

@@ -64,11 +64,26 @@ message GPUStateResponse {
     repeated GPUState GPUState = 1;
 }
 
+// only for testing ecc error simulation
+message GPUErrorRequest {
+    // id of the GPU
+    string ID = 1;
+    // list of error fields to set, this doesn't override the previous set bit
+    repeated string Fields = 2;
+    // list of error values for the respective fiels, to remove set it to 0
+    repeated uint32 Counts = 3;
+}
+
+message GPUErrorResponse {
+    string ID = 1;
+    repeated string Fields = 2;
+}
+
 service MetricsService {
     // GPUState get API
     rpc GetGPUState(GPUGetRequest) returns (GPUStateResponse) {}
 
-    rpc SetGPUHealth(GPUUpdateRequest) returns (GPUUpdateRequest) {}
-
     rpc List(google.protobuf.Empty) returns (GPUStateResponse) {}
+
+    rpc SetError(GPUErrorRequest) returns (GPUErrorResponse) {}
 }

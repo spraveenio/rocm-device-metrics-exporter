@@ -19,6 +19,7 @@ package gpuagent
 import (
 	"fmt"
 	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -39,7 +40,7 @@ var (
 	gpuMockCl   *mock_gen.MockGPUSvcClient
 	eventMockCl *mock_gen.MockEventSvcClient
 	mh          *metricsutil.MetricsHandler
-	mConfig     *config.Config
+	mConfig     *config.ConfigHandler
 )
 
 func setupTest(t *testing.T) func(t *testing.T) {
@@ -48,6 +49,10 @@ func setupTest(t *testing.T) func(t *testing.T) {
 	fmt.Println("LOGDIR", os.Getenv("LOGDIR"))
 
 	logger.Init()
+
+	dir := path.Dir(globals.SlurmDir)
+	t.Logf("setting up slurmdir %v", dir)
+	os.MkdirAll(dir, 0644)
 
 	mockCtl = gomock.NewController(t)
 
@@ -100,8 +105,7 @@ func setupTest(t *testing.T) func(t *testing.T) {
 		eventMockCl.EXPECT().EventGet(gomock.Any(), gomock.Any()).Return(event_mockcriticalresp, nil).AnyTimes(),
 	)
 
-	mConfig = config.NewConfig("config.json")
-	mConfig.SetAgentPort(globals.GPUAgentPort)
+	mConfig = config.NewConfigHandler("config.json", globals.GPUAgentPort)
 
 	mh, _ = metricsutil.NewMetrics(mConfig)
 	mh.InitConfig()
@@ -113,7 +117,7 @@ func setupTest(t *testing.T) func(t *testing.T) {
 }
 
 func getNewAgent(t *testing.T) *GPUAgentClient {
-    // setup zmq mock port
+	// setup zmq mock port
 	ga := NewAgent(mh)
 	ga.initializeContext()
 	ga.gpuclient = gpuMockCl

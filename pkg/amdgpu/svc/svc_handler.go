@@ -22,6 +22,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/config"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/testsvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
@@ -33,6 +34,7 @@ type SvcHandler struct {
 	grpc      *grpc.Server
 	testSvc   *TestSvcImpl
 	healthSvc *MetricsSvcImpl
+	config    *config.ConfigHandler
 }
 
 func InitSvcs() *SvcHandler {
@@ -64,7 +66,7 @@ func (s *SvcHandler) Run() error {
 	}
 	logger.Log.Printf("Listening on socket %v", socketPath)
 
-    // server registration for grpc services
+	// server registration for grpc services
 	metricssvc.RegisterMetricsServiceServer(s.grpc, s.healthSvc)
 	testsvc.RegisterTestServiceServer(s.grpc, s.testSvc)
 

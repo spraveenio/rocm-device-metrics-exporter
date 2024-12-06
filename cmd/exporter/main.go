@@ -48,7 +48,7 @@ var (
 	GitCommit string
 	mh        *metricsutil.MetricsHandler
 	gpuclient *gpuagent.GPUAgentClient
-	runConf   *config.Config
+	runConf   *config.ConfigHandler
 )
 
 const (
@@ -67,7 +67,7 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func startMetricsServer(c *config.Config) *http.Server {
+func startMetricsServer(c *config.ConfigHandler) *http.Server {
 
 	serverPort := c.GetServerPort()
 
@@ -188,20 +188,12 @@ func foreverWatcher() {
 }
 
 func main() {
-	logger.Init()
 	var (
 		metricsConfig = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
 		agentGrpcPort = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
 		versionOpt    = flag.Bool("version", false, "show version")
 	)
 	flag.Parse()
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("panic occured: %+v", r)
-			os.Exit(1)
-		}
-	}()
 
 	if *versionOpt {
 		fmt.Printf("Version : %v\n", Version)
@@ -210,9 +202,22 @@ func main() {
 		os.Exit(0)
 	}
 
+	logger.Init()
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Log.Printf("panic occured: %+v", r)
+			os.Exit(1)
+		}
+	}()
+
 	logger.Log.Printf("Version : %v", Version)
 	logger.Log.Printf("BuildDate: %v", BuildDate)
 	logger.Log.Printf("GitCommit: %v", GitCommit)
+
+	if (0 >= *agentGrpcPort) || (*agentGrpcPort > 65535) {
+		logger.Log.Printf("invalid agent-grpc-port exiting")
+		os.Exit(1)
+	}
 
 	svcHandler := metricsserver.InitSvcs()
 	go func() {
@@ -222,8 +227,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	runConf = config.NewConfig(*metricsConfig)
-	runConf.SetAgentPort(*agentGrpcPort)
+	runConf = config.NewConfigHandler(*metricsConfig, *agentGrpcPort)
 
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()

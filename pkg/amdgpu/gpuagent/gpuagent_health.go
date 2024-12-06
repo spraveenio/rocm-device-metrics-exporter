@@ -18,19 +18,34 @@ package gpuagent
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 )
+
+func (ga *GPUAgentClient) getHealthThreshholds() *gpumetrics.GPUHealthThresholds {
+	rConfig := ga.mh.GetRunConfig()
+	// config is never nil as the handler preserves default config
+	if rConfig != nil && rConfig.GetConfig() != nil {
+		gpuConfig := rConfig.GetConfig()
+		if gpuConfig.GPUConfig != nil && gpuConfig.GPUConfig.HealthThresholds != nil {
+			return gpuConfig.GPUConfig.HealthThresholds
+		}
+	}
+	// default is all zero
+	return &gpumetrics.GPUHealthThresholds{}
+}
 
 func (ga *GPUAgentClient) processHealthValidation() error {
 	var gpumetrics *amdgpu.GPUGetResponse
 	var evtData *amdgpu.EventResponse
 	var err error
+	// this will fetch the latest threshold as the config refresh is done
+	// through metrics handler in the main thread
+	thresholds := ga.getHealthThreshholds()
 
 	errOccured := false
 	ga.Lock()
@@ -39,11 +54,17 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 
 	gpuUUIDMap := make(map[string]string)
 	gpuHealthState := make(map[string]bool)
-	metricErrCheck := func(gpuid string, count float64) {
-		if count > 0 {
+	metricErrCheck := func(gpuid string, fieldName string, threshold uint32, count float64) {
+
+		mockVal := ga.getMockError(gpuid, fieldName)
+		if mockVal > 0 {
+			count = float64(mockVal)
+		}
+
+		if count > float64(threshold) {
 			// set health to unhealthy
 			gpuHealthState[gpuid] = false
-			logger.Log.Printf("gpuid[%v] is set to unhealthy for ecc error", gpuid)
+			logger.Log.Printf("gpuid[%v] is set to unhealthy for ecc field [%v] error crossing threshold %v, current value %v", gpuid, fieldName, threshold, count)
 		}
 	}
 
@@ -79,46 +100,25 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 			stats := gpu.Stats
 
 			// business logic for health detection
-			metricErrCheck(gpuid, normalizeUint64(stats.TotalCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.TotalUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.SDMACorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.SDMAUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.GFXCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.GFXUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MMHUBCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MMHUBUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.ATHUBCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.ATHUBUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.BIFCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.BIFUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.HDPCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.HDPUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.XGMIWAFLCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.XGMIWAFLUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.DFCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.DFUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.SMNCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.SMNUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.SEMCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.SEMUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MP0CorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MP0UncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MP1CorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MP1UncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.FUSECorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.FUSEUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.UMCCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.UMCUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MCACorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MCAUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.VCNCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.VCNUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.JPEGCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.JPEGUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.IHCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.IHUncorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MPIOCorrectableErrors))
-			metricErrCheck(gpuid, normalizeUint64(stats.MPIOUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SDMA", thresholds.GPU_ECC_UNCORRECT_SDMA, normalizeUint64(stats.SDMAUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_GFX", thresholds.GPU_ECC_UNCORRECT_GFX, normalizeUint64(stats.GFXUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MMHUB", thresholds.GPU_ECC_UNCORRECT_MMHUB, normalizeUint64(stats.MMHUBUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_ATHUB", thresholds.GPU_ECC_UNCORRECT_ATHUB, normalizeUint64(stats.ATHUBUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_BIF", thresholds.GPU_ECC_UNCORRECT_BIF, normalizeUint64(stats.BIFUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_HDP", thresholds.GPU_ECC_UNCORRECT_HDP, normalizeUint64(stats.HDPUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_XGMI_WAFL", thresholds.GPU_ECC_UNCORRECT_XGMI_WAFL, normalizeUint64(stats.XGMIWAFLUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_DF", thresholds.GPU_ECC_UNCORRECT_DF, normalizeUint64(stats.DFUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SMN", thresholds.GPU_ECC_UNCORRECT_SMN, normalizeUint64(stats.SMNUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SEM", thresholds.GPU_ECC_UNCORRECT_SEM, normalizeUint64(stats.SEMUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MP0", thresholds.GPU_ECC_UNCORRECT_MP0, normalizeUint64(stats.MP0UncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MP1", thresholds.GPU_ECC_UNCORRECT_MP1, normalizeUint64(stats.MP1UncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_FUSE", thresholds.GPU_ECC_UNCORRECT_FUSE, normalizeUint64(stats.FUSEUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_UMC", thresholds.GPU_ECC_UNCORRECT_UMC, normalizeUint64(stats.UMCUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MCA", thresholds.GPU_ECC_UNCORRECT_MCA, normalizeUint64(stats.MCAUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_VCN", thresholds.GPU_ECC_UNCORRECT_VCN, normalizeUint64(stats.VCNUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_JPEG", thresholds.GPU_ECC_UNCORRECT_JPEG, normalizeUint64(stats.JPEGUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_IH", thresholds.GPU_ECC_UNCORRECT_IH, normalizeUint64(stats.IHUncorrectableErrors))
+			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MPIO", thresholds.GPU_ECC_UNCORRECT_MPIO, normalizeUint64(stats.MPIOUncorrectableErrors))
 		}
 	}
 
@@ -143,11 +143,6 @@ ret:
 
 	ga.Lock()
 	for gpuid, healthy := range gpuHealthState {
-		// override mock stats
-		if mhealth, ok := ga.mockHealthState[gpuid]; ok {
-			ga.healthState[gpuid] = mhealth
-			continue
-		}
 		if healthy {
 			ga.healthState[gpuid] = "healthy"
 		} else {
@@ -161,15 +156,36 @@ ret:
 	return nil
 }
 
-func (ga *GPUAgentClient) SetMockGPUHealthState(gpuid, state string) error {
+func (ga *GPUAgentClient) SetError(gpuid string, fields []string, values []uint32) error {
 	ga.Lock()
 	defer ga.Unlock()
-	if _, ok := metricssvc.GPUHealth_value[strings.ToUpper(state)]; !ok {
-		delete(ga.mockHealthState, gpuid)
-	} else {
-		ga.mockHealthState[gpuid] = state
+	if _, ok := ga.mockEccField[gpuid]; !ok {
+		ga.mockEccField[gpuid] = make(map[string]uint32)
+	}
+	for i, field := range fields {
+		if values[i] == 0 {
+			delete(ga.mockEccField[gpuid], field)
+			if len(ga.mockEccField[gpuid]) == 0 {
+				delete(ga.mockEccField, gpuid)
+			}
+			continue
+		}
+		ga.mockEccField[gpuid][field] = values[i]
 	}
 	return nil
+}
+
+func (ga *GPUAgentClient) getMockError(gpuid, field string) uint32 {
+	ga.Lock()
+	defer ga.Unlock()
+	if _, ok := ga.mockEccField[gpuid]; !ok {
+		return 0
+	}
+	mv, ok := ga.mockEccField[gpuid][field]
+	if !ok {
+		return 0
+	}
+	return mv
 }
 
 func (ga *GPUAgentClient) GetGPUHealthStates() (map[string]string, error) {

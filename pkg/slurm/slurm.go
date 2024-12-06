@@ -20,17 +20,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/fsnotify/fsnotify"
-	zmq "github.com/go-zeromq/zmq4"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
-	"log"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/fsnotify/fsnotify"
+	zmq "github.com/go-zeromq/zmq4"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 )
 
 var jobLabels = map[string]bool{
@@ -116,7 +116,7 @@ func NewClient(ctx context.Context) (JobsService, error) {
 		// Add a path.
 		err = watcher.Add(globals.SlurmDir)
 		if err != nil {
-			log.Fatal(err)
+			logger.Log.Fatalf("fsnotify watch err: %v", err)
 		}
 
 		// read existing

@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -32,4 +31,5 @@ type E2ESuite struct {
 	imageTag   string
 	ns         string
 	kubeconfig string
+	platform   string
 }

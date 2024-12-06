@@ -36,6 +36,7 @@ var helmChart = flag.String("helmchart", "", "helmchart")
 var exporterNS = flag.String("namespace", "kube-amd-gpu", "namespace")
 var registry = flag.String("registry", "registry.test.pensando.io:5000/device-metrics-exporter/exporter", "exporter container registry")
 var imageTag = flag.String("imagetag", "latest", "exporter image version/tag")
+var platform = flag.String("platform", "k8s", "k8s/openshift")
 
 // All the test config, state and any helper caches for running this test
 // Hook up gocheck into the "go test" runner.
@@ -44,6 +45,10 @@ func Test(t *testing.T) {
 }
 
 var _ = Suite(&E2ESuite{})
+var platforms = map[string]string{
+	"k8s":       "k8s",
+	"openshift": "openshift",
+}
 
 func (s *E2ESuite) SetUpSuite(c *C) {
 	log.Print("setupSuite:")
@@ -53,6 +58,12 @@ func (s *E2ESuite) SetUpSuite(c *C) {
 	s.registry = *registry
 	s.imageTag = *imageTag
 	ctx := context.Background()
+
+	if _, ok := platforms[*platform]; !ok {
+		assert.Fail(c, "unsupported platform")
+		return
+	}
+	s.platform = *platform
 
 	// use the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", s.kubeconfig)
