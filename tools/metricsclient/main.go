@@ -270,7 +270,6 @@ func getPodResources() {
 var jout = flag.Bool("json", false, "output in json format")
 
 func main() {
-	logger.Init()
 	var (
 		socketPath   = flag.String("socket", fmt.Sprintf("unix://%v", globals.MetricsSocketPath), "metrics grpc socket path")
 		getOpt       = flag.Bool("get", false, "get health status of gpu")
@@ -337,11 +336,22 @@ func main() {
 		fmt.Printf("node[%v] labels[%+v]", nodeName, labels)
 	}
 
+	/*
 	if *sendTest {
 		sendTestResult(*socketPath)
 	}
 
 	if *listTest {
 		listTestResult(*socketPath)
+	}
+	*/
+
+	if *setEcc {
+		if *eccFile == "" {
+			fmt.Println("invalid ecc error file path")
+			return
+
+		}
+		setError(*socketPath, *eccFile)
 	}
 }
