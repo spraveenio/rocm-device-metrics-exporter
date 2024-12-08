@@ -321,6 +321,11 @@ func main() {
 		setError(*socketPath, *eccFile)
 	}
 
+	if *podRes {
+		getPodResources()
+		return
+	}
+
 	if *getNodeLabel {
 		nodeName := os.Getenv("NODE_NAME")
 		if nodeName == "" {
@@ -336,22 +341,7 @@ func main() {
 		fmt.Printf("node[%v] labels[%+v]", nodeName, labels)
 	}
 
-	/*
-	if *sendTest {
-		sendTestResult(*socketPath)
-	}
-
-	if *listTest {
-		listTestResult(*socketPath)
-	}
-	*/
-
-	if *setEcc {
-		if *eccFile == "" {
-			fmt.Println("invalid ecc error file path")
-			return
-
-		}
+	if *eccFile != "" {
 		setError(*socketPath, *eccFile)
 	}
 }

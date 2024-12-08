@@ -23,14 +23,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pensando/device-metrics-exporter/pkg/slurm"
-
-	"github.com/pensando/device-metrics-exporter/pkg/k8s"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/scheduler"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/k8sclient"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -47,14 +47,13 @@ type GPUAgentClient struct {
 	gpuclient        amdgpu.GPUSvcClient
 	evtclient        amdgpu.EventSvcClient
 	m                *metrics // client specific metrics
-	kubeClient       k8s.PodResourcesService
 	k8sLabelClient   *k8sclient.K8sClient
+	schedulerCl      scheduler.SchedulerClient
 	isKubernetes     bool
-	slurmClient      slurm.JobsService
 	staticHostLabels map[string]string
 	ctx              context.Context
 	cancel           context.CancelFunc
-	healthState      map[string]string
+	healthState      map[string]*metricssvc.GPUState
 	mockEccField     map[string]map[string]uint32 // gpuid->fields->count
 }
 
@@ -71,34 +70,28 @@ func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclie
 	return
 }
 
-func initSchedulers(ctx context.Context) (kubeClient k8s.PodResourcesService, slurmClient slurm.JobsService, err error) {
-	if k8s.IsKubernetes() {
-		kubeClient, err = k8s.NewClient()
-		if err != nil {
-			return nil, nil, fmt.Errorf("error in kubelet client, %v", err)
-		}
-	} else {
-		slurmClient, err = slurm.NewClient(ctx)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error in slurm client, %v", err)
-		}
+func initScheduler(ctx context.Context) (scheduler.SchedulerClient, error) {
+	if utils.IsKubernetes() {
+		logger.Log.Printf("NewKubernetesClient creating")
+		return scheduler.NewKubernetesClient(ctx)
 	}
-	return
+	logger.Log.Printf("NewSlurmClient creating")
+	return scheduler.NewSlurmClient(ctx)
 }
 
 func NewAgent(mh *metricsutil.MetricsHandler) *GPUAgentClient {
 	ga := &GPUAgentClient{mh: mh}
-	ga.healthState = make(map[string]string)
+	ga.healthState = make(map[string]*metricssvc.GPUState)
 	ga.mockEccField = make(map[string]map[string]uint32)
 	mh.RegisterMetricsClient(ga)
 	return ga
 }
 
-func (ga *GPUAgentClient) init() error {
+func (ga *GPUAgentClient) Init() error {
 	ga.Lock()
 	defer ga.Unlock()
 	ga.initializeContext()
-	ga.healthState = make(map[string]string)
+	ga.healthState = make(map[string]*metricssvc.GPUState)
 	conn, gpuclient, evtclient, err := initclients(ga.mh)
 	if err != nil {
 		logger.Log.Printf("gpu client init failure err :%v", err)
@@ -109,19 +102,15 @@ func (ga *GPUAgentClient) init() error {
 	ga.gpuclient = gpuclient
 	ga.evtclient = evtclient
 
-	k8c, sc, err := initSchedulers(ga.ctx)
+	schedulerCl, err := initScheduler(ga.ctx)
 	if err != nil {
 		logger.Log.Printf("gpu client init failure err :%v", err)
 		return err
 	}
-
-	if k8c != nil {
+	ga.schedulerCl = schedulerCl
+	if utils.IsKubernetes() {
 		ga.isKubernetes = true
-		ga.kubeClient = k8c
 		ga.k8sLabelClient = k8sclient.NewClient()
-	} else {
-		ga.isKubernetes = false
-		ga.slurmClient = sc
 	}
 
 	if err := ga.populateStaticHostLabels(); err != nil {
@@ -141,7 +130,7 @@ func (ga *GPUAgentClient) initializeContext() {
 
 func (ga *GPUAgentClient) reconnect() error {
 	ga.Close()
-	return ga.init()
+	return ga.Init()
 }
 
 func (ga *GPUAgentClient) isActive() bool {
@@ -187,8 +176,8 @@ func (ga *GPUAgentClient) sendNodeLabelUpdate() error {
 	}
 	gpuHealthStates := make(map[string]string)
 	ga.Lock()
-	for gpuid, state := range ga.healthState {
-		gpuHealthStates[gpuid] = state
+	for gpuid, hs := range ga.healthState {
+		gpuHealthStates[gpuid] = hs.Health
 	}
 	ga.Unlock()
 	_ = ga.k8sLabelClient.UpdateHealthLabel(nodeName, gpuHealthStates)
@@ -205,8 +194,9 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 		logger.Log.Printf("resp status :%v", resp.ApiStatus)
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
+	wls, _ := ga.schedulerCl.ListWorkloads()
 	for _, gpu := range resp.Response {
-		ga.updateGPUInfoToMetrics(gpu)
+		ga.updateGPUInfoToMetrics(wls, gpu)
 	}
 
 	return nil
@@ -244,17 +234,14 @@ func (ga *GPUAgentClient) Close() {
 	ga.Lock()
 	defer ga.Unlock()
 	if ga.conn != nil {
+		logger.Log.Printf("gpuagent client closing")
 		ga.conn.Close()
 		ga.gpuclient = nil
 		ga.conn = nil
 	}
-	if ga.kubeClient != nil {
-		ga.kubeClient.Close()
-		ga.kubeClient = nil
-	}
-
-	if ga.slurmClient != nil {
-		ga.slurmClient.Close()
-		ga.slurmClient = nil
+	if ga.schedulerCl != nil {
+		logger.Log.Printf("gpuagent scheduler closing")
+		ga.schedulerCl.Close()
+		ga.schedulerCl = nil
 	}
 }

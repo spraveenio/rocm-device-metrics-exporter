@@ -5,8 +5,6 @@ the workflows mocking data
 
 #metricsclient -h
 Usage of metricsclient:
-  -ecc
-        set mock ecc error
   -ecc-file-path string
         json ecc err file
   -get
@@ -18,7 +16,8 @@ Usage of metricsclient:
   -label
         get k8s node label
   -socket string
-        metrics grpc socket path (default "/sockets/metrics_grpc.socket")
+        metrics grpc socket path (default
+        "/sockets/amdgpu_device_metrics_exporter_grpc.socket")
 
 ===========================================================================
 1. list health status of gpus reported by the exporter
@@ -47,7 +46,7 @@ ID      Health  Associated Workload
         ]
 }
 [root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]#
-[root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]# metricsclient -ecc -ecc-file-path ecc.json
+[root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]# metricsclient -ecc-file-path ecc.json
 ID      Health  Associated Workload
 ------------------------------------------------
 0       healthy []
@@ -68,7 +67,7 @@ ID      Health  Associated Workload
                 0, 0
         ]
 }
-[root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]# metricsclient -ecc -ecc-file-path ecc_delete.json
+[root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]# metricsclient -ecc-file-path ecc_delete.json
 ID      Health  Associated Workload
 ------------------------------------------------
 0       unhealthy       []

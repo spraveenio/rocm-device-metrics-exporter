@@ -26,11 +26,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/fsnotify/fsnotify"
 	zmq "github.com/go-zeromq/zmq4"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 )
 
 var SlurmLabels = map[string]bool{
@@ -45,14 +45,11 @@ type client struct {
 }
 
 // NewSlurmClient - creates a slurm schedler client
-func NewSlurmClient(ctx context.Context, enableZmq bool) (SchedulerClient, error) {
+func NewSlurmClient(ctx context.Context) (SchedulerClient, error) {
 	sock := zmq.NewPull(ctx)
-
-	if enableZmq {
-		logger.Log.Printf("Starting Listen on port %v", globals.ZmqPort)
-		if err := sock.Listen(fmt.Sprintf("tcp://*:%v", globals.ZmqPort)); err != nil {
-			return nil, fmt.Errorf("failed to listen on port %v, %v ", globals.ZmqPort, err)
-		}
+	logger.Log.Printf("Starting Listen on port %v", globals.ZmqPort)
+	if err := sock.Listen(fmt.Sprintf("tcp://*:%v", globals.ZmqPort)); err != nil {
+		return nil, fmt.Errorf("failed to listen on port %v, %v ", globals.ZmqPort, err)
 	}
 
 	cl := &client{

@@ -20,8 +20,6 @@ import (
 	"log"
 	"os"
 	"sync"
-
-	"github.com/pensando/device-metrics-exporter/pkg/k8s"
 )
 
 var (
@@ -47,8 +45,8 @@ func SetLogDir(dir string) {
 	logdir = dir
 }
 
-func initLogger() {
-	if k8s.IsKubernetes() {
+func initLogger(console bool) {
+	if console {
 		Log = log.New(os.Stdout, logPrefix, log.Lmsgprefix)
 	} else {
 		if os.Getenv("LOGDIR") != "" {
@@ -61,6 +59,9 @@ func initLogger() {
 	Log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
-func Init() {
-	once.Do(initLogger)
+func Init(console bool) {
+	init := func() {
+		initLogger(console)
+	}
+	once.Do(init)
 }
