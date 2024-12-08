@@ -244,6 +244,7 @@ func getPodResources() {
 		return
 	}
 
+	found := false
 	for _, pod := range resp.PodResources {
 		for _, container := range pod.Containers {
 			for _, devs := range container.GetDevices() {
@@ -251,11 +252,14 @@ func getPodResources() {
 					for _, devId := range devs.DeviceIds {
 						fmt.Printf("dev:ns/pod/container [{%v}%v/%v/%v]\n",
 							devId, pod.Name, pod.Namespace, container.Name)
-						return
+						found = true
 					}
 				}
 			}
 		}
+	}
+	if found {
+		return
 	}
 	fmt.Printf("no associations found\n")
 	fmt.Printf("pod resp:\n %+v\n", resp)

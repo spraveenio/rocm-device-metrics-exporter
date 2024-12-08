@@ -19,6 +19,8 @@ package utils
 import (
 	"fmt"
 	"os"
+
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 )
 
 const (
@@ -57,6 +59,9 @@ func AddNodeHealthLabel(nodeLabels map[string]string, healthMap map[string]strin
 
 func IsKubernetes() bool {
 	if s := os.Getenv("KUBERNETES_SERVICE_HOST"); s != "" {
+		return true
+	}
+	if _, err := os.Stat(globals.PodResourceSocket); err == nil {
 		return true
 	}
 	return false

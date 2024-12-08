@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -30,9 +31,6 @@ import (
 
 	"os"
 )
-
-const PodResourceSocket = "/var/lib/kubelet/pod-resources/kubelet.sock"
-const amdGpuResourceName = "amd.com/gpu"
 
 var KubernetesLabels = map[string]bool{
 	gpumetrics.GPUMetricLabel_POD.String():       true,
@@ -47,11 +45,11 @@ type podResourcesClient struct {
 
 // NewKubernetesClient - creates a kubernetes schedler client
 func NewKubernetesClient(ctx context.Context) (SchedulerClient, error) {
-	if _, err := os.Stat(PodResourceSocket); err != nil {
+	if _, err := os.Stat(globals.PodResourceSocket); err != nil {
 		logger.Log.Printf("no kubelet found")
 		return nil, fmt.Errorf("no kubelet, %v", err)
 	}
-	client, err := grpc.NewClient("unix://"+PodResourceSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	client, err := grpc.NewClient("unix://"+globals.PodResourceSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Log.Printf("kubelet socket err: %v", err)
 		return nil, fmt.Errorf("kubelet socket error, %v", err)
@@ -75,7 +73,7 @@ func (pr *podResourcesClient) ListWorkloads() (map[string]interface{}, error) {
 	for _, pod := range resp.PodResources {
 		for _, container := range pod.Containers {
 			for _, devs := range container.GetDevices() {
-				if devs.ResourceName == amdGpuResourceName {
+				if devs.ResourceName == globals.AMDGPUResourceLabel {
 					for _, devId := range devs.DeviceIds {
 						podInfo[strings.ToLower(devId)] = PodResourceInfo{
 							Pod:       pod.Name,

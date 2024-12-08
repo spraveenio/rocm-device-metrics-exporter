@@ -7,7 +7,7 @@ IMAGE_TAG ?= dev
 IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_TAG)
 
 # name used for saving the container images as tar.gz
-DOCKER_CONTAINER_IMG = $(IMAGE_NAME)-$(IMAGE_TAG)
+DOCKER_CONTAINER_IMG ?= $(IMAGE_NAME)-$(IMAGE_TAG)
 HOURLY_TAG_LABEL ?= latest
 
 .PHONY: docker
@@ -31,6 +31,7 @@ docker-cicd:
 
 .PHONY: docker-save
 docker-save: ## save the container
+	@echo saving docker image to $(DOCKER_CONTAINER_IMG).tar.gz
 	@docker save $(IMG) | gzip > $(DOCKER_CONTAINER_IMG).tar.gz
 
 .PHONY: azure

@@ -18,6 +18,7 @@ package gpuagent
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -41,22 +42,10 @@ func (ga *GPUAgentClient) getHealthThreshholds() *gpumetrics.GPUHealthThresholds
 	return &gpumetrics.GPUHealthThresholds{}
 }
 
-func (ga *GPUAgentClient) processHealthValidation() error {
-	var gpumetrics *amdgpu.GPUGetResponse
-	var evtData *amdgpu.EventResponse
-	var err error
-	// this will fetch the latest threshold as the config refresh is done
-	// through metrics handler in the main thread
-	thresholds := ga.getHealthThreshholds()
+// returns list of
+func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[string]interface{}) map[string]*metricssvc.GPUState {
 
-	errOccured := false
-	ga.Lock()
-	ga.healthState = make(map[string]*metricssvc.GPUState)
-	ga.Unlock()
-
-	gpuUUIDMap := make(map[string]string)
-	gpuHealthState := make(map[string]bool)
-	gpuWorkloads := make(map[string]string) // only one workload per gpu [gpuid ->workload]
+	gpuHealthMap := make(map[string]*metricssvc.GPUState)
 	metricErrCheck := func(gpuid string, fieldName string, threshold uint32, count float64) {
 
 		mockVal := ga.getMockError(gpuid, fieldName)
@@ -66,10 +55,85 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 
 		if count > float64(threshold) {
 			// set health to unhealthy
-			gpuHealthState[gpuid] = false
+			gpuHealthMap[gpuid].Health = strings.ToLower(metricssvc.GPUHealth_UNHEALTHY.String())
 			logger.Log.Printf("gpuid[%v] is set to unhealthy for ecc field [%v] error crossing threshold %v, current value %v", gpuid, fieldName, threshold, count)
 		}
 	}
+	// this will fetch the latest threshold as the config refresh is done
+	// through metrics handler in the main thread
+	thresholds := ga.getHealthThreshholds()
+
+	for _, gpu := range gpus {
+		uuid, _ := uuid.FromBytes(gpu.Spec.Id)
+		gpuid := fmt.Sprintf("%v", gpu.Status.Index)
+		gpuuid := uuid.String()
+		stats := gpu.Stats
+		workloadInfo := "" // only one per gpu
+
+		if wl := ga.getWorkloadInfo(wls, gpu, false); wl != nil {
+			if ga.isKubernetes {
+				podInfo := wl.(scheduler.PodResourceInfo)
+				workloadInfo = fmt.Sprintf("pod : %v, namespace : %v, container: %v",
+					podInfo.Pod, podInfo.Namespace, podInfo.Container)
+			} else {
+				jobInfo := wl.(scheduler.JobInfo)
+				workloadInfo = fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
+					jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster)
+			}
+		}
+		// default is healthy
+		gpuHealthMap[gpuid] = &metricssvc.GPUState{
+			ID:                 gpuid,
+			UUID:               gpuuid,
+			Health:             strings.ToLower(metricssvc.GPUHealth_HEALTHY.String()),
+			AssociatedWorkload: []string{workloadInfo},
+		}
+
+		// business logic for health detection
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SDMA", thresholds.GPU_ECC_UNCORRECT_SDMA, normalizeUint64(stats.SDMAUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_GFX", thresholds.GPU_ECC_UNCORRECT_GFX, normalizeUint64(stats.GFXUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MMHUB", thresholds.GPU_ECC_UNCORRECT_MMHUB, normalizeUint64(stats.MMHUBUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_ATHUB", thresholds.GPU_ECC_UNCORRECT_ATHUB, normalizeUint64(stats.ATHUBUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_BIF", thresholds.GPU_ECC_UNCORRECT_BIF, normalizeUint64(stats.BIFUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_HDP", thresholds.GPU_ECC_UNCORRECT_HDP, normalizeUint64(stats.HDPUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_XGMI_WAFL", thresholds.GPU_ECC_UNCORRECT_XGMI_WAFL, normalizeUint64(stats.XGMIWAFLUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_DF", thresholds.GPU_ECC_UNCORRECT_DF, normalizeUint64(stats.DFUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SMN", thresholds.GPU_ECC_UNCORRECT_SMN, normalizeUint64(stats.SMNUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SEM", thresholds.GPU_ECC_UNCORRECT_SEM, normalizeUint64(stats.SEMUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MP0", thresholds.GPU_ECC_UNCORRECT_MP0, normalizeUint64(stats.MP0UncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MP1", thresholds.GPU_ECC_UNCORRECT_MP1, normalizeUint64(stats.MP1UncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_FUSE", thresholds.GPU_ECC_UNCORRECT_FUSE, normalizeUint64(stats.FUSEUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_UMC", thresholds.GPU_ECC_UNCORRECT_UMC, normalizeUint64(stats.UMCUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MCA", thresholds.GPU_ECC_UNCORRECT_MCA, normalizeUint64(stats.MCAUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_VCN", thresholds.GPU_ECC_UNCORRECT_VCN, normalizeUint64(stats.VCNUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_JPEG", thresholds.GPU_ECC_UNCORRECT_JPEG, normalizeUint64(stats.JPEGUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_IH", thresholds.GPU_ECC_UNCORRECT_IH, normalizeUint64(stats.IHUncorrectableErrors))
+		metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MPIO", thresholds.GPU_ECC_UNCORRECT_MPIO, normalizeUint64(stats.MPIOUncorrectableErrors))
+	}
+
+	return gpuHealthMap
+
+}
+
+func (ga *GPUAgentClient) updateNewHealthState(newGPUState map[string]*metricssvc.GPUState) error {
+	ga.Lock()
+	defer ga.Unlock()
+	ga.healthState = make(map[string]*metricssvc.GPUState)
+	for gpuid, hstate := range newGPUState {
+		ga.healthState[gpuid] = hstate
+	}
+	return nil
+}
+
+func (ga *GPUAgentClient) processHealthValidation() error {
+	var gpumetrics *amdgpu.GPUGetResponse
+	var evtData *amdgpu.EventResponse
+	var newGPUState map[string]*metricssvc.GPUState
+	var err error
+
+	errOccured := false
+
+	gpuUUIDMap := make(map[string]string)
 
 	eventErrCheck := func(e *amdgpu.Event) {
 		uuid, _ := uuid.FromBytes(e.GPU)
@@ -79,7 +143,7 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 			e.Id, gpuuid, e.Severity, ts, e.Description)
 		if e.Severity == amdgpu.EventSeverity_EVENT_SEVERITY_CRITICAL {
 			if gpuid, ok := gpuUUIDMap[gpuuid]; ok {
-				gpuHealthState[gpuid] = false
+				newGPUState[gpuid].Health = strings.ToLower(metricssvc.GPUHealth_UNHEALTHY.String())
 				logger.Log.Printf("gpuid[%v] is set to unhealthy for evt[%+v]", gpuid, e)
 			} else {
 				logger.Log.Printf("ignoring invalid gpuid[%v] is set to unhealthy for evt[%+v]", gpuuid, e)
@@ -95,48 +159,14 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 		logger.Log.Printf("gpuagent get metrics failed %v", err)
 		goto ret
 	} else {
-		// reset for every gpu state
-		for _, gpu := range gpumetrics.Response {
-			uuid, _ := uuid.FromBytes(gpu.Spec.Id)
-			gpuid := fmt.Sprintf("%v", gpu.Status.Index)
-			gpuuid := uuid.String()
-			gpuUUIDMap[gpuuid] = gpuid
-			gpuHealthState[gpuid] = true
-			stats := gpu.Stats
+		newGPUState = ga.processEccErrorMetrics(gpumetrics.Response, wls)
+	}
 
-			if wl := ga.getWorkloadInfo(wls, gpu, false); wl != nil {
-				if ga.isKubernetes {
-					podInfo := wl.(scheduler.PodResourceInfo)
-					gpuWorkloads[gpuid] = fmt.Sprintf("pod : %v, namespace : %v, container: %v",
-						podInfo.Pod, podInfo.Namespace, podInfo.Container)
-				} else {
-					jobInfo := wl.(scheduler.JobInfo)
-					gpuWorkloads[gpuid] = fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
-						jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster)
-				}
-			}
-
-			// business logic for health detection
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SDMA", thresholds.GPU_ECC_UNCORRECT_SDMA, normalizeUint64(stats.SDMAUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_GFX", thresholds.GPU_ECC_UNCORRECT_GFX, normalizeUint64(stats.GFXUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MMHUB", thresholds.GPU_ECC_UNCORRECT_MMHUB, normalizeUint64(stats.MMHUBUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_ATHUB", thresholds.GPU_ECC_UNCORRECT_ATHUB, normalizeUint64(stats.ATHUBUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_BIF", thresholds.GPU_ECC_UNCORRECT_BIF, normalizeUint64(stats.BIFUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_HDP", thresholds.GPU_ECC_UNCORRECT_HDP, normalizeUint64(stats.HDPUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_XGMI_WAFL", thresholds.GPU_ECC_UNCORRECT_XGMI_WAFL, normalizeUint64(stats.XGMIWAFLUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_DF", thresholds.GPU_ECC_UNCORRECT_DF, normalizeUint64(stats.DFUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SMN", thresholds.GPU_ECC_UNCORRECT_SMN, normalizeUint64(stats.SMNUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SEM", thresholds.GPU_ECC_UNCORRECT_SEM, normalizeUint64(stats.SEMUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MP0", thresholds.GPU_ECC_UNCORRECT_MP0, normalizeUint64(stats.MP0UncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MP1", thresholds.GPU_ECC_UNCORRECT_MP1, normalizeUint64(stats.MP1UncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_FUSE", thresholds.GPU_ECC_UNCORRECT_FUSE, normalizeUint64(stats.FUSEUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_UMC", thresholds.GPU_ECC_UNCORRECT_UMC, normalizeUint64(stats.UMCUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MCA", thresholds.GPU_ECC_UNCORRECT_MCA, normalizeUint64(stats.MCAUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_VCN", thresholds.GPU_ECC_UNCORRECT_VCN, normalizeUint64(stats.VCNUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_JPEG", thresholds.GPU_ECC_UNCORRECT_JPEG, normalizeUint64(stats.JPEGUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_IH", thresholds.GPU_ECC_UNCORRECT_IH, normalizeUint64(stats.IHUncorrectableErrors))
-			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_MPIO", thresholds.GPU_ECC_UNCORRECT_MPIO, normalizeUint64(stats.MPIOUncorrectableErrors))
-		}
+	for _, gpu := range gpumetrics.Response {
+		uuid, _ := uuid.FromBytes(gpu.Spec.Id)
+		gpuid := fmt.Sprintf("%v", gpu.Status.Index)
+		gpuuid := uuid.String()
+		gpuUUIDMap[gpuuid] = gpuid
 	}
 
 	evtData, err = ga.getEvents(amdgpu.EventSeverity_EVENT_SEVERITY_CRITICAL)
@@ -158,23 +188,7 @@ ret:
 		return fmt.Errorf("data pull error occured")
 	}
 
-	ga.Lock()
-	for gpuid, hstate := range gpuHealthState {
-		healthStr := "unhealthy"
-		if hstate {
-			healthStr = "healthy"
-		}
-		ga.healthState[gpuid] = &metricssvc.GPUState{
-			ID:                 gpuid,
-			Health:             healthStr,
-			AssociatedWorkload: []string{gpuWorkloads[gpuid]},
-		}
-	}
-	ga.Unlock()
-
-	// logger.Log.Printf("health process update done :%+v", ga.healthState)
-
-	return nil
+	return ga.updateNewHealthState(newGPUState)
 }
 
 func (ga *GPUAgentClient) SetError(gpuid string, fields []string, values []uint32) error {

@@ -40,11 +40,14 @@ message GPUState {
     // id of the GPU
     string ID = 1;
 
+    // uuid of the GPU
+    string UUID = 2;
+
     // health state string value of GPUHealth enum
-    string Health = 2;
+    string Health = 3;
 
     // Workload associated with GPU
-    repeated string AssociatedWorkload = 3;
+    repeated string AssociatedWorkload = 4;
 } 
 
 message GPUGetRequest {

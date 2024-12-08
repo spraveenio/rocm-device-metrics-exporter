@@ -173,7 +173,36 @@ func (s *E2ESuite) Test004FieldUpdate(c *C) {
 	}, 90*time.Second, 5*time.Second)
 }
 
-func (s *E2ESuite) Test005HelmUninstall(c *C) {
+func (s *E2ESuite) Test005HealthFieldUpdate(c *C) {
+	ctx := context.Background()
+	log.Print("Test metrics server is updating fields")
+	cmFields := []string{"gpu_health"}
+	config := exporterConfig{
+		GPUConfig: &gpuconfig{
+			Fields: cmFields,
+		},
+	}
+	cfgData, err := json.Marshal(config)
+	if err != nil {
+		assert.Fail(c, err.Error())
+		return
+	}
+	err = s.k8sclient.UpdateConfigMap(ctx, s.ns, configmapName, string(cfgData))
+	assert.Eventually(c, func() bool {
+		labels, fields, err := s.k8sclient.GetMetricsCmdFromPod(ctx, s.restConfig, exporterPod)
+		if err != nil {
+			log.Printf("error : %v", err)
+			return false
+		}
+		log.Printf("got valid payload : %v, %v", labels, fields)
+		if len(fields) != len(cmFields)+1 {
+			return false
+		}
+		return true
+	}, 90*time.Second, 5*time.Second)
+}
+
+func (s *E2ESuite) Test006HelmUninstall(c *C) {
 	err := s.helmClient.UninstallChart()
 	if err != nil {
 		assert.Fail(c, err.Error())
@@ -187,7 +216,7 @@ func (s *E2ESuite) Test005HelmUninstall(c *C) {
 	}
 }
 
-func (s *E2ESuite) Test006SecondDeplymentNoConfigMap(c *C) {
+func (s *E2ESuite) Test007SecondDeplymentNoConfigMap(c *C) {
 	ctx := context.Background()
 	log.Print("Testing helm install for exporter")
 	values := []string{
@@ -231,7 +260,7 @@ func (s *E2ESuite) Test006SecondDeplymentNoConfigMap(c *C) {
 	}, 10*time.Second, 1*time.Second)
 }
 
-func (s *E2ESuite) Test007MetricsServer(c *C) {
+func (s *E2ESuite) Test008MetricsServer(c *C) {
 	ctx := context.Background()
 	log.Print("Test noconfigmap metrics server is responding")
 	assert.Eventually(c, func() bool {
@@ -245,7 +274,7 @@ func (s *E2ESuite) Test007MetricsServer(c *C) {
 	}, 50*time.Second, 10*time.Second)
 }
 
-func (s *E2ESuite) Test008HelmUninstall(c *C) {
+func (s *E2ESuite) Test009HelmUninstall(c *C) {
 	err := s.helmClient.UninstallChart()
 	if err != nil {
 		assert.Fail(c, err.Error())
