@@ -19,6 +19,7 @@ package logger
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -52,7 +53,7 @@ func initLogger(console bool) {
 		if os.Getenv("LOGDIR") != "" {
 			logdir = os.Getenv("LOGDIR")
 		}
-		outfile, _ := os.Create(logdir + logfile)
+		outfile, _ := os.Create(filepath.Join(logdir, logfile))
 		Log = log.New(outfile, "", 0)
 	}
 

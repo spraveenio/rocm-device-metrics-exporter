@@ -24,8 +24,8 @@ import (
 	"os"
 	"strings"
 
-	types "github.com/pensando/device-metrics-exporter/internal/testrunner/interface"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	types "github.com/pensando/device-metrics-exporter/pkg/testrunner/interface"
 )
 
 // TestRunner is a test framework for testing GPUs
@@ -81,7 +81,7 @@ func (rts *TestRunner) loadTestSuites() error {
 		if !file.IsDir() && strings.HasSuffix(file.Name(), ".conf") {
 			// Add the testsuite to the map
 			testSuiteName := strings.Split(file.Name(), ".")[0]
-			fmt.Println(testSuiteName)
+			logger.Log.Printf("loaded test suite %+v", testSuiteName)
 			rts.testSuites[testSuiteName] = true
 		}
 	}
@@ -89,7 +89,7 @@ func (rts *TestRunner) loadTestSuites() error {
 }
 
 // NewRvsTestRunner returns instance of RvsTestRunner
-func NewRvsTestRunner(rvsBinPath, testSuitesDir, logDir string) (types.TestRunner, error) {
+func NewRvsTestRunner(rvsBinPath, testSuitesDir string, testRunnerCfg TestRunnerConfig) (types.TestRunner, error) {
 	if len(rvsBinPath) == 0 {
 		return nil, fmt.Errorf("rocm path is not set")
 	}
@@ -102,7 +102,7 @@ func NewRvsTestRunner(rvsBinPath, testSuitesDir, logDir string) (types.TestRunne
 
 	obj := &TestRunner{
 		binaryLocation: rvsBinPath,
-		logDir:         logDir,
+		logDir:         testRunnerCfg.ResultLogDir,
 		logger:         logger.Log,
 		testSuites:     make(map[string]bool),
 		testSuitesDir:  testSuitesDir,
