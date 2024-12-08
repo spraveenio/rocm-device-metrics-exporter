@@ -18,7 +18,7 @@ package metricsserver
 
 type HealthInterface interface {
 	// Get health update of clients
-	GetGPUHealthStates() (map[string]string, error)
+	GetGPUHealthStates() (map[string]interface{}, error)
 
 	// debug/mock
 	SetError(gpuid string, fields []string, values []uint32) error

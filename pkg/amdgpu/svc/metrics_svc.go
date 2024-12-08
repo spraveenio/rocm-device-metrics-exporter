@@ -40,16 +40,13 @@ func (m *MetricsSvcImpl) GetGPUState(ctx context.Context, req *metricssvc.GPUGet
 		GPUState: []*metricssvc.GPUState{},
 	}
 	for _, client := range m.clients {
-		gpuState, err := client.GetGPUHealthStates()
+		gpuStateMap, err := client.GetGPUHealthStates()
 		if err != nil {
 			return nil, err
 		}
 		for _, id := range req.ID {
-			if gstate, ok := gpuState[id]; ok {
-				state := &metricssvc.GPUState{
-					ID:     id,
-					Health: gstate,
-				}
+			if gstate, ok := gpuStateMap[id]; ok {
+				state := gstate.(*metricssvc.GPUState)
 				resp.GPUState = append(resp.GPUState, state)
 			}
 		}
@@ -66,16 +63,13 @@ func (m *MetricsSvcImpl) List(ctx context.Context, e *emptypb.Empty) (*metricssv
 	}
 
 	for _, client := range m.clients {
-		gpuState, err := client.GetGPUHealthStates()
+		gpuStateMap, err := client.GetGPUHealthStates()
 		if err != nil {
 			return nil, err
 		}
-		for gpu, state := range gpuState {
-			gstate := &metricssvc.GPUState{
-				ID:     gpu,
-				Health: state,
-			}
-			resp.GPUState = append(resp.GPUState, gstate)
+		for _, gstate := range gpuStateMap {
+			state := gstate.(*metricssvc.GPUState)
+			resp.GPUState = append(resp.GPUState, state)
 		}
 	}
 	return resp, nil

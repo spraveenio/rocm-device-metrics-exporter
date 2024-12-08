@@ -16,7 +16,10 @@
 
 package utils
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 const (
 	MaxGPUPerServer     = 16 // current max is 8, gpuagent mock has 16
@@ -50,4 +53,11 @@ func AddNodeHealthLabel(nodeLabels map[string]string, healthMap map[string]strin
 		labelKey := fmt.Sprintf(NodeGPUHealthPrefix, gpuid)
 		nodeLabels[labelKey] = state
 	}
+}
+
+func IsKubernetes() bool {
+	if s := os.Getenv("KUBERNETES_SERVICE_HOST"); s != "" {
+		return true
+	}
+	return false
 }

@@ -2,7 +2,7 @@
 Device Metrics Exporter exports metrics from AMD GPUs to collectors like Prometheus.
 Health Monitoring for each of the GPU is done by the exporter in a 30s
 interval. The GPU will be marked as healthy/unhealthy on the grpc service
-hosted on /sockets/metrics_grpc.socket for external clients. In case of
+hosted on /sockets/amdgpu_device_metrics_exporter_grpc.socket for external clients. In case of
 Kubernets environment the respective node will have the labels with each gpu
 state marked healthy/unhealthy as well.
 
@@ -154,10 +154,10 @@ _Usage of bin/amd-metrics-exporter_
         - Labels
             CARD_MODEL, GPU_ID, HOSTNAME and SERIAL_NUMBER are always set and cannot be removed. Labels supported are available in
             [_internal/amdgpu/proto/fields.proto_**:GPUMetricLabel**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L114)
-    - Thresholds:
-         These values dictates the threshold of the ECC field counters to mark
-         a GPU as unhealthy. Default is 0 if not specified, the GPU will be
-         marked unhealthy once the value goes above the set threshold limit.
+        - HealthThresholds:
+            These values dictates the threshold of the ECC field counters to mark
+            a GPU as unhealthy. Default is 0 if not specified, the GPU will be
+            marked unhealthy once the value goes above the set threshold limit.
 
 - Invalid values in any of the field will be ignored and revert to default
   behavior for the respective fields.

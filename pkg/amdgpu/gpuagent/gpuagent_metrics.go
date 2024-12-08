@@ -17,22 +17,18 @@
 package gpuagent
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"os"
 	"reflect"
 	"strings"
-	"time"
-
-	"github.com/pensando/device-metrics-exporter/pkg/k8s"
-	"github.com/pensando/device-metrics-exporter/pkg/slurm"
 
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/parserutil"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/scheduler"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -267,11 +263,15 @@ func (ga *GPUAgentClient) initLabelConfigs(config *gpumetrics.GPUMetricConfig) {
 		exportLables[name] = true
 	}
 
+	k8sLabels := scheduler.GetExportLabels(scheduler.Kubernetes)
+
 	if config != nil {
 		for _, name := range config.GetLabels() {
 			name = strings.ToUpper(name)
 			if _, ok := exportLables[name]; ok {
-				if _, ok := k8s.ExportLabels[name]; ok && !ga.isKubernetes {
+				// export labels must have atleast one label exported by
+				// kubernets client, otherwise don't enable the label
+				if _, ok := k8sLabels[name]; ok && !ga.isKubernetes {
 					continue
 				}
 				logger.Log.Printf("label %v enabled", name)
@@ -306,7 +306,6 @@ func initFieldConfig(config *gpumetrics.GPUMetricConfig) {
 		enable_default = false
 	}
 	for _, name := range gpumetrics.GPUMetricField_name {
-		logger.Log.Printf("%v set to %v", name, enable_default)
 		exportFieldMap[name] = enable_default
 	}
 	if config == nil || len(config.GetFields()) == 0 {
@@ -315,8 +314,13 @@ func initFieldConfig(config *gpumetrics.GPUMetricConfig) {
 	for _, fieldName := range config.GetFields() {
 		fieldName = strings.ToUpper(fieldName)
 		if _, ok := exportFieldMap[fieldName]; ok {
-			logger.Log.Printf("%v enabled", fieldName)
 			exportFieldMap[fieldName] = true
+		}
+	}
+	// print disabled short list
+	for k, v := range exportFieldMap {
+		if !v {
+			logger.Log.Printf("%v field is disabled", k)
 		}
 	}
 	return
@@ -842,6 +846,7 @@ func getGPUInstanceID(gpu *amdgpu.GPU) int {
 
 func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	// send the req to gpuclient
+	wls := make(map[string]interface{})
 	resp, err := ga.getMetrics()
 	if err != nil {
 		return err
@@ -850,9 +855,10 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 		logger.Log.Printf("resp status :%v", resp.ApiStatus)
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
+	wls, _ = ga.schedulerCl.ListWorkloads()
 	ga.m.gpuNodesTotal.Set(float64(len(resp.Response)))
 	for _, gpu := range resp.Response {
-		ga.updateGPUInfoToMetrics(gpu)
+		ga.updateGPUInfoToMetrics(wls, gpu)
 	}
 	return nil
 }
@@ -861,27 +867,35 @@ func (ga *GPUAgentClient) UpdateMetricsStats() error {
 	return ga.getMetricsAll()
 }
 
-func (ga *GPUAgentClient) populateLabelsFromGPU(gpu *amdgpu.GPU) map[string]string {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	var podInfo k8s.PodResourceInfo
-	var jobInfo slurm.JobInfo
+func (ga *GPUAgentClient) getWorkloadInfo(wls map[string]interface{}, gpu *amdgpu.GPU, filter bool) interface{} {
+	var workload interface{}
 
+	if filter && !ga.schedulerCl.CheckExportLabels(exportLables) {
+		// return empty if labels are not set to be exportered
+		return workload
+	}
+	// populate with workload info
 	if ga.isKubernetes {
-		if ga.kubeClient.CheckExportLabels(exportLables) {
-			if pods, err := ga.kubeClient.ListPods(ctx); err == nil {
-				if gpu.Status.PCIeStatus != nil {
-					podInfo = pods[strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)]
-				}
-			} else {
-				logger.Log.Printf("failed to list pod resources, %v", err)
-				// continue
-			}
+		if gpu.Status.PCIeStatus != nil {
+			workload = wls[strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)]
 		}
 	} else {
-		if ga.slurmClient.CheckExportLabels(exportLables) {
-			jobs := ga.slurmClient.ListJobs()
-			jobInfo = jobs[fmt.Sprintf("%v", gpu.Status.Index)]
+		// TODO: revisit
+		// ignore errors as we always expect slurm deployment as default
+		workload = wls[fmt.Sprintf("%v", gpu.Status.Index)]
+	}
+	return workload
+}
+
+func (ga *GPUAgentClient) populateLabelsFromGPU(wls map[string]interface{}, gpu *amdgpu.GPU) map[string]string {
+	var podInfo scheduler.PodResourceInfo
+	var jobInfo scheduler.JobInfo
+
+	if wl := ga.getWorkloadInfo(wls, gpu, true); wl != nil {
+		if ga.isKubernetes {
+			podInfo = wl.(scheduler.PodResourceInfo)
+		} else {
+			jobInfo = wl.(scheduler.JobInfo)
 		}
 	}
 
@@ -962,13 +976,13 @@ func normalizeUint64(x interface{}) float64 {
 	return 0
 }
 
-func (ga *GPUAgentClient) updateGPUInfoToMetrics(gpu *amdgpu.GPU) {
+func (ga *GPUAgentClient) updateGPUInfoToMetrics(wls map[string]interface{}, gpu *amdgpu.GPU) {
 	if !ga.exporterEnabledGPU(getGPUInstanceID(gpu)) {
 		return
 	}
 
-	labels := ga.populateLabelsFromGPU(gpu)
-	labelsWithIndex := ga.populateLabelsFromGPU(gpu)
+	labels := ga.populateLabelsFromGPU(wls, gpu)
+	labelsWithIndex := ga.populateLabelsFromGPU(wls, gpu)
 	status := gpu.Status
 	stats := gpu.Stats
 	ga.m.gpuPackagePower.With(labels).Set(normalizeUint64(stats.PackagePower))

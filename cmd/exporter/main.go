@@ -39,6 +39,7 @@ import (
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
 	metricsserver "github.com/pensando/device-metrics-exporter/pkg/amdgpu/svc"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
 )
 
 // single instance handlers
@@ -202,7 +203,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	logger.Init()
+	logger.Init(utils.IsKubernetes())
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Log.Printf("panic occured: %+v", r)
@@ -233,6 +234,9 @@ func main() {
 	mh.InitConfig()
 
 	gpuclient := gpuagent.NewAgent(mh)
+	if err := gpuclient.Init(); err != nil {
+		logger.Log.Printf("gpuclient init err :%+v", err)
+	}
 	defer gpuclient.Close()
 
 	go gpuclient.StartMonitor()

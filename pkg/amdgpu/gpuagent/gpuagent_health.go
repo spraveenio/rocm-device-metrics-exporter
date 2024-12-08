@@ -23,7 +23,9 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/scheduler"
 )
 
 func (ga *GPUAgentClient) getHealthThreshholds() *gpumetrics.GPUHealthThresholds {
@@ -49,11 +51,12 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 
 	errOccured := false
 	ga.Lock()
-	ga.healthState = make(map[string]string)
+	ga.healthState = make(map[string]*metricssvc.GPUState)
 	ga.Unlock()
 
 	gpuUUIDMap := make(map[string]string)
 	gpuHealthState := make(map[string]bool)
+	gpuWorkloads := make(map[string]string) // only one workload per gpu [gpuid ->workload]
 	metricErrCheck := func(gpuid string, fieldName string, threshold uint32, count float64) {
 
 		mockVal := ga.getMockError(gpuid, fieldName)
@@ -84,6 +87,8 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 		}
 	}
 
+	wls := make(map[string]interface{})
+	wls, _ = ga.schedulerCl.ListWorkloads()
 	gpumetrics, err = ga.getMetrics()
 	if err != nil || (gpumetrics != nil && gpumetrics.ApiStatus != 0) {
 		errOccured = true
@@ -98,6 +103,18 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 			gpuUUIDMap[gpuuid] = gpuid
 			gpuHealthState[gpuid] = true
 			stats := gpu.Stats
+
+			if wl := ga.getWorkloadInfo(wls, gpu, false); wl != nil {
+				if ga.isKubernetes {
+					podInfo := wl.(scheduler.PodResourceInfo)
+					gpuWorkloads[gpuid] = fmt.Sprintf("pod : %v, namespace : %v, container: %v",
+						podInfo.Pod, podInfo.Namespace, podInfo.Container)
+				} else {
+					jobInfo := wl.(scheduler.JobInfo)
+					gpuWorkloads[gpuid] = fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
+						jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster)
+				}
+			}
 
 			// business logic for health detection
 			metricErrCheck(gpuid, "GPU_ECC_UNCORRECT_SDMA", thresholds.GPU_ECC_UNCORRECT_SDMA, normalizeUint64(stats.SDMAUncorrectableErrors))
@@ -142,11 +159,15 @@ ret:
 	}
 
 	ga.Lock()
-	for gpuid, healthy := range gpuHealthState {
-		if healthy {
-			ga.healthState[gpuid] = "healthy"
-		} else {
-			ga.healthState[gpuid] = "unhealthy"
+	for gpuid, hstate := range gpuHealthState {
+		healthStr := "unhealthy"
+		if hstate {
+			healthStr = "healthy"
+		}
+		ga.healthState[gpuid] = &metricssvc.GPUState{
+			ID:                 gpuid,
+			Health:             healthStr,
+			AssociatedWorkload: []string{gpuWorkloads[gpuid]},
 		}
 	}
 	ga.Unlock()
@@ -188,15 +209,15 @@ func (ga *GPUAgentClient) getMockError(gpuid, field string) uint32 {
 	return mv
 }
 
-func (ga *GPUAgentClient) GetGPUHealthStates() (map[string]string, error) {
+func (ga *GPUAgentClient) GetGPUHealthStates() (map[string]interface{}, error) {
 	ga.Lock()
 	defer ga.Unlock()
 	if len(ga.healthState) == 0 {
 		return nil, fmt.Errorf("health status not available")
 	}
-	healthMap := make(map[string]string)
-	for id, state := range ga.healthState {
-		healthMap[id] = state
+	healthMap := make(map[string]interface{})
+	for id, gstate := range ga.healthState {
+		healthMap[id] = gstate
 	}
 
 	return healthMap, nil

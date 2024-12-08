@@ -109,9 +109,8 @@
       "DRIVER_VERSION",
       "VBIOS_VERSION",
       "HOSTNAME"
-    ]
-  },
-  "Thresholds" : {
+    ],
+    "HealthThresholds" : {
       "GPU_ECC_UNCORRECT_SDMA" : 0,
       "GPU_ECC_UNCORRECT_GFX" : 0,
       "GPU_ECC_UNCORRECT_MMHUB" : 0,
@@ -131,5 +130,6 @@
       "GPU_ECC_UNCORRECT_JPEG" : 0,
       "GPU_ECC_UNCORRECT_IH" : 0,
       "GPU_ECC_UNCORRECT_MPIO" : 0
+    }
   }
 }

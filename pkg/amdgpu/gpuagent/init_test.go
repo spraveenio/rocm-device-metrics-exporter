@@ -48,7 +48,7 @@ func setupTest(t *testing.T) func(t *testing.T) {
 
 	fmt.Println("LOGDIR", os.Getenv("LOGDIR"))
 
-	logger.Init()
+	logger.Init(true)
 
 	dir := path.Dir(globals.SlurmDir)
 	t.Logf("setting up slurmdir %v", dir)
@@ -122,14 +122,9 @@ func getNewAgent(t *testing.T) *GPUAgentClient {
 	ga.initializeContext()
 	ga.gpuclient = gpuMockCl
 	ga.evtclient = eventMockCl
-	k8c, sc, err := initSchedulers(ga.ctx)
+	schedulerCl, err := initScheduler(ga.ctx)
 	assert.Assert(t, err == nil, "error creating new agent : %v", err)
-	if k8c != nil {
-		ga.isKubernetes = true
-		ga.kubeClient = k8c
-	} else {
-		ga.isKubernetes = false
-		ga.slurmClient = sc
-	}
+	ga.schedulerCl = schedulerCl
+	ga.isKubernetes = false
 	return ga
 }

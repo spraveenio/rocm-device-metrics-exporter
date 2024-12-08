@@ -32,6 +32,7 @@ import (
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
 )
 
 const (
@@ -64,7 +65,7 @@ func main() {
 	logger.SetLogDir(logDir)
 	logger.SetLogFile(logFile)
 	logger.SetLogPrefix(logPrefix)
-	logger.Init()
+	logger.Init(utils.IsKubernetes())
 
 	// parse test config
 	// users could specify the test config json at /etc/rvs/config.json

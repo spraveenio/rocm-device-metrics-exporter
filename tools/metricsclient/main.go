@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/testsvc"
@@ -33,6 +34,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
+	kube "k8s.io/kubelet/pkg/apis/podresources/v1alpha1"
 )
 
 func prettyPrintGPUState(resp *metricssvc.GPUStateResponse) {
@@ -215,6 +217,50 @@ func setError(socketPath, filepath string) error {
 	return nil
 }
 
+const (
+	PodResourceSocket  = "/var/lib/kubelet/pod-resources/kubelet.sock"
+	amdGpuResourceName = "amd.com/gpu"
+)
+
+func getPodResources() {
+	if _, err := os.Stat(PodResourceSocket); err != nil {
+		fmt.Printf("no kubelet, %v", err)
+		return
+	}
+	client, err := grpc.NewClient(
+		"unix://"+PodResourceSocket,
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		fmt.Printf("kubelet socket error, %v", err)
+		return
+	}
+
+	prCl := kube.NewPodResourcesListerClient(client)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	resp, err := prCl.List(ctx, &kube.ListPodResourcesRequest{})
+	if err != nil {
+		fmt.Printf("failed to list pod resources, %v", err)
+		return
+	}
+
+	for _, pod := range resp.PodResources {
+		for _, container := range pod.Containers {
+			for _, devs := range container.GetDevices() {
+				if devs.ResourceName == amdGpuResourceName {
+					for _, devId := range devs.DeviceIds {
+						fmt.Printf("dev:ns/pod/container [{%v}%v/%v/%v]\n",
+							devId, pod.Name, pod.Namespace, container.Name)
+						return
+					}
+				}
+			}
+		}
+	}
+	fmt.Printf("no associations found\n")
+	fmt.Printf("pod resp:\n %+v\n", resp)
+}
+
 var jout = flag.Bool("json", false, "output in json format")
 
 func main() {
@@ -223,9 +269,7 @@ func main() {
 		getOpt       = flag.Bool("get", false, "get health status of gpu")
 		setId        = flag.String("id", "1", "gpu id")
 		getNodeLabel = flag.Bool("label", false, "get k8s node label")
-		//sendTest     = flag.Bool("test", false, "send mock test result")
-		//listTest     = flag.Bool("list", false, "list all test results from server")
-		setEcc       = flag.Bool("ecc", false, "set mock ecc error")
+		podRes       = flag.Bool("pod", false, "get node resource info")
 		eccFile      = flag.String("ecc-file-path", "", "json ecc err file")
 	)
 	flag.Parse()
@@ -240,6 +284,11 @@ func main() {
 		if err != nil {
 			log.Fatalf("request failed :%v", err)
 		}
+	}
+
+	if *podRes {
+		getPodResources()
+		return
 	}
 
 	if *getNodeLabel {
@@ -257,22 +306,7 @@ func main() {
 		fmt.Printf("node[%v] labels[%+v]", nodeName, labels)
 	}
 
-	/*
-	if *sendTest {
-		sendTestResult(*socketPath)
-	}
-
-	if *listTest {
-		listTestResult(*socketPath)
-	}
-	*/
-
-	if *setEcc {
-		if *eccFile == "" {
-			fmt.Println("invalid ecc error file path")
-			return
-
-		}
+	if *eccFile != "" {
 		setError(*socketPath, *eccFile)
 	}
 }
