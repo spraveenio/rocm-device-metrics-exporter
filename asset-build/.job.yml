@@ -9,7 +9,8 @@ targets:
     feature:
     build-dependencies:
       - build-debian-package
-      - build-device-metrics-exporter-docker
+      - build-device-metrics-exporter-docker-ubi9.4
+      - build-device-metrics-exporter-docker-azure
       - build-helm-artifact
       - e2e-build-mock-exporter
 

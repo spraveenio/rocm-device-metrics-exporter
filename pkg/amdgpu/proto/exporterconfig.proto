@@ -117,6 +117,8 @@ enum GPUMetricField {
     GPU_ECC_UNCORRECT_IH        = 86;
     GPU_ECC_CORRECT_MPIO        = 87;
     GPU_ECC_UNCORRECT_MPIO      = 88;
+    // 1 - healthy, 0 unhealthy
+    GPU_HEALTH                  = 89;
 }
 
 message GPUHealthThresholds {

@@ -40,4 +40,10 @@ const (
 
 	// AMDTestCfgPath path to the test runner config parameters
 	AMDTestCfgPath = "/etc/rvs/config.json"
+
+	//PodResourceSocket - k8s pod grpc socket
+	PodResourceSocket = "/var/lib/kubelet/pod-resources/kubelet.sock"
+
+	// AMDGPUResourceLabel - k8s AMD gpu resource label
+	AMDGPUResourceLabel = "amd.com/gpu"
 )

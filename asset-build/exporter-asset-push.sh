@@ -31,8 +31,10 @@ setup_dir () {
 }
 
 copy_artifacts () {
-    # copy docker image
+    # copy docker image ubi9.4
     cp /device-metrics-exporter/docker/exporter-latest.tar.gz $BUNDLE_DIR/
+    # copy docker image azure coreos 3
+    cp /device-metrics-exporter/docker/exporter-latest-azure.tar.gz $BUNDLE_DIR/
     # copy docker mock image
     cp /device-metrics-exporter/docker/exporter-mock-latest.tgz $BUNDLE_DIR/
     # copy debian package

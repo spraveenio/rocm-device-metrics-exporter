@@ -61,6 +61,7 @@ BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
 GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
 VERSION ?=$(RELEASE)
 KUBECONFIG ?= ~/.kube/config
+AZURE_DOCKER_CONTAINER_IMG ?= exporter-latest-azure
 
 export ${GOROOT}
 export ${GOPATH}
@@ -366,8 +367,8 @@ docker: gen amdexporter
 
 .PHONY: docker-azure
 docker-azure: gen amdexporter
-	${MAKE} -C docker TOP_DIR=$(CURDIR) MOCK=$(MOCK) azure
-	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
+	#${MAKE} -C docker azure TOP_DIR=$(CURDIR)
+	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR) DOCKER_CONTAINER_IMG=${AZURE_DOCKER_CONTAINER_IMG}
 
 .PHONY: docker-mock
 docker-mock: gen amdexporter

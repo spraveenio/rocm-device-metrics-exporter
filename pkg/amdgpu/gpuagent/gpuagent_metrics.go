@@ -26,6 +26,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/parserutil"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/scheduler"
@@ -145,6 +146,8 @@ type metrics struct {
 
 	gpuEccCorrectMPIO   prometheus.GaugeVec
 	gpuEccUncorrectMPIO prometheus.GaugeVec
+
+	gpuHealth prometheus.GaugeVec
 }
 
 func (ga *GPUAgentClient) ResetMetrics() error {
@@ -237,6 +240,7 @@ func (ga *GPUAgentClient) ResetMetrics() error {
 	ga.m.gpuEccUncorrectIH.Reset()
 	ga.m.gpuEccCorrectMPIO.Reset()
 	ga.m.gpuEccUncorrectMPIO.Reset()
+	ga.m.gpuHealth.Reset()
 	return nil
 }
 
@@ -418,6 +422,7 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		ga.m.gpuEccUncorrectIH,
 		ga.m.gpuEccCorrectMPIO,
 		ga.m.gpuEccUncorrectMPIO,
+		ga.m.gpuHealth,
 	}
 
 }
@@ -809,6 +814,10 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Name: "gpu_ecc_uncorrect_mpio",
 		},
 			labels),
+		gpuHealth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_health",
+		},
+			labels),
 	}
 	ga.initFieldMetricsMap()
 
@@ -857,6 +866,11 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	}
 	wls, _ = ga.schedulerCl.ListWorkloads()
 	ga.m.gpuNodesTotal.Set(float64(len(resp.Response)))
+	// do this only once as the health monitoring thread will
+	// update periodically. this is required only for first state
+	// of the metrics pull response from prometheus
+	newGPUState := ga.processEccErrorMetrics(resp.Response, wls)
+	_ = ga.updateNewHealthState(newGPUState)
 	for _, gpu := range resp.Response {
 		ga.updateGPUInfoToMetrics(wls, gpu)
 	}
@@ -882,7 +896,7 @@ func (ga *GPUAgentClient) getWorkloadInfo(wls map[string]interface{}, gpu *amdgp
 	} else {
 		// TODO: revisit
 		// ignore errors as we always expect slurm deployment as default
-		workload = wls[fmt.Sprintf("%v", gpu.Status.Index)]
+		workload = wls[fmt.Sprintf("%v", getGPUInstanceID(gpu))]
 	}
 	return workload
 }
@@ -911,7 +925,7 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(wls map[string]interface{}, gpu 
 			uuid, _ := uuid.FromBytes(gpu.Spec.Id)
 			labels[key] = uuid.String()
 		case gpumetrics.GPUMetricLabel_GPU_ID.String():
-			labels[key] = fmt.Sprintf("%v", gpu.Status.Index)
+			labels[key] = fmt.Sprintf("%v", getGPUInstanceID(gpu))
 		case gpumetrics.GPUMetricLabel_POD.String():
 			labels[key] = podInfo.Pod
 		case gpumetrics.GPUMetricLabel_NAMESPACE.String():
@@ -987,6 +1001,16 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(wls map[string]interface{}, gpu
 	stats := gpu.Stats
 	ga.m.gpuPackagePower.With(labels).Set(normalizeUint64(stats.PackagePower))
 	ga.m.gpuAvgPkgPower.With(labels).Set(normalizeUint64(stats.AvgPackagePower))
+
+	// export health state only if available
+    gpuid := fmt.Sprintf("%v", getGPUInstanceID(gpu))
+	if hstate, ok := ga.healthState[gpuid]; ok {
+		if hstate.Health == strings.ToLower(metricssvc.GPUHealth_HEALTHY.String()) {
+			ga.m.gpuHealth.With(labels).Set(1)
+		} else {
+			ga.m.gpuHealth.With(labels).Set(0)
+		}
+	}
 
 	// gpu temp stats
 	tempStats := stats.Temperature
