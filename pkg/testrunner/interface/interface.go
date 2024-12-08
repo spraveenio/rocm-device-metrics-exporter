@@ -33,11 +33,17 @@ type TestHandlerInterface interface {
 	// Status
 	Status() CommandStatus
 
+	// Stdout
+	Stdout() string
+
+	// Stderr
+	Stderr() string
+
 	// GetLogFilePath
 	GetLogFilePath() string
 
 	// Result
-	Result() []*IterationResult
+	Result() map[string]TestResult
 
 	// Done signals test completion
 	Done() chan struct{}
@@ -65,8 +71,6 @@ const (
 	TestCompleted CommandStatus = "completed"
 	// TestNotStarted represents test is not started yet
 	TestNotStarted CommandStatus = "not_started"
-	// TestTimedOut represents test timed out
-	TestTimedOut CommandStatus = "timed_out"
 	// Success represents test passed
 	Success TestResult = "success"
 	// Failure represents test failed
@@ -75,8 +79,6 @@ const (
 	Skipped TestResult = "skipped"
 	// Cancelled represents test cancelled
 	Cancelled TestResult = "cancelled"
-	// Timedout represents test timedout
-	Timedout TestResult = "timedout"
 )
 
 // String convert command status into string

@@ -19,29 +19,17 @@
 package testrunner
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/logger"
-	types "github.com/ROCm/device-metrics-exporter/pkg/testrunner/interface"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	types "github.com/pensando/device-metrics-exporter/pkg/testrunner/interface"
 )
 
-// TestResult is used to convert test json output to struct
-type TestResult map[string]map[string][]GPUTestResult
-
-// GPUTestResult is struct for GPU ID and it's test result
-type GPUTestResult struct {
-	GPUID string `json:"gpu_id"`
-	Pass  string `json:"pass,omitempty"`
-}
-
 // TestRunner is a test framework for testing GPUs
-type RVSTestRunner struct {
+type TestRunner struct {
 	// binaryLocation is the location where the test framework binary is present
 	binaryLocation string
 
@@ -59,34 +47,32 @@ type RVSTestRunner struct {
 }
 
 // GetTestHandler returns test handler for the given test and params
-func (rts *RVSTestRunner) GetTestHandler(testName string, params types.TestParams) (types.TestHandlerInterface, error) {
+func (rts *TestRunner) GetTestHandler(testName string, params types.TestParams) (types.TestHandlerInterface, error) {
 	if _, ok := rts.testSuites[testName]; !ok {
 		return nil, fmt.Errorf("testsuite %v not found", testName)
 	}
 	cmdArgs := []string{}
 	cmdArgs = append(cmdArgs, rts.binaryLocation)
-	confFile := filepath.Join(rts.testSuitesDir, fmt.Sprintf("%v.conf", testName))
+	confFile := fmt.Sprintf("%v/%v.conf", rts.testSuitesDir, testName)
 	cmdArgs = append(cmdArgs, "-c", confFile)
 
 	if len(params.DeviceIDs) > 0 {
 		cmdArgs = append(cmdArgs, "-i", strings.Join(params.DeviceIDs, ","))
 	}
 
-	cmdArgs = append(cmdArgs, "-j")
 	if len(params.ExtraArgs) > 0 {
+		cmdArgs = append(cmdArgs, "-j")
 		cmdArgs = append(cmdArgs, params.ExtraArgs...)
 	}
 	var options []types.TOption
 	if params.Timeout > 0 {
 		options = append(options, types.TestWithTimeout(params.Timeout))
 	}
-	options = append(options, types.TestWithResultParser(parseRvsTestResult),
-		types.TestWithIteration(uint32(params.Iterations)), types.TestWithStopOnFailure(params.StopOnFailure))
 	return types.NewTestHandler(testName, rts.logger, cmdArgs, options...), nil
 }
 
 // loadTestSuites loads the testsuite info
-func (rts *RVSTestRunner) loadTestSuites() error {
+func (rts *TestRunner) loadTestSuites() error {
 	files, err := os.ReadDir(rts.testSuitesDir)
 	if err != nil {
 		return err
@@ -102,50 +88,8 @@ func (rts *RVSTestRunner) loadTestSuites() error {
 	return nil
 }
 
-func parseRvsTestResult(stdout string) (map[string]types.TestResults, error) {
-	// get the log file
-	file, err := ExtractLogFile(stdout)
-	if err != nil {
-		return nil, err
-	}
-
-	bytes, err := os.ReadFile(globals.RVSLogDir + "/" + file)
-	if err != nil {
-		return nil, err
-	}
-
-	var data TestResult
-	err = json.Unmarshal(bytes, &data)
-	if err != nil {
-		return nil, err
-	}
-	testResult := make(map[string]types.TestResults)
-	for _, testsuite := range data {
-		for name, test := range testsuite {
-			for _, gpu := range test {
-				if len(gpu.Pass) == 0 {
-					continue
-				}
-				if testResult[gpu.GPUID] == nil {
-					testResult[gpu.GPUID] = make(map[string]types.TestResult)
-					testResult[gpu.GPUID] = make(types.TestResults)
-				}
-				testResult[gpu.GPUID][name] = getTestResultEnum(gpu.Pass)
-			}
-		}
-	}
-	return testResult, nil
-}
-
-func getTestResultEnum(val string) types.TestResult {
-	if val == "true" {
-		return types.Success
-	}
-	return types.Failure
-}
-
 // NewRvsTestRunner returns instance of RvsTestRunner
-func NewRvsTestRunner(rvsBinPath, testSuitesDir, resultLogDir string) (types.TestRunner, error) {
+func NewRvsTestRunner(rvsBinPath, testSuitesDir string, testRunnerCfg TestRunnerConfig) (types.TestRunner, error) {
 	if len(rvsBinPath) == 0 {
 		return nil, fmt.Errorf("rocm path is not set")
 	}
@@ -156,9 +100,9 @@ func NewRvsTestRunner(rvsBinPath, testSuitesDir, resultLogDir string) (types.Tes
 		return nil, fmt.Errorf("test runner logger is not initialized")
 	}
 
-	obj := &RVSTestRunner{
+	obj := &TestRunner{
 		binaryLocation: rvsBinPath,
-		logDir:         resultLogDir,
+		logDir:         testRunnerCfg.ResultLogDir,
 		logger:         logger.Log,
 		testSuites:     make(map[string]bool),
 		testSuitesDir:  testSuitesDir,

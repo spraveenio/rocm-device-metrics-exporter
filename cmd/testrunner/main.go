@@ -64,21 +64,34 @@ func main() {
 		fmt.Printf("GitCommit: %v\n", GitCommit)
 		os.Exit(0)
 	}
-	defer conn.Close()
-	c := metricssvc.NewMetricsServiceClient(conn)
 
-	timer := time.NewTicker(gpuStateWatchFreq)
-	defer timer.Stop()
+	c := metricssvc.NewMetricsServiceClient(conn)
+	watchTicker := time.NewTicker(globals.GPUStateWatchFreq)
+	defer watchTicker.Stop()
+	unhealthyGPUTestCfg := globalTestRunnerConfig.GPUTestTriggers[testrunner.UnhealthyGPU]
+
+	// handle test runner crash or restart
+	// read existing test runner status db
+	// immediately start test on interrupted test before restarting
+	statusObj, _ := testrunner.LoadRunnerStatus(globalTestRunnerConfig.StatusDBPath)
+	ids := []string{}
+	if statusObj != nil && len(statusObj.Status) > 0 {
+		for deviceID := range statusObj.Status {
+			ids = append(ids, deviceID)
+		}
+		logger.Log.Printf("found GPU %+v with incomplete test before restart %+v, start to rerun test", ids, statusObj)
+		go testGPU(testrunner.UnhealthyGPU, ids, unhealthyGPUTestCfg, rocmSMIPath, true)
+	}
 
 	for {
 		select {
-		case <-timer.C:
-			ctx, cancel := context.WithTimeout(context.Background(), gpuStateReqTimeout)
+		case <-watchTicker.C:
+			ctx, cancel := context.WithTimeout(context.Background(), globals.GPUStateReqTimeout)
 			r, err := c.List(ctx, &emptypb.Empty{})
 			if err != nil {
-				logger.Log.Fatalf("could not list GPU state: %v", err)
+				logger.Log.Printf("could not list GPU state: %v", err)
 				cancel()
-				return
+				continue
 			}
 			logger.Log.Printf("GPU State: %s", r.String())
 			cancel()
@@ -88,18 +101,23 @@ func main() {
 				for _, state := range r.GPUState {
 					// if any GPU is not healthy, start a test against those GPUs
 					if state.Health != metricssvc.GPUHealth_HEALTHY.String() {
-						unHealthyGPUIDs = append(unHealthyGPUIDs, state.ID)
+						// TODO: currently exporter with gpuagent just returns GPU index number
+						// we need to convert it to GUID per rvs's request
+						// modify this after rvs starts to accept index number as ID
+						id, err := getGUIDFromIndex(state.ID, rocmSMIPath)
+						if err != nil {
+							logger.Log.Printf("failed to fetch GUID for GPU card%v, err: %+v", state.ID, err)
+							continue
+						}
+						unHealthyGPUIDs = append(unHealthyGPUIDs, id)
 					}
 				}
 			}
 
 			// start test on unhealthy GPU
-			if len(globalTestConfig.DeviceIDs) > 0 {
-				logger.Log.Printf("test config force to run test for GPU %+v", globalTestConfig.DeviceIDs)
-				go testGPU(globalTestConfig.DeviceIDs)
-			} else if len(unHealthyGPUIDs) > 0 {
+			if len(unHealthyGPUIDs) > 0 {
 				logger.Log.Printf("found GPU with unhealthy state %+v", unHealthyGPUIDs)
-				go testGPU(unHealthyGPUIDs)
+				go testGPU(testrunner.UnhealthyGPU, unHealthyGPUIDs, unhealthyGPUTestCfg, rocmSMIPath, false)
 			}
 		}
 	}
