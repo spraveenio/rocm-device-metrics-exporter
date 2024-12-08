@@ -150,7 +150,7 @@ docker: gen amdexporter
 
 .PHONY: docker-azure
 docker-azure: gen amdexporter
-	#${MAKE} -C docker azure TOP_DIR=$(CURDIR)
+	${MAKE} -C docker azure TOP_DIR=$(CURDIR)
 	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR) DOCKER_CONTAINER_IMG=${AZURE_DOCKER_CONTAINER_IMG}
 
 .PHONY: docker-mock
