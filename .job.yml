@@ -20,7 +20,7 @@ builds:
 
   build-device-metrics-exporter-docker-azure:
     commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make && \
-                            DOCKER_CONTAINER_IMG=exporter-latest-azure HOURLY_TAG_LABEL=$RELEASE IMAGE_TAG=latest make docker-cicd"]
+                            DOCKER_CONTAINER_IMG=exporter-latest-azure HOURLY_TAG_LABEL=$RELEASE IMAGE_TAG=latest make docker-azure"]
     owners: ["email:prshanmug@amd.com"]
     artifacts:
         - /device-metrics-exporter/docker/exporter-latest-azure.tar.gz
