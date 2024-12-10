@@ -32,7 +32,7 @@ const (
 
 	SlurmDir = "/var/run/exporter/"
 
-	MetricsSocketPath = "/sockets/amdgpu_device_metrics_exporter_grpc.socket"
+	MetricsSocketPath = "/var/lib/amd-metrics-exporter/amdgpu_device_metrics_exporter_grpc.socket"
 
 	// rvs binary path
 	RVSPath = "/opt/rocm/bin/rvs"
