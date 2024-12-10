@@ -48,6 +48,9 @@ message GPUState {
 
     // Workload associated with GPU
     repeated string AssociatedWorkload = 4;
+
+    // PCIe Bus ID refers to device ID in amd device plugin
+    string Device = 5;
 } 
 
 message GPUGetRequest {

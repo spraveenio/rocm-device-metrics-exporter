@@ -303,6 +303,9 @@ All dashboard json are provided under directory `grafana`
 - Prerequisites
   - Kubernetes cluster is up and running
   - Helm tool is installed on the node with kubectl + kube config file to get access to the cluster
+  - create directory "/var/lib/amd-metrics-exporter" on the hosts if the grpc
+    health service socket is required for external clients like
+    "amdgpu-device-plugin"
 - Installation
   - Download the device metrics exporter helm charts .tgz file
   - Prepare ```values.yaml``` to setup the deployment parameters, for example:

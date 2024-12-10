@@ -68,6 +68,10 @@ func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[str
 		gpuid := fmt.Sprintf("%v", gpu.Status.Index)
 		gpuuid := uuid.String()
 		stats := gpu.Stats
+		deviceid := ""
+		if gpu.Status.PCIeStatus != nil {
+			deviceid = strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)
+		}
 		workloadInfo := "" // only one per gpu
 
 		if wl := ga.getWorkloadInfo(wls, gpu, false); wl != nil {
@@ -86,6 +90,7 @@ func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[str
 			ID:                 gpuid,
 			UUID:               gpuuid,
 			Health:             strings.ToLower(metricssvc.GPUHealth_HEALTHY.String()),
+			Device:             deviceid,
 			AssociatedWorkload: []string{workloadInfo},
 		}
 
