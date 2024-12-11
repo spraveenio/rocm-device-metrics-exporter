@@ -50,6 +50,7 @@ type GPUAgentClient struct {
 	k8sLabelClient   *k8sclient.K8sClient
 	schedulerCl      scheduler.SchedulerClient
 	isKubernetes     bool
+	enableZmq        bool
 	staticHostLabels map[string]string
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -70,17 +71,17 @@ func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclie
 	return
 }
 
-func initScheduler(ctx context.Context) (scheduler.SchedulerClient, error) {
+func initScheduler(ctx context.Context, enableZmq bool) (scheduler.SchedulerClient, error) {
 	if utils.IsKubernetes() {
 		logger.Log.Printf("NewKubernetesClient creating")
 		return scheduler.NewKubernetesClient(ctx)
 	}
 	logger.Log.Printf("NewSlurmClient creating")
-	return scheduler.NewSlurmClient(ctx)
+	return scheduler.NewSlurmClient(ctx, enableZmq)
 }
 
-func NewAgent(mh *metricsutil.MetricsHandler) *GPUAgentClient {
-	ga := &GPUAgentClient{mh: mh}
+func NewAgent(mh *metricsutil.MetricsHandler, enableZmq bool) *GPUAgentClient {
+	ga := &GPUAgentClient{mh: mh, enableZmq: enableZmq}
 	ga.healthState = make(map[string]*metricssvc.GPUState)
 	ga.mockEccField = make(map[string]map[string]uint32)
 	mh.RegisterMetricsClient(ga)
@@ -102,7 +103,7 @@ func (ga *GPUAgentClient) Init() error {
 	ga.gpuclient = gpuclient
 	ga.evtclient = evtclient
 
-	schedulerCl, err := initScheduler(ga.ctx)
+	schedulerCl, err := initScheduler(ga.ctx, ga.enableZmq)
 	if err != nil {
 		logger.Log.Printf("gpu client init failure err :%v", err)
 		return err

@@ -45,11 +45,14 @@ type client struct {
 }
 
 // NewSlurmClient - creates a slurm schedler client
-func NewSlurmClient(ctx context.Context) (SchedulerClient, error) {
+func NewSlurmClient(ctx context.Context, enableZmq bool) (SchedulerClient, error) {
 	sock := zmq.NewPull(ctx)
-	logger.Log.Printf("Starting Listen on port %v", globals.ZmqPort)
-	if err := sock.Listen(fmt.Sprintf("tcp://*:%v", globals.ZmqPort)); err != nil {
-		return nil, fmt.Errorf("failed to listen on port %v, %v ", globals.ZmqPort, err)
+
+	if enableZmq {
+		logger.Log.Printf("Starting Listen on port %v", globals.ZmqPort)
+		if err := sock.Listen(fmt.Sprintf("tcp://*:%v", globals.ZmqPort)); err != nil {
+			return nil, fmt.Errorf("failed to listen on port %v, %v ", globals.ZmqPort, err)
+		}
 	}
 
 	cl := &client{
