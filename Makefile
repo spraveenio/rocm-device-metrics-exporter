@@ -32,14 +32,21 @@ PKG_LIB_PATH := ${TOP_DIR}/debian/usr/local/metrics/
 LUA_PROTO := ${TOP_DIR}/pkg/amdgpu/proto/luaplugin.proto
 PKG_LUA_PATH := ${TOP_DIR}/debian/usr/local/etc/metrics/slurm
 
+TO_GEN_TESTRUNNER := pkg/testrunner/proto
+GEN_DIR_TESTRUNNER := $(TOP_DIR)/pkg/testrunner/
+
 .PHONY: all
 all:
 	${MAKE} gen amdexporter metricutil
 
 .PHONY: gen
-gen: gopkglist
+gen: gopkglist gen-testrunner
 	@for c in ${TO_GEN}; do printf "\n+++++++++++++++++ Generating $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} GEN_DIR=$(GEN_DIR) || exit 1; done
 	@for c in ${TO_MOCK}; do printf "\n+++++++++++++++++ Generating mock $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} MOCK_DIR=$(MOCK_DIR) GEN_DIR=$(GEN_DIR) || exit 1; done
+
+.PHONY: gen-testrunner
+gen-testrunner:
+	@for c in ${TO_GEN_TESTRUNNER}; do printf "\n+++++++++++++++++ Generating $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} GEN_DIR=$(GEN_DIR_TESTRUNNER) || exit 1; done
 
 .PHONY: pkg pkg-clean
 
