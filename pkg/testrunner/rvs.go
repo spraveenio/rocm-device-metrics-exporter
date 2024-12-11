@@ -29,7 +29,7 @@ import (
 )
 
 // TestRunner is a test framework for testing GPUs
-type TestRunner struct {
+type RVSTestRunner struct {
 	// binaryLocation is the location where the test framework binary is present
 	binaryLocation string
 
@@ -47,7 +47,7 @@ type TestRunner struct {
 }
 
 // GetTestHandler returns test handler for the given test and params
-func (rts *TestRunner) GetTestHandler(testName string, params types.TestParams) (types.TestHandlerInterface, error) {
+func (rts *RVSTestRunner) GetTestHandler(testName string, params types.TestParams) (types.TestHandlerInterface, error) {
 	if _, ok := rts.testSuites[testName]; !ok {
 		return nil, fmt.Errorf("testsuite %v not found", testName)
 	}
@@ -72,7 +72,7 @@ func (rts *TestRunner) GetTestHandler(testName string, params types.TestParams) 
 }
 
 // loadTestSuites loads the testsuite info
-func (rts *TestRunner) loadTestSuites() error {
+func (rts *RVSTestRunner) loadTestSuites() error {
 	files, err := os.ReadDir(rts.testSuitesDir)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (rts *TestRunner) loadTestSuites() error {
 }
 
 // NewRvsTestRunner returns instance of RvsTestRunner
-func NewRvsTestRunner(rvsBinPath, testSuitesDir string, testRunnerCfg TestRunnerConfig) (types.TestRunner, error) {
+func NewRvsTestRunner(rvsBinPath, testSuitesDir, resultLogDir string) (types.TestRunner, error) {
 	if len(rvsBinPath) == 0 {
 		return nil, fmt.Errorf("rocm path is not set")
 	}
@@ -100,9 +100,9 @@ func NewRvsTestRunner(rvsBinPath, testSuitesDir string, testRunnerCfg TestRunner
 		return nil, fmt.Errorf("test runner logger is not initialized")
 	}
 
-	obj := &TestRunner{
+	obj := &RVSTestRunner{
 		binaryLocation: rvsBinPath,
-		logDir:         testRunnerCfg.ResultLogDir,
+		logDir:         resultLogDir,
 		logger:         logger.Log,
 		testSuites:     make(map[string]bool),
 		testSuitesDir:  testSuitesDir,

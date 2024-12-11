@@ -16,8 +16,6 @@
 
 package globals
 
-import "time"
-
 const (
 	// metrics exporter default server port
 	AMDListenPort = 5000
@@ -34,44 +32,9 @@ const (
 
 	MetricsSocketPath = "/var/lib/amd-metrics-exporter/amdgpu_device_metrics_exporter_grpc.socket"
 
-	// rvs binary path
-	RVSPath = "/opt/rocm/bin/rvs"
-
-	// rocm-smi binary path
-	ROCmSMIPath = "/opt/rocm/bin/rocm-smi"
-
-	// gpu test runner configuration file path
-	AMDTestCaseDir = "/opt/rocm/share/rocm-validation-suite/conf/"
-
 	//PodResourceSocket - k8s pod grpc socket
 	PodResourceSocket = "/var/lib/kubelet/pod-resources/kubelet.sock"
 
 	// AMDGPUResourceLabel - k8s AMD gpu resource label
 	AMDGPUResourceLabel = "amd.com/gpu"
-
-	// AMDTestRunnerCfgPath path to the test runner config
-	AMDTestRunnerCfgPath = "/etc/test-runner/config.json"
-
-	LogPrefix = "test-runner "
-
-	GPUStateWatchFreq        = 30 * time.Second // frequency to watch GPU health state from exporter
-	GPUStateReqTimeout       = 10 * time.Second // timeout for gRPC request sending to exporter socket
-	GPUStateConnRetryFreq    = 5 * time.Second
-	GPUStateConnREtryTimeout = 60 * time.Second
-
-	DefaultRunnerLogPath = "/var/run/test-runner/test-runner.log"
-	DefaultResultLogDir  = "/var/run/test-runner/results/"
-	DefaultStatusDBPath  = "/var/run/test-runner/status.db"
-
-	// TODO: rvs is one of offical ROCm RVS test suite names
-	// revisit after deciding the pre-defined default test case
-	DefaultUnhealthyGPUTestName           = "rvs"
-	DefaultUnhealthyGPUTestIterations     = 1
-	DefaultUnhealthyGPUTestStopOnFailure  = true
-	DefaultUnhealthyGPUTestTimeoutSeconds = 600
-
-	DefaultPreJobCheckTestName           = "rvs"
-	DefaultPreJobCheckTestIterations     = 1
-	DefaultPreJobCheckTestStopOnFailure  = true
-	DefaultPreJobCheckTestTimeoutSeconds = 600
 )
