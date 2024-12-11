@@ -233,7 +233,7 @@ func main() {
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()
 
-	gpuclient := gpuagent.NewAgent(mh)
+	gpuclient := gpuagent.NewAgent(mh, true)
 	if err := gpuclient.Init(); err != nil {
 		logger.Log.Printf("gpuclient init err :%+v", err)
 	}

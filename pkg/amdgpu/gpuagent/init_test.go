@@ -118,11 +118,11 @@ func setupTest(t *testing.T) func(t *testing.T) {
 
 func getNewAgent(t *testing.T) *GPUAgentClient {
 	// setup zmq mock port
-	ga := NewAgent(mh)
+	ga := NewAgent(mh, true)
 	ga.initializeContext()
 	ga.gpuclient = gpuMockCl
 	ga.evtclient = eventMockCl
-	schedulerCl, err := initScheduler(ga.ctx)
+	schedulerCl, err := initScheduler(ga.ctx, ga.enableZmq)
 	assert.Assert(t, err == nil, "error creating new agent : %v", err)
 	ga.schedulerCl = schedulerCl
 	ga.isKubernetes = false
