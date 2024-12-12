@@ -77,7 +77,7 @@ func prettyPrintErrResponse(resp *metricssvc.GPUErrorResponse) {
 
 func send(socketPath string) error {
 	conn, err := grpc.Dial(
-		"unix:"+socketPath,
+		socketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
 	)
 	if err != nil {
@@ -99,7 +99,7 @@ func send(socketPath string) error {
 
 func get(socketPath, id string) error {
 	conn, err := grpc.Dial(
-		"unix:"+socketPath,
+		socketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
 	)
 	if err != nil {
@@ -132,7 +132,7 @@ func get(socketPath, id string) error {
 
 func sendTestResult(socketPath string) error {
 	conn, err := grpc.Dial(
-		"unix:"+socketPath,
+		socketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
 	)
 	if err != nil {
@@ -159,7 +159,7 @@ func sendTestResult(socketPath string) error {
 
 func listTestResult(socketPath string) error {
 	conn, err := grpc.Dial(
-		"unix:"+socketPath,
+		socketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
 	)
 	if err != nil {
@@ -196,7 +196,7 @@ func setError(socketPath, filepath string) error {
 	}
 
 	conn, err := grpc.Dial(
-		"unix:"+socketPath,
+		socketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // Use insecure credentials for simplicity
 	)
 	if err != nil {
@@ -217,18 +217,13 @@ func setError(socketPath, filepath string) error {
 	return nil
 }
 
-const (
-	PodResourceSocket  = "/var/lib/kubelet/pod-resources/kubelet.sock"
-	amdGpuResourceName = "amd.com/gpu"
-)
-
 func getPodResources() {
-	if _, err := os.Stat(PodResourceSocket); err != nil {
+	if _, err := os.Stat(globals.PodResourceSocket); err != nil {
 		fmt.Printf("no kubelet, %v", err)
 		return
 	}
 	client, err := grpc.NewClient(
-		"unix://"+PodResourceSocket,
+		"unix://"+globals.PodResourceSocket,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		fmt.Printf("kubelet socket error, %v", err)
@@ -248,7 +243,7 @@ func getPodResources() {
 	for _, pod := range resp.PodResources {
 		for _, container := range pod.Containers {
 			for _, devs := range container.GetDevices() {
-				if devs.ResourceName == amdGpuResourceName {
+				if devs.ResourceName == globals.AMDGPUResourceLabel {
 					for _, devId := range devs.DeviceIds {
 						fmt.Printf("dev:ns/pod/container [{%v}%v/%v/%v]\n",
 							devId, pod.Name, pod.Namespace, container.Name)
@@ -269,7 +264,7 @@ var jout = flag.Bool("json", false, "output in json format")
 
 func main() {
 	var (
-		socketPath   = flag.String("socket", globals.MetricsSocketPath, "metrics grpc socket path")
+		socketPath   = flag.String("socket", fmt.Sprintf("unix://%v", globals.MetricsSocketPath), "metrics grpc socket path")
 		getOpt       = flag.Bool("get", false, "get health status of gpu")
 		setId        = flag.String("id", "1", "gpu id")
 		getNodeLabel = flag.Bool("label", false, "get k8s node label")

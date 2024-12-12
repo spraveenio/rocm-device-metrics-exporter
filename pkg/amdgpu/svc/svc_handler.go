@@ -64,6 +64,10 @@ func (s *SvcHandler) Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen on port: %v", err)
 	}
+	// world readable socket
+	if err = os.Chmod(socketPath, 777); err != nil {
+		logger.Log.Printf("socket %v chmod to 777 failed, set it on host", socketPath)
+	}
 	logger.Log.Printf("Listening on socket %v", socketPath)
 
 	// server registration for grpc services

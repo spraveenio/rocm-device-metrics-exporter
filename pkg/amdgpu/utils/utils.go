@@ -57,6 +57,16 @@ func AddNodeHealthLabel(nodeLabels map[string]string, healthMap map[string]strin
 	}
 }
 
+func GetNodeName() string {
+	if os.Getenv("DS_NODE_NAME") != "" {
+		return os.Getenv("DS_NODE_NAME")
+	}
+	if os.Getenv("NODE_NAME") != "" {
+		return os.Getenv("NODE_NAME")
+	}
+	return ""
+}
+
 func IsKubernetes() bool {
 	if s := os.Getenv("KUBERNETES_SERVICE_HOST"); s != "" {
 		return true

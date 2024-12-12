@@ -188,21 +188,8 @@ func foreverWatcher() {
 	<-make(chan struct{})
 }
 
-func main() {
-	var (
-		metricsConfig = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
-		agentGrpcPort = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
-		versionOpt    = flag.Bool("version", false, "show version")
-	)
-	flag.Parse()
-
-	if *versionOpt {
-		fmt.Printf("Version : %v\n", Version)
-		fmt.Printf("BuildDate: %v\n", BuildDate)
-		fmt.Printf("GitCommit: %v\n", GitCommit)
-		os.Exit(0)
-	}
-
+// entryMain for exporter standalone
+func entryMain() {
 	logger.Init(utils.IsKubernetes())
 	defer func() {
 		if r := recover(); r != nil {
@@ -244,4 +231,23 @@ func main() {
 	svcHandler.RegisterHealthClient(gpuclient)
 
 	foreverWatcher()
+}
+
+var (
+	metricsConfig = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
+	agentGrpcPort = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
+	versionOpt    = flag.Bool("version", false, "show version")
+)
+
+func main() {
+	flag.Parse()
+
+	if *versionOpt {
+		fmt.Printf("Version : %v\n", Version)
+		fmt.Printf("BuildDate: %v\n", BuildDate)
+		fmt.Printf("GitCommit: %v\n", GitCommit)
+		os.Exit(0)
+	}
+
+	entryMain()
 }
