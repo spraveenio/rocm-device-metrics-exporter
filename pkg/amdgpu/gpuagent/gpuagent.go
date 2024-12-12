@@ -19,7 +19,6 @@ package gpuagent
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -170,7 +169,7 @@ func (ga *GPUAgentClient) sendNodeLabelUpdate() error {
 		return nil
 	}
 	// send update to label , reconnect logic tbd
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := utils.GetNodeName()
 	if nodeName == "" {
 		logger.Log.Printf("error getting node name on k8s deployment, skip label update")
 		return fmt.Errorf("node name not found")
