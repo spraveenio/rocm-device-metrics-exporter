@@ -65,7 +65,7 @@ spec:
             name: sys-volume
           - mountPath: /var/lib/kubelet/pod-resources
             name: pod-resources
-          - mountPath: /var/lib/amd-metrics-exporter
+          - mountPath: /var/lib/
             name: exporter-health-grpc-volume
           {{- if .Values.configMap }}
           - name: metrics-config-volume
@@ -90,7 +90,7 @@ spec:
           type: Directory
         name: pod-resources
       - hostPath:
-          path: /var/lib/amd-metrics-exporter
+          path: /var/lib/
           type: Directory
         name: exporter-health-grpc-volume
       {{- if .Values.configMap }}
