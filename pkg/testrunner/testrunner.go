@@ -31,11 +31,15 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
+	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
+	k8sclient "github.com/pensando/device-metrics-exporter/pkg/client"
 	testrunnerGen "github.com/pensando/device-metrics-exporter/pkg/testrunner/gen/testrunner"
 	types "github.com/pensando/device-metrics-exporter/pkg/testrunner/interface"
 )
@@ -49,7 +53,7 @@ var (
 		},
 		TestConfig: map[string]*testrunnerGen.TestCategoryConfig{
 			testrunnerGen.TestCategory_GPU_HEALTH_CHECK.String(): {
-				TestLocationTrigger: map[string]*testrunnerGen.TestLocationTrigger{
+				TestLocationTrigger: map[string]*testrunnerGen.TestTriggerConfig{
 					globals.GlobalTestTriggerKeyword: {
 						TestParameters: map[string]*testrunnerGen.TestParameters{
 							testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(): {
@@ -91,6 +95,7 @@ var (
 )
 
 type TestRunner struct {
+	hostName               string
 	rvsPath                string
 	rocmSMIPath            string
 	exporterSocketPath     string
@@ -100,6 +105,11 @@ type TestRunner struct {
 	rvsTestCaseDir         string
 	globalTestRunnerConfig *testrunnerGen.TestRunnerConfig
 	rvsTestRunner          types.TestRunner
+	// k8s related fields
+	isK8s           bool
+	k8sClient       *k8sclient.K8sClient
+	k8sPodName      string
+	k8sPodNamespace string
 }
 
 // initTestRunner init the test runner and related configs
@@ -118,7 +128,11 @@ func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, tes
 	runner.readTestRunnerConfig(testRunnerConfigPath)
 	runner.validateTestTrigger()
 	runner.initTestRunnerConfig()
-	logger.Log.Printf("Test runner config: %+v", runner.globalTestRunnerConfig)
+	if utils.IsKubernetes() {
+		runner.isK8s = true
+		runner.k8sClient = k8sclient.NewClient()
+	}
+	logger.Log.Printf("Test runner isKubernetes: %+v config: %+v", runner.isK8s, runner.globalTestRunnerConfig)
 	return runner
 }
 
@@ -142,6 +156,7 @@ func (tr *TestRunner) validateTestTrigger() {
 	if err != nil {
 		logger.Log.Printf("failed to get hostname, err: %+v", err)
 	}
+	tr.hostName = hostName
 	logger.Log.Printf("HostName: %v", hostName)
 	if categoryConfig.TestLocationTrigger == nil {
 		fmt.Printf("failed to find any global or host specific test config under category %+v: %+v\n", tr.testCategory, categoryConfig)
@@ -211,15 +226,15 @@ func (tr *TestRunner) readTestRunnerConfig(configPath string) {
 		logger.Log.Printf("cannot read provided test runner config at %+v, err: %+v, using default test runner config", configPath, err)
 		return
 	}
-	var config *testrunnerGen.TestRunnerConfig
-	err = json.Unmarshal(bytes, config)
+	var config testrunnerGen.TestRunnerConfig
+	err = json.Unmarshal(bytes, &config)
 	if err != nil {
 		tr.globalTestRunnerConfig = defaultGlobalTestRunnerConfig
 		tr.initLogger()
 		logger.Log.Printf("cannot read provided test runner config at %+v, err: %+v, using default test runner config", configPath, err)
 		return
 	}
-	tr.globalTestRunnerConfig = config
+	tr.globalTestRunnerConfig = &config
 	tr.initLogger()
 }
 
@@ -340,7 +355,7 @@ func (tr *TestRunner) watchGPUState(parameters *testrunnerGen.TestParameters) {
 			ids = append(ids, deviceID)
 		}
 		logger.Log.Printf("found GPU %+v with incomplete test before restart %+v, start to rerun test", ids, statusObj)
-		go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH, ids, parameters, true)
+		go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(), ids, parameters, true)
 	}
 
 	for {
@@ -377,7 +392,7 @@ func (tr *TestRunner) watchGPUState(parameters *testrunnerGen.TestParameters) {
 			// start test on unhealthy GPU
 			if len(unHealthyGPUIDs) > 0 {
 				logger.Log.Printf("found GPU with unhealthy state %+v", unHealthyGPUIDs)
-				go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH, unHealthyGPUIDs, parameters, false)
+				go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(), unHealthyGPUIDs, parameters, false)
 			} else {
 				logger.Log.Printf("all GPUs are healthy, skip testing")
 			}
@@ -385,7 +400,7 @@ func (tr *TestRunner) watchGPUState(parameters *testrunnerGen.TestParameters) {
 	}
 }
 
-func (tr *TestRunner) testGPU(trigger testrunnerGen.TestTrigger, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) {
+func (tr *TestRunner) testGPU(trigger string, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) {
 	// load ongoing test status
 	// avoid run multiple test on the same device
 	validIDs, statusObj := removeIDsWithExistingTest(trigger, tr.globalTestRunnerConfig.SystemConfig.StatusDBPath, ids, parameters, isRerun)
@@ -438,19 +453,21 @@ func (tr *TestRunner) testGPU(trigger testrunnerGen.TestTrigger, ids []string, p
 
 	select {
 	case <-time.After(time.Duration(parameters.TestCases[0].TimeoutSeconds) * time.Second):
-		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v timeout", trigger.String(), parameters.TestCases[0].Recipe, ids)
+		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v timeout", trigger, parameters.TestCases[0].Recipe, ids)
+		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String())
 	case <-handler.Done():
 		// TODO: this has to change later based on result logs parsing.
 		// for now updating same result in all GPU
 		result := handler.Result()
-		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v completed. Result: %v", trigger.String(), parameters.TestCases[0].Recipe, ids, result)
+		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v completed. Result: %v", trigger, parameters.TestCases[0].Recipe, ids, result)
 		// save log into gzip file
 		if stdout := handler.Stdout(); stdout != "" {
-			SaveTestResultToGz(stdout, GetLogFilePath(tr.globalTestRunnerConfig.SystemConfig.ResultLogDir, trigger.String(), parameters.TestCases[0].Recipe, "stdout"))
+			SaveTestResultToGz(stdout, GetLogFilePath(tr.globalTestRunnerConfig.SystemConfig.ResultLogDir, trigger, parameters.TestCases[0].Recipe, "stdout"))
 		}
 		if stderr := handler.Stderr(); stderr != "" {
-			SaveTestResultToGz(stderr, GetLogFilePath(tr.globalTestRunnerConfig.SystemConfig.ResultLogDir, trigger.String(), parameters.TestCases[0].Recipe, "stderr"))
+			SaveTestResultToGz(stderr, GetLogFilePath(tr.globalTestRunnerConfig.SystemConfig.ResultLogDir, trigger, parameters.TestCases[0].Recipe, "stderr"))
 		}
+		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String())
 	}
 
 	// remove the running test status from db
@@ -471,8 +488,85 @@ func (tr *TestRunner) manualTestGPU(parameters *testrunnerGen.TestParameters) {
 			ids = append(ids, deviceID)
 		}
 		logger.Log.Printf("found GPU %+v with incomplete test before restart %+v, start to rerun test", ids, statusObj)
-		tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH, ids, parameters, true)
+		tr.testGPU(tr.testTrigger, ids, parameters, true)
 	} else {
-		tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH, ids, parameters, false)
+		tr.testGPU(tr.testTrigger, ids, parameters, false)
 	}
+}
+
+func (tr *TestRunner) ReadPodInfo() {
+	if tr.k8sPodName == "" {
+		tr.k8sPodName = os.Getenv("POD_NAME")
+	}
+	if tr.k8sPodNamespace == "" {
+		tr.k8sPodNamespace = os.Getenv("POD_NAMESPACE")
+	}
+}
+
+func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string) {
+	if !tr.isK8s {
+		// return if it is not running in k8s cluster
+		return
+	}
+	msg := GetK8sEventMessage(tr.testCategory, tr.testTrigger, tr.hostName, testRecipe, reason)
+	tr.ReadPodInfo()
+	if tr.k8sPodName == "" || tr.k8sPodNamespace == "" {
+		logger.Log.Printf("failed to get pod name or pod namespace: name: %+v namespace: %+v, skip generating event for %+v", tr.k8sPodName, tr.k8sPodNamespace, msg)
+		return
+	}
+
+	// fetch existing event with the same test
+	// because the default k8s event schema requires to put a first time and last time when event was generated
+	evtName := GetEventName(tr.testCategory, tr.testTrigger, testRecipe)
+	evtObjMeta := &metav1.ObjectMeta{
+		Namespace: tr.k8sPodNamespace,
+		Name:      evtName,
+	}
+	currEvt, err := tr.k8sClient.GetEvent(evtObjMeta)
+	if err != nil || currEvt == nil {
+		if k8serrors.IsNotFound(err) {
+			// if there is no event exist, create a new one
+			evtObj := &v1.Event{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      evtName,
+					Namespace: tr.k8sPodNamespace,
+				},
+				FirstTimestamp: metav1.Time{
+					Time: time.Now().UTC(),
+				},
+				LastTimestamp: metav1.Time{
+					Time: time.Now().UTC(),
+				},
+				Count:   1,
+				Type:    evtType,
+				Reason:  reason,
+				Message: msg,
+				InvolvedObject: v1.ObjectReference{
+					Kind:      "Pod",
+					Namespace: tr.k8sPodNamespace,
+					Name:      tr.k8sPodName,
+				},
+				Source: v1.EventSource{
+					Host:      tr.hostName,
+					Component: globals.EventSourceComponentName,
+				},
+			}
+			// TODO: handle error for failing to generate event
+			tr.k8sClient.CreateEvent(evtObj)
+		} else {
+			logger.Log.Printf("failed to fetch event from k8s cluster, err: %+v", err)
+		}
+	} else {
+		// if there already exists event, patch the event with latest info
+		currEvt.LastTimestamp = metav1.Time{
+			Time: time.Now().UTC(),
+		}
+		currEvt.Count += 1
+		currEvt.Type = evtType
+		currEvt.Reason = reason
+		currEvt.Message = msg
+		// TODO: handle error for failing to update event
+		tr.k8sClient.UpdateEvent(currEvt)
+	}
+
 }

@@ -13,6 +13,6 @@ HOURLY_TAG_LABEL ?= latest
 .PHONY: docker
 docker:
 	@echo "building amd testrunner container"
-	@go build $(TOP_DIR)/cmd/testrunner/
-	@cp $(TOP_DIR)/cmd/testrunner/testrunner .
-	@docker build --build-arg BASE_IMAGE=registry.test.pensando.io:5000/ubuntu:22.04 -t ${IMG} . -f $(TOP_DIR)/docker/testrunner/Dockerfile
+	@cp $(TOP_DIR)/bin/amd-test-runner .
+	@docker build --build-arg BASE_IMAGE=registry.test.pensando.io:5000/ubi9/ubi:9.4 -t ${IMG} . -f $(TOP_DIR)/docker/testrunner/Dockerfile
+	@rm -rf $(TOP_DIR)/docker/testrunner/amd-test-runner

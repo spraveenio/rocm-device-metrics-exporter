@@ -37,15 +37,15 @@ GEN_DIR_TESTRUNNER := $(TOP_DIR)/pkg/testrunner/
 
 .PHONY: all
 all:
-	${MAKE} gen amdexporter metricutil
+	${MAKE} gen amdexporter metricutil amdtestrunner
 
 .PHONY: gen
-gen: gopkglist gen-testrunner
+gen: gopkglist gen-test-runner
 	@for c in ${TO_GEN}; do printf "\n+++++++++++++++++ Generating $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} GEN_DIR=$(GEN_DIR) || exit 1; done
 	@for c in ${TO_MOCK}; do printf "\n+++++++++++++++++ Generating mock $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} MOCK_DIR=$(MOCK_DIR) GEN_DIR=$(GEN_DIR) || exit 1; done
 
-.PHONY: gen-testrunner
-gen-testrunner:
+.PHONY: gen-test-runner
+gen-test-runner:
 	@for c in ${TO_GEN_TESTRUNNER}; do printf "\n+++++++++++++++++ Generating $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} GEN_DIR=$(GEN_DIR_TESTRUNNER) || exit 1; done
 
 .PHONY: pkg pkg-clean
@@ -137,6 +137,10 @@ amdexporter: metricsclient
 	@echo "building amd metrics exporter"
 	CGO_ENABLED=0 go build  -C cmd/exporter -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" -o $(CURDIR)/bin/amd-metrics-exporter
 
+amdtestrunner:
+	@echo "building amd test runner"
+	CGO_ENABLED=0 go build  -C cmd/testrunner -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" -o $(CURDIR)/bin/amd-test-runner
+
 metricutil:
 	@echo "building metrics util"
 	CGO_ENABLED=0 go build -C tools/metricutil -o $(CURDIR)/bin/metricutil
@@ -154,6 +158,10 @@ docker-cicd: gen amdexporter
 .PHONY: docker
 docker: gen amdexporter
 	${MAKE} -C docker TOP_DIR=$(CURDIR) MOCK=$(MOCK)
+
+.PHONY: docker-test-runner
+docker-test-runner: gen-test-runner amdtestrunner
+	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker
 
 .PHONY: docker-azure
 docker-azure: gen amdexporter

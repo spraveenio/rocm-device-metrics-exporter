@@ -26,10 +26,10 @@ import (
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/k8sclient"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
+	k8sclient "github.com/pensando/device-metrics-exporter/pkg/client"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

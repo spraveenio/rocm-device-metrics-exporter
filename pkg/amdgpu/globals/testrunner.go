@@ -19,7 +19,6 @@ package globals
 import "time"
 
 const (
-	// TestRunner related constants
 	DefaultTestCategory      = "GPU_HEALTH_CHECK"
 	DefaultTestTrigger       = "AUTO_UNHEALTHY_GPU_WATCH"
 	GlobalTestTriggerKeyword = "global"
@@ -61,4 +60,6 @@ const (
 	DefaultManualTestIterations           = 1
 	DefaultManualTestStopOnFailure        = true
 	DefaultManualTestTimeoutSeconds       = 600
+
+	EventSourceComponentName = "amd-test-runner"
 )

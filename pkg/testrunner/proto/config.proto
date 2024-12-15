@@ -31,11 +31,19 @@ enum TestTrigger {
     MANUAL                      = 2;
 }
 
+/// TestEventReason is the short string to represent the reason of raising event
+enum TestEventReason {
+    TestPassed                  = 0;
+    TestFailed                  = 1;
+    TestTimedOut                = 2;
+}
+
 // config specification of TestRunner
 message TestRunnerConfig {
     // TestRunner system config
     TestRunnerSysConfig                SystemConfig   = 1;
     // TestRunner test config
+    // key is test category and value is the struct for specific config
     map<string, TestCategoryConfig>    TestConfig     = 2;
 }
 
@@ -49,13 +57,17 @@ message TestRunnerSysConfig {
     string  StatusDBPath  = 3;
 }
 
-// Define global or node specific test config 
+// Test category's specific config
 message TestCategoryConfig {
-    map<string, TestLocationTrigger> TestLocationTrigger = 1;
+    // define global or node specific test config 
+    // key is global or hostname, value is the struct for specifc config
+    map<string, TestTriggerConfig> TestLocationTrigger = 1;
 }
 
-message TestLocationTrigger {
-    map<string, TestParameters>    TestParameters = 1;
+// Test trigger's specific config
+message TestTriggerConfig {
+    // key is test trigger name, value is TestParameters
+    map<string, TestParameters>    TestParameters     = 1;
 }
 
 message TestParameters {

@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
@@ -37,7 +38,13 @@ func ValidateArgs(testCategory, testTrigger, rvsPath, rocmSMIPath, testCaseDir, 
 	validateArgTrigger(testTrigger)
 	statOrExit(rvsPath, false)
 	statOrExit(rocmSMIPath, false)
-	statOrExit(exporterSocketPath, false)
+	switch testCategory {
+	case testrunnerGen.TestCategory_GPU_HEALTH_CHECK.String():
+		switch testTrigger {
+		case testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String():
+			statOrExit(exporterSocketPath, false)
+		}
+	}
 	statOrExit(testCaseDir, true)
 	dryRunBinary(rvsPath, "-g")     // run rvs to list GPU to make sure rvs is working
 	dryRunBinary(rocmSMIPath, "-i") // run rocm-smi to list GPU IDs to make sure GPU info is available
@@ -185,7 +192,7 @@ func GetGUIDFromIndex(index, rocmSMIPath string) (string, error) {
 	return "", fmt.Errorf("failed to GUID from 'rocm-smi -i --json' output: %+v", result)
 }
 
-func removeIDsWithExistingTest(trigger testrunnerGen.TestTrigger, statusDBPath string, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) ([]string, *testrunnerGen.TestRunnerStatus) {
+func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) ([]string, *testrunnerGen.TestRunnerStatus) {
 	// load ongoing test status
 	// avoid run multiple test on the same device
 	statusObj, err := LoadRunnerStatus(statusDBPath)
@@ -209,4 +216,16 @@ func removeIDsWithExistingTest(trigger testrunnerGen.TestTrigger, statusDBPath s
 		}
 	}
 	return validIDs, statusObj
+}
+
+func GetEventName(testCategory, testTrigger, testRecipe string) string {
+	return strings.ToLower("amd-test-runner-" + testCategory + "-" + testTrigger + "-" + testRecipe)
+}
+
+func GetK8sEventMessage(category, trigger, hostName, recipe, reason string) string {
+	switch category {
+	case testrunnerGen.TestCategory_GPU_HEALTH_CHECK.String():
+		return fmt.Sprintf("%v %v %v %v %v", category, trigger, hostName, recipe, reason)
+	}
+	return ""
 }
