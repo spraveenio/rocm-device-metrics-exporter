@@ -18,19 +18,17 @@ package k8sclient
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/logger"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/utils"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
 	//
 	// Uncomment to load all auth plugins
 	// _ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -41,14 +39,11 @@ import (
 
 type K8sClient struct {
 	sync.Mutex
-	ctx       context.Context
 	clientset *kubernetes.Clientset
 }
 
-func NewClient(ctx context.Context) *K8sClient {
-	return &K8sClient{
-		ctx: ctx,
-	}
+func NewClient() *K8sClient {
+	return &K8sClient{}
 }
 
 func (k *K8sClient) init() error {
@@ -82,7 +77,7 @@ func (k *K8sClient) CreateEvent(evtObj *v1.Event) error {
 	k.reConnect()
 	k.Lock()
 	defer k.Unlock()
-	ctx, cancel := context.WithCancel(k.ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	if evtObj == nil {
@@ -98,11 +93,53 @@ func (k *K8sClient) CreateEvent(evtObj *v1.Event) error {
 	return nil
 }
 
+func (k *K8sClient) GetEvent(evtObjMeta *metav1.ObjectMeta) (*v1.Event, error) {
+	k.reConnect()
+	k.Lock()
+	defer k.Unlock()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if evtObjMeta == nil {
+		logger.Log.Printf("k8s client got empty event object meta, unable to get event")
+		return nil, fmt.Errorf("k8s client got empty event object meta, unable to get event")
+	}
+
+	var err error
+	var evtObj *v1.Event
+	if evtObj, err = k.clientset.CoreV1().Events(evtObjMeta.Namespace).Get(ctx, evtObjMeta.Name, metav1.GetOptions{}); err != nil {
+		logger.Log.Printf("failed to get event %+v, err: %+v", evtObjMeta, err)
+		return nil, err
+	}
+
+	return evtObj, nil
+}
+
+func (k *K8sClient) UpdateEvent(evtObj *v1.Event) error {
+	k.reConnect()
+	k.Lock()
+	defer k.Unlock()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if evtObj == nil {
+		logger.Log.Printf("k8s client got empty event object, skip patching k8s event")
+		return fmt.Errorf("k8s client received empty event object")
+	}
+
+	if _, err := k.clientset.CoreV1().Events(evtObj.Namespace).Update(ctx, evtObj, metav1.UpdateOptions{}); err != nil {
+		logger.Log.Printf("failed to generate event %+v, err: %+v", evtObj, err)
+		return err
+	}
+
+	return nil
+}
+
 func (k *K8sClient) GetNodelLabel(nodeName string) (string, error) {
 	k.reConnect()
 	k.Lock()
 	defer k.Unlock()
-	ctx, cancel := context.WithCancel(k.ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	node, err := k.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -114,61 +151,12 @@ func (k *K8sClient) GetNodelLabel(nodeName string) (string, error) {
 	return fmt.Sprintf("%+v", node.Labels), nil
 }
 
-func (k *K8sClient) AddNodeLabel(nodeName, key, val string) error {
-	k.reConnect()
-	k.Lock()
-	defer k.Unlock()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	patch := []map[string]interface{}{
-		{
-			"op":    "add",
-			"path":  fmt.Sprintf("/metadata/labels/%v", key),
-			"value": val,
-		},
-	}
-	patchBytes, err := json.Marshal(patch)
-	if err != nil {
-		return fmt.Errorf("failed to marshal patch %v: %v", patch, err)
-	}
-	_, err = k.clientset.CoreV1().Nodes().Patch(ctx, nodeName, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
-	if err != nil {
-		logger.Log.Printf("failed to add label %+v to node %+v err %+v", key, nodeName, err)
-	}
-	return err
-}
-
-func (k *K8sClient) RemoveNodeLabel(nodeName, key string) error {
-	k.reConnect()
-	k.Lock()
-	defer k.Unlock()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	patch := []map[string]interface{}{
-		{
-			"op":   "remove",
-			"path": fmt.Sprintf("/metadata/labels/%v", key),
-		},
-	}
-	patchBytes, err := json.Marshal(patch)
-	if err != nil {
-		return fmt.Errorf("failed to marshal patch %v: %v", patch, err)
-	}
-	_, err = k.clientset.CoreV1().Nodes().Patch(ctx, nodeName, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
-	if err != nil {
-		logger.Log.Printf("failed to remove label %+v from node %+v err %+v", key, nodeName, err)
-	}
-	return err
-}
-
 func (k *K8sClient) UpdateHealthLabel(nodeName string, newHealthMap map[string]string) error {
 	k.reConnect()
 	k.Lock()
 	defer k.Unlock()
 
-	ctx, cancel := context.WithCancel(k.ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	node, err := k.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -187,6 +175,9 @@ func (k *K8sClient) UpdateHealthLabel(nodeName string, newHealthMap map[string]s
 	}
 	utils.RemoveNodeHealthLabel(node.Labels)
 	utils.AddNodeHealthLabel(node.Labels, newHealthMap)
+
+	//TODO : disable for azure image drop
+	// logger.Log.Printf("Updating node health labels %+v", node.Labels)
 
 	// Update the node
 	_, err = k.clientset.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})

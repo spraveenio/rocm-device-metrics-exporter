@@ -693,6 +693,7 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 			// exit on non-auto trigger's failure
 			tr.exitOnFailure()
 		}
+		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String())
 	}
 
 	statusObj, _ = LoadRunnerStatus(tr.statusDBPath)

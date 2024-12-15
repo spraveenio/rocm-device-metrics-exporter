@@ -346,6 +346,10 @@ docker-cicd: gen amdexporter
 	${MAKE} -C docker docker-cicd TOP_DIR=$(CURDIR)
 	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
 
+amdtestrunner:
+	@echo "building amd test runner"
+	CGO_ENABLED=0 go build  -C cmd/testrunner -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" -o $(CURDIR)/bin/amd-test-runner
+
 metricutil:
 	@echo "building metrics util"
 	CGO_ENABLED=0 go build -C tools/metricutil -o $(CURDIR)/bin/metricutil
@@ -364,6 +368,10 @@ docker-cicd: gen amdexporter
 docker: gen amdexporter
 	${MAKE} -C docker TOP_DIR=$(CURDIR)
 	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
+
+.PHONY: docker-test-runner
+docker-test-runner: gen-test-runner amdtestrunner
+	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker
 
 .PHONY: docker-azure
 docker-azure: gen amdexporter
