@@ -93,48 +93,6 @@ func (k *K8sClient) CreateEvent(evtObj *v1.Event) error {
 	return nil
 }
 
-func (k *K8sClient) GetEvent(evtObjMeta *metav1.ObjectMeta) (*v1.Event, error) {
-	k.reConnect()
-	k.Lock()
-	defer k.Unlock()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if evtObjMeta == nil {
-		logger.Log.Printf("k8s client got empty event object meta, unable to get event")
-		return nil, fmt.Errorf("k8s client got empty event object meta, unable to get event")
-	}
-
-	var err error
-	var evtObj *v1.Event
-	if evtObj, err = k.clientset.CoreV1().Events(evtObjMeta.Namespace).Get(ctx, evtObjMeta.Name, metav1.GetOptions{}); err != nil {
-		logger.Log.Printf("failed to get event %+v, err: %+v", evtObjMeta, err)
-		return nil, err
-	}
-
-	return evtObj, nil
-}
-
-func (k *K8sClient) UpdateEvent(evtObj *v1.Event) error {
-	k.reConnect()
-	k.Lock()
-	defer k.Unlock()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if evtObj == nil {
-		logger.Log.Printf("k8s client got empty event object, skip patching k8s event")
-		return fmt.Errorf("k8s client received empty event object")
-	}
-
-	if _, err := k.clientset.CoreV1().Events(evtObj.Namespace).Update(ctx, evtObj, metav1.UpdateOptions{}); err != nil {
-		logger.Log.Printf("failed to generate event %+v, err: %+v", evtObj, err)
-		return err
-	}
-
-	return nil
-}
-
 func (k *K8sClient) GetNodelLabel(nodeName string) (string, error) {
 	k.reConnect()
 	k.Lock()

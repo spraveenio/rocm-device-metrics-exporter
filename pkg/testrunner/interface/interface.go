@@ -43,7 +43,7 @@ type TestHandlerInterface interface {
 	GetLogFilePath() string
 
 	// Result
-	Result() map[string]TestResult
+	Result() map[string]map[string]TestResult
 
 	// Done signals test completion
 	Done() chan struct{}
@@ -79,6 +79,8 @@ const (
 	Skipped TestResult = "skipped"
 	// Cancelled represents test cancelled
 	Cancelled TestResult = "cancelled"
+	// Timedout represents test timedout
+	Timedout TestResult = "timedout"
 )
 
 // String convert command status into string

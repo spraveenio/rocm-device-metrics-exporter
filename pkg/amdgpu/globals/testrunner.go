@@ -53,6 +53,9 @@ const (
 	// RVS json log dir
 	RVSLogDir = "/var/tmp"
 
+	// RVS json log dir
+	RVSLogDir = "/var/tmp"
+
 	// TODO: rvs is one of offical ROCm RVS test suite names
 	// revisit after deciding the pre-defined default test case
 	DefaultUnhealthyGPUTestName           = "gst_single"

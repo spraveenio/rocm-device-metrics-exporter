@@ -238,7 +238,7 @@ func getGPUModelTestRecipeDir(rocmSMIPath string) (string, error) {
 func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) ([]string, *testrunnerGen.TestRunnerStatus) {
 	// load ongoing test status
 	// avoid run multiple test on the same device
-	statusObj, err := LoadRunnerStatus(statusDBPath)
+	statusObj, err := LoadRunnerStatus()
 	if err != nil {
 		logger.Log.Printf("failed to load test runner status %+v, err: %+v", statusDBPath, err)
 		if os.IsNotExist(err) {

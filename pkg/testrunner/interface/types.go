@@ -23,10 +23,15 @@ import (
 	"os/exec"
 	"sync"
 	"time"
+
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 )
 
 // DefaultTestTimeout is default test timeout
 const DefaultTestTimeout = 600 // 10 min
+
+// ResultParser is a generic function which can be used to develop parser for different test frameworks
+type ResultParser func(val string) (map[string]map[string]TestResult, error)
 
 // TOption fills the optional params for Test Handler
 type TOption func(*TestHandler)
@@ -45,6 +50,13 @@ func TestWithLogFilePath(logFilePath string) TOption {
 	}
 }
 
+// TestWithResultParser sets the Result parser
+func TestWithResultParser(parser ResultParser) TOption {
+	return func(th *TestHandler) {
+		th.parser = parser
+	}
+}
+
 // TestHandler runs a given test CLI
 type TestHandler struct {
 	testname    string
@@ -59,8 +71,9 @@ type TestHandler struct {
 	logger      *log.Logger
 	status      CommandStatus
 	rwLock      sync.RWMutex
-	result      map[string]TestResult // component id -> result
+	result      map[string]map[string]TestResult // gpuid -> test1 - pass, test2- fail
 	doneChan    chan struct{}
+	parser      ResultParser
 }
 
 // NewTestHandler returns instance of TestHandler
@@ -74,6 +87,7 @@ func NewTestHandler(testname string, logger *log.Logger, args []string, opts ...
 		status:   TestNotStarted,
 		rwLock:   sync.RWMutex{},
 		doneChan: make(chan struct{}),
+		parser:   defaultParser,
 	}
 
 	for _, o := range opts {
@@ -150,10 +164,18 @@ func (th *TestHandler) Status() CommandStatus {
 }
 
 // Result for the test
-func (th *TestHandler) Result() map[string]TestResult {
-	// TODO, set the result after parsing the logs
-	th.logger.Printf("stdout: %+v", th.stdout.String())
-	th.logger.Printf("stderr: %+v", th.stderr.String())
+func (th *TestHandler) Result() map[string]map[string]TestResult {
+	// If we have already parsed the result, no need to do it again
+	if th.result != nil {
+		return th.result
+	}
+	res, err := th.parser(th.stdout.String())
+	if err != nil {
+		logger.Log.Printf("error parsing test logs for %v err: %v", th.testname, err)
+		th.result = make(map[string]map[string]TestResult)
+	} else {
+		th.result = res
+	}
 	return th.result
 }
 
@@ -166,4 +188,10 @@ func (th *TestHandler) setStatus(status CommandStatus) {
 	th.rwLock.Lock()
 	defer th.rwLock.Unlock()
 	th.status = status
+}
+
+// defaultParser is default parser for test handler
+func defaultParser(val string) (map[string]map[string]TestResult, error) {
+	res := make(map[string]map[string]TestResult)
+	return res, nil
 }
