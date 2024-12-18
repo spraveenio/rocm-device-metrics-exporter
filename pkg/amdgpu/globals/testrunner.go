@@ -46,6 +46,9 @@ const (
 	DefaultResultLogDir  = "/var/run/test-runner/results/"
 	DefaultStatusDBPath  = "/var/run/test-runner/status.db"
 
+	// RVS json log dir
+	RVSLogDir = "/var/tmp"
+
 	// TODO: rvs is one of offical ROCm RVS test suite names
 	// revisit after deciding the pre-defined default test case
 	DefaultUnhealthyGPUTestName           = "mem"

@@ -49,12 +49,8 @@ message TestRunnerConfig {
 
 // system level config for TestRunner
 message TestRunnerSysConfig {
-    // Path to save TestRunner log
-    string  RunnerLogPath = 1;
     // Directory to save test result logs
-    string  ResultLogDir  = 2;
-    // Path to maintain a tiny db of TestRunner running status
-    string  StatusDBPath  = 3;
+    string  ResultLogDir  = 1;
 }
 
 // Test category's specific config
@@ -84,5 +80,5 @@ message TestParameter {
 // maintain a tiny db to record TestRunner running status
 message TestRunnerStatus {
     // key is GPU GUID and value is the test recipe name
-    map<string, string> RunningTest = 1;
+    map<string, string> TestStatus = 1;
 }

@@ -25,12 +25,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	testrunnerGen "github.com/pensando/device-metrics-exporter/pkg/testrunner/gen/testrunner"
+	types "github.com/pensando/device-metrics-exporter/pkg/testrunner/interface"
 )
+
+var statusDBLock sync.Mutex
 
 // ValidateArgs validate argument to make sure the mandatory tools/configs are available
 func ValidateArgs(testCategory, testTrigger, rvsPath, rocmSMIPath, testCaseDir, exporterSocketPath string) {
@@ -86,27 +92,31 @@ func statOrExit(path string, isFolder bool) {
 	}
 }
 
-func SaveRunnerStatus(statusObj *testrunnerGen.TestRunnerStatus, path string) error {
+func SaveRunnerStatus(statusObj *testrunnerGen.TestRunnerStatus) error {
+	statusDBLock.Lock()
+	defer statusDBLock.Unlock()
 	data, err := json.Marshal(statusObj)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(path, data, 0644)
+	err = os.WriteFile(globals.DefaultStatusDBPath, data, 0644)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func LoadRunnerStatus(path string) (*testrunnerGen.TestRunnerStatus, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
+func LoadRunnerStatus() (*testrunnerGen.TestRunnerStatus, error) {
+	statusDBLock.Lock()
+	defer statusDBLock.Unlock()
 	var status testrunnerGen.TestRunnerStatus
+	data, err := os.ReadFile(globals.DefaultStatusDBPath)
+	if err != nil {
+		return &status, err
+	}
 	err = json.Unmarshal(data, &status)
 	if err != nil {
-		return nil, err
+		return &status, err
 	}
 	return &status, nil
 }
@@ -195,7 +205,7 @@ func GetGUIDFromIndex(index, rocmSMIPath string) (string, error) {
 func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) ([]string, *testrunnerGen.TestRunnerStatus) {
 	// load ongoing test status
 	// avoid run multiple test on the same device
-	statusObj, err := LoadRunnerStatus(statusDBPath)
+	statusObj, err := LoadRunnerStatus()
 	if err != nil {
 		logger.Log.Printf("failed to load test runner status %+v, err: %+v", statusDBPath, err)
 		if os.IsNotExist(err) {
@@ -203,14 +213,15 @@ func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, param
 		}
 		// TODO: add more error handling when failed to load runner running status
 	}
-	if statusObj.RunningTest == nil {
-		statusObj.RunningTest = map[string]string{}
+	if statusObj == nil || statusObj.TestStatus == nil {
+		statusObj = &testrunnerGen.TestRunnerStatus{}
+		statusObj.TestStatus = map[string]string{}
 	}
 	validIDs := []string{}
 	for _, id := range ids {
-		if testName, ok := statusObj.RunningTest[id]; ok && !isRerun {
-			logger.Log.Printf("trigger %+v is trying to run test %+v on device %+v but found existing running test %+v, skip for now",
-				trigger, parameters.TestCases[0].Recipe, id, testName)
+		if testStatus, ok := statusObj.TestStatus[id]; ok && !isRerun {
+			logger.Log.Printf("trigger %+v is trying to run test %+v on device %+v but found existing running/completed test %+v, skip for now",
+				trigger, parameters.TestCases[0].Recipe, id, testStatus)
 		} else {
 			validIDs = append(validIDs, id)
 		}
@@ -219,13 +230,34 @@ func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, param
 }
 
 func GetEventName(testCategory, testTrigger, testRecipe string) string {
-	return strings.ToLower("amd-test-runner-" + testCategory + "-" + testTrigger + "-" + testRecipe)
+	return strings.ToLower("amd-test-runner-" + testCategory + "-" + testTrigger + "-" + testRecipe + "-")
 }
 
-func GetK8sEventMessage(category, trigger, hostName, recipe, reason string) string {
-	switch category {
-	case testrunnerGen.TestCategory_GPU_HEALTH_CHECK.String():
-		return fmt.Sprintf("%v %v %v %v %v", category, trigger, hostName, recipe, reason)
+// ExtractLogFile uses a simple regex to find the json log file path
+func ExtractLogFile(output string) (string, error) {
+	// Pattern: matches /var/tmp/<test_name>_<timestamp>.json
+	pattern := `/var/tmp/[^/]+_\d+\.json`
+
+	re := regexp.MustCompile(pattern)
+	match := re.FindString(output)
+
+	if match == "" {
+		return "", fmt.Errorf("log file path not found")
 	}
-	return ""
+
+	parts := strings.Split(match, "/")
+
+	// Last element is the filename
+	filename := parts[len(parts)-1]
+
+	return filename, nil
+}
+
+func BuildTimedoutTestSummary(ids []string) map[string]map[string]types.TestResult {
+	result := map[string]map[string]types.TestResult{}
+	for _, id := range ids {
+		result[id] = map[string]types.TestResult{}
+		result[id]["action"] = types.Timedout
+	}
+	return result
 }
