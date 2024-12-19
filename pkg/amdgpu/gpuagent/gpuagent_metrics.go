@@ -438,384 +438,447 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 		),
 		gpuPackagePower: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_package_power",
-			Help: "package power in Watts",
+			Help: "Current socker power in Watts",
 		},
 			labels),
 		gpuAvgPkgPower: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_average_package_power",
-			Help: "Average package power in Watts",
+			Help: "Average socket power in Watts",
 		},
 			labels),
 		gpuEdgeTemp: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_edge_temperature",
-			Help: "Current edge temperature in celsius",
+			Help: "Current edge temperature in Celsius",
 		},
 			labels),
 		gpuJunctionTemp: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_junction_temperature",
-			Help: "Current junction/hotspot temperature in celsius",
+			Help: "Current junction/hotspot temperature in Celsius",
 		},
 			labels),
 		gpuMemoryTemp: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_memory_temperature",
-			Help: "Current memory temperature in celsius",
+			Help: "Current memory temperature in Celsius",
 		},
 			labels),
 		gpuHBMTemp: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_hbm_temperature",
-			Help: "Current HBM temperature in celsius",
+			Help: "List of current HBM temperatures in Celsius",
 		},
 			append([]string{"hbm_index"}, labels...)),
 		gpuGFXActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_gfx_activity",
+			Help: "Graphics engine usage in Percentage (0-100)",
 		},
 			labels),
 		gpuUMCActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_umc_activity",
+			Help: "Memory engine usage in Percentage (0-100)",
 		},
 			labels),
 		gpuMMAActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_mma_activity",
-			Help: "usage of MultiMedia (MM) engine as a percentage",
+			Help: "Average MultiMedia (MM) engine usage in Percentage (0-100)",
 		},
 			labels),
 		gpuVCNActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_vcn_activity",
-			Help: "usage of Video Core Next (VCN) activity as a percentage",
+			Help: "List of Video Core Next (VCN) encoe/decode usage in percentage",
 		},
 			append([]string{"vcn_index"}, labels...)),
 		gpuJPEGActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_jpeg_activity",
+			Help: "List of JPEG engine usage in Percentage (0-100)",
 		},
 			append([]string{"jpeg_index"}, labels...)),
 		gpuVoltage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_voltage",
-			Help: "Current voltage draw in mV",
+			Help: "Current SoC voltage in mV",
 		},
 			labels),
 		gpuGFXVoltage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_gfx_voltage",
-			Help: "Current graphics voltage in mV",
+			Help: "Current gfx voltage in mV",
 		},
 			labels),
 		gpuMemVoltage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_memory_voltage",
-			Help: "current memory voltage in mV",
+			Help: "Current memory voltage in mV",
 		},
 			labels),
 		gpuPCIeSpeed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_speed",
-			Help: "current PCIe speed in GT/s",
+			Help: "Current PCIe speed in GT/s",
 		},
 			labels),
 		gpuPCIeMaxSpeed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_max_speed",
-			Help: "maximum PCIe speed in GT/s",
+			Help: "Maximum PCIe speed in GT/s",
 		},
 			labels),
 		gpuPCIeBandwidth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_bandwidth",
-			Help: "current PCIe bandwidth in Mb/s",
+			Help: "Current PCIe bandwidth in Mb/s",
 		},
 			labels),
 		gpuEnergyConsumed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_energy_consumed",
-			Help: "accumulated energy consumed in uJ",
+			Help: "Accumulated energy consumed by the GPU in uJ",
 		},
 			labels),
 		gpuPCIeReplayCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_replay_count",
+			Help: "Total number of PCIe replays",
 		},
 			labels),
 		gpuPCIeRecoveryCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_recovery_count",
+			Help: "Total number of PCIe recoveries",
 		},
 			labels),
 		gpuPCIeReplayRolloverCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_replay_rollover_count",
+			Help: "PCIe replay accumulated count",
 		},
 			labels),
 		gpuPCIeNACKSentCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_nack_sent_count",
+			Help: "PCIe NAK sent accumulated count",
 		},
 			labels),
 		gpuPCIeNACKReceivedCount: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_nack_received_count",
+			Help: "PCIe NAK received accumulated count",
 		},
 			labels),
 		gpuClock: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_clock",
-			Help: "current GPU clock frequency in MHz",
+			Help: "List of current GPU clock frequencies in MHz",
 		},
 			append([]string{"clock_index", "clock_type"}, labels...)),
 		gpuPowerUsage: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_power_usage",
-			Help: "power usage in Watts",
+			Help: "GPU Power usage in Watts",
 		},
 			labels),
 		gpuTotalVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_total_vram",
-			Help: "total VRAM of the GPU (in MB)",
+			Help: "Total VRAM memory of the GPU (in MB)",
 		},
 			labels),
 		gpuUsedVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_used_vram",
-			Help: "used VRAM of the GPU (in MB)",
+			Help: "Used VRAM memory of the GPU (in MB)",
 		},
 			labels),
 		gpuFreeVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_free_vram",
-			Help: "free VRAM memory of the GPU (in MB)",
+			Help: "Free VRAM memory of the GPU (in MB)",
 		},
 			labels),
 		gpuTotalVisibleVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_total_visible_vram",
-			Help: "total visible VRAM of the GPU (in MB)",
+			Help: "Total visible VRAM memory of the GPU (in MB)",
 		},
 			labels),
 		gpuUsedVisibleVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_used_visible_vram",
-			Help: "used visible VRAM of the GPU (in MB)",
+			Help: "Used visible VRAM memory of the GPU (in MB)",
 		},
 			labels),
 		gpuFreeVisibleVram: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_free_visible_vram",
-			Help: "free visible VRAM of the GPU (in MB)",
+			Help: "Free visible VRAM memory of the GPU (in MB)",
 		},
 			labels),
 		gpuTotalGTT: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_total_gtt",
-			Help: "total graphics translation table of the GPU (in MB)",
+			Help: "Total graphics translation table memory of the GPU (in MB)",
 		},
 			labels),
 		gpuUsedGTT: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_used_gtt",
-			Help: "used graphics translation table of the GPU (in MB)",
+			Help: "Used graphics translation table memory of the GPU (in MB)",
 		},
 			labels),
 		gpuFreeGTT: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_free_gtt",
-			Help: "total graphics translation table of the GPU (in MB)",
+			Help: "Free graphics translation table memory of the GPU (in MB)",
 		},
 			labels),
 		gpuEccCorrectTotal: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_total",
+			Help: "Total Correctable error count",
 		},
 			labels),
 		gpuEccUncorrectTotal: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_total",
+			Help: "Total Uncorrectable error count",
 		},
 			labels),
 		gpuEccCorrectSDMA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_sdma",
+			Help: "Correctable error count in SDMA block",
 		},
 			labels),
 		gpuEccUncorrectSDMA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_sdma",
+			Help: "Uncorrectable error count in SDMA block",
 		},
 			labels),
 		gpuEccCorrectGFX: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_gfx",
+			Help: "Correctable error count in GFX block",
 		},
 			labels),
 		gpuEccUncorrectGFX: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_gfx",
+			Help: "Uncorrectable error count in GFX block",
 		},
 			labels),
 		gpuEccCorrectMMHUB: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_mmhub",
+			Help: "Correctable error count in MMHUB block",
 		},
 			labels),
 		gpuEccUncorrectMMHUB: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_mmhub",
+			Help: "Uncorrectable error count in MMHUB block",
 		},
 			labels),
 		gpuEccCorrectATHUB: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_athub",
+			Help: "Correctable error count in ATHUB block",
 		},
 			labels),
 		gpuEccUncorrectATHUB: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_athub",
+			Help: "Uncorrectable error count in ATHUB block",
 		},
 			labels),
 		gpuEccCorrectBIF: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_bif",
+			Help: "Correctable error count in BIF block",
 		},
 			labels),
 		gpuEccUncorrectBIF: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_bif",
+			Help: "Uncorrectable error count in BIF block",
 		},
 			labels),
 		gpuEccCorrectHDP: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_hdp",
+			Help: "Correctable error count in HDP block",
 		},
 			labels),
 		gpuEccUncorrectHDP: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_hdp",
+			Help: "Uncorrectable error count in HDP block",
 		},
 			labels),
 		gpuEccCorrectXgmiWAFL: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_xgmi_wafl",
+			Help: "Correctable error count in WAFL block",
 		},
 			labels),
 		gpuEccUncorrectXgmiWAFL: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_xgmi_wafl",
+			Help: "Uncorrectable error count in WAFL block",
 		},
 			labels),
 		gpuEccCorrectDF: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_df",
+			Help: "Correctable error count in DF block",
 		},
 			labels),
 		gpuEccUncorrectDF: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_df",
+			Help: "Uncorrectable error count in DF block",
 		},
 			labels),
 		gpuEccCorrectSMN: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_smn",
+			Help: "Correctable error count in SMN block",
 		},
 			labels),
 		gpuEccUncorrectSMN: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_smn",
+			Help: "Uncorrectable error count in SMN block",
 		},
 			labels),
 		gpuEccCorrectSEM: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_sem",
+			Help: "Correctable error count in SEM block",
 		},
 			labels),
 		gpuEccUncorrectSEM: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_sem",
+			Help: "Uncorrectable error count in SEM block",
 		},
 			labels),
 		gpuEccCorrectMP0: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_mp0",
+			Help: "Correctable error count in MP0 block",
 		},
 			labels),
 		gpuEccUncorrectMP0: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_mp0",
+			Help: "Uncorrectable error count in MP0 block",
 		},
 			labels),
 		gpuEccCorrectMP1: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_mp1",
+			Help: "Correctable error count in MP1 block",
 		},
 			labels),
 		gpuEccUncorrectMP1: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_mp1",
+			Help: "Uncorrectable error count in MP1 block",
 		},
 			labels),
 		gpuEccCorrectFUSE: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_fuse",
+			Help: "Correctable error count in Fuse block",
 		},
 			labels),
 		gpuEccUncorrectFUSE: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_fuse",
+			Help: "Uncorrectable error count in Fuse block",
 		},
 			labels),
 		gpuEccCorrectUMC: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_umc",
+			Help: "Correctable error count in UMC block",
 		},
 			labels),
 		gpuEccUncorrectUMC: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_umc",
+			Help: "Uncorrectable error count in UMC block",
 		},
 			labels),
 		xgmiNbrNopTx0: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_0_nop_tx",
+			Help: "NOPs sent to neighbor 0",
 		},
 			labels),
 		xgmiNbrNopTx1: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_1_nop_tx",
+			Help: "NOPs sent to neighbor 1",
 		},
 			labels),
 		xgmiNbrReqTx0: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_0_request_tx",
+			Help: "Outgoing requests to neighbor 0",
 		},
 			labels),
 		xgmiNbrReqTx1: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_1_request_tx",
+			Help: "Outgoing requests to neighbor 1",
 		},
 			labels),
 		xgmiNbrRespTx0: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_0_response_tx",
+			Help: "Outgoing responses to neighbor 0",
 		},
 			labels),
 		xgmiNbrRespTx1: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_1_response_tx",
+			Help: "Outgoing responses to neighbor 1",
 		},
 			labels),
 		xgmiNbrBeatsTx0: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_0_beats_tx",
+			Help: "Data beats sent to neighbor 0; Each beat represents 32 bytes",
 		},
 			labels),
 		xgmiNbrBeatsTx1: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_1_beats_tx",
+			Help: "Data beats sent to neighbor 1; Each beat represents 32 bytes",
 		},
 			labels),
 		xgmiNbrTxTput0: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_0_tx_throughput",
+			Help: "Represents the number of outbound beats (each representing 32 bytes) on link 0; Throughput = BEATS/time_running * 10^9  bytes/sec",
 		},
 			labels),
 		xgmiNbrTxTput1: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_1_tx_throughput",
+			Help: "Represents the number of outbound beats (each representing 32 bytes) on link 1; Throughput = BEATS/time_running * 10^9  bytes/sec",
 		},
 			labels),
 		xgmiNbrTxTput2: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_2_tx_throughput",
+			Help: "Represents the number of outbound beats (each representing 32 bytes) on link 2; Throughput = BEATS/time_running * 10^9  bytes/sec",
 		},
 			labels),
 		xgmiNbrTxTput3: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_3_tx_throughput",
+			Help: "Represents the number of outbound beats (each representing 32 bytes) on link 3; Throughput = BEATS/time_running * 10^9  bytes/sec",
 		},
 			labels),
 		xgmiNbrTxTput4: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_4_tx_throughput",
+			Help: "Represents the number of outbound beats (each representing 32 bytes) on link 4; Throughput = BEATS/time_running * 10^9  bytes/sec",
 		},
 			labels),
 		xgmiNbrTxTput5: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "xgmi_neighbor_5_tx_throughput",
+			Help: "Represents the number of outbound beats (each representing 32 bytes) on link 5; Throughput = BEATS/time_running * 10^9  bytes/sec",
 		},
 			labels),
 		gpuEccCorrectMCA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_mca",
+			Help: "Correctable error count in MCA block",
 		},
 			labels),
 		gpuEccUncorrectMCA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_mca",
+			Help: "Uncorrectable error count in MCA block",
 		},
 			labels),
 		gpuEccCorrectVCN: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_vcn",
+			Help: "Correctable error count in VCN block",
 		},
 			labels),
 		gpuEccUncorrectVCN: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_vcn",
+			Help: "Uncorrectable error count in VCN block",
 		},
 			labels),
 		gpuEccCorrectJPEG: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_jpeg",
+			Help: "Correctable error count in JPEG block",
 		},
 			labels),
 		gpuEccUncorrectJPEG: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_jpeg",
+			Help: "Uncorrectable error count in JPEG block",
 		},
 			labels),
 		gpuEccCorrectIH: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_ih",
+			Help: "Correctable error count in IH block",
 		},
 			labels),
 		gpuEccUncorrectIH: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_ih",
+			Help: "Uncorrectable error count in IH block",
 		},
 			labels),
 		gpuEccCorrectMPIO: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_correct_mpio",
+			Help: "Correctable error count in MPIO block",
 		},
 			labels),
 		gpuEccUncorrectMPIO: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_mpio",
+			Help: "Uncorrectable error count in MPIO block",
 		},
 			labels),
 		gpuHealth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_health",
+			Help: "Health of the GPU (0 = Unhealthy | 1 = Healthy)",
 		},
 			labels),
 	}
@@ -1003,7 +1066,7 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(wls map[string]interface{}, gpu
 	ga.m.gpuAvgPkgPower.With(labels).Set(normalizeUint64(stats.AvgPackagePower))
 
 	// export health state only if available
-    gpuid := fmt.Sprintf("%v", getGPUInstanceID(gpu))
+	gpuid := fmt.Sprintf("%v", getGPUInstanceID(gpu))
 	if hstate, ok := ga.healthState[gpuid]; ok {
 		if hstate.Health == strings.ToLower(metricssvc.GPUHealth_HEALTHY.String()) {
 			ga.m.gpuHealth.With(labels).Set(1)
