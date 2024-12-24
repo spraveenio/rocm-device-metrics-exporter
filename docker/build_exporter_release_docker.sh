@@ -73,9 +73,9 @@ mkdir -p $IMAGE_DIR
 # create symlinks for gpuagent and gpuctl binaries and librocm_smi64.so.2 in the
 # docker directory so that they can be added to the container
 if [ "$MOCK" == "1" ]; then
-    gunzip -c $TOP_DIR/assets/gpuagent_mock.bin.gz > $TOP_DIR/docker/gpuagent
+    tar -xf $TOP_DIR/assets/gpuagent_mock.bin.gz -C $TOP_DIR/docker/
 else
-    gunzip -c $TOP_DIR/assets/gpuagent_static.bin.gz > $TOP_DIR/docker/gpuagent
+    tar -xf $TOP_DIR/assets/gpuagent_static.bin.gz -C $TOP_DIR/docker/
 fi
 chmod +x $TOP_DIR/docker/gpuagent
 cp -r $TOP_DIR/assets/amd_smi_lib/x86_64/lib $TOP_DIR/docker/smilib

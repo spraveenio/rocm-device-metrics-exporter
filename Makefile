@@ -62,7 +62,7 @@ pkg: pkg-clean
 	cp -rvf ${THIRDPARTY_LIBS}/ ${PKG_LIB_PATH}
 	#copy and strip files
 	mkdir -p ${PKG_PATH}
-	gunzip -c ${ASSETS_PATH}/gpuagent_static.bin.gz > ${PKG_PATH}/gpuagent
+	tar -xf ${ASSETS_PATH}/gpuagent_static.bin.gz -C ${PKG_PATH}/
 	chmod +x ${PKG_PATH}/gpuagent
 	ls -alsh ${PKG_PATH}/gpuagent
 	#strip prebuilt binaries
