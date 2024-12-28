@@ -216,7 +216,7 @@ e2e:
 
 .PHOHY: k8s-e2e
 k8s-e2e:
-	PATH=$$PATH KUBECONFIG=$$KUBECONFIG TOP_DIR=$(TOP_DIR) $(MAKE) -C test/k8s-e2e all
+	TOP_DIR=$(CURDIR) $(MAKE) -C test/k8s-e2e
 
 .PHONY: helm-lint
 helm-lint:

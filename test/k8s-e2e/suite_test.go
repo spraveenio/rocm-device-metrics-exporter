@@ -75,6 +75,8 @@ func (s *E2ESuite) SetUpSuite(c *C) {
 	assert.NoError(c, err)
 
 	s.k8sclient = cs
+	//cleanup namespace if exists before creating
+	_ = s.k8sclient.DeleteNamespace(ctx, s.ns)
 	// create namespace for test
 	err = s.k8sclient.CreateNamespace(ctx, s.ns)
 	assert.NoError(c, err)

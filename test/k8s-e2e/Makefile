@@ -1,15 +1,16 @@
 .DEFAULT: all
 .PHONY: all lint
 
-TEST_ARGS = ""
+TEST_ARGS :=
+# define custom kubeconfig file path below. default will be $(HOME)/.kube/config
+KUBECONFIG :=
+
+ifdef KUBECONFIG
+	TEST_ARGS += -kubeconfig=$(KUBECONFIG)
+endif
 
 all:
-	@if [ -z ${KUBECONFIG} ]; then \
-		TEST_ARGS += "-kubeconfig $(KUBECONFIG) " \
-		go test -failfast -helmchart $(TOP_DIR)/helm-charts/ -test.timeout=30m -v $(TEST_ARGS); \
-	else \
-		go test -failfast -helmchart $(TOP_DIR)/helm-charts/ -test.timeout=30m -v ; \
-	fi
+	go test -failfast -helmchart $(TOP_DIR)/helm-charts/ -test.timeout=30m -v $(TEST_ARGS); 
 
 lint:
 	@go fmt ./...
