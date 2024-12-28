@@ -42,6 +42,10 @@ DOCKER_REGISTRY="registry.test.pensando.io:5000/device-metrics-exporter/"
 #TODO : rename to official exporter later
 EXPORTER_IMAGE="exporter"
 
+if [ "$MOCK" == "1" ]; then
+	EXPORTER_IMAGE="exporter-mock"
+fi
+
 IMAGE_URL="${DOCKER_REGISTRY}${EXPORTER_IMAGE}:${VER}"
 
 while getopts ":h:sn:p" option; do
