@@ -21,8 +21,8 @@ import (
 	"flag"
 	"log"
 	"path/filepath"
-
 	"testing"
+	"time"
 
 	"github.com/pensando/device-metrics-exporter/test/k8s-e2e/clients"
 	"github.com/stretchr/testify/assert"
@@ -76,7 +76,11 @@ func (s *E2ESuite) SetUpSuite(c *C) {
 
 	s.k8sclient = cs
 	//cleanup namespace if exists before creating
-	_ = s.k8sclient.DeleteNamespace(ctx, s.ns)
+	err = s.k8sclient.DeleteNamespace(ctx, s.ns)
+	if err == nil {
+		log.Print("Waiting for namespace cleanup")
+		time.Sleep(100 * time.Second)
+	}
 	// create namespace for test
 	err = s.k8sclient.CreateNamespace(ctx, s.ns)
 	assert.NoError(c, err)

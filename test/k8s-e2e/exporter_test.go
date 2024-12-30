@@ -215,7 +215,63 @@ func (s *E2ESuite) Test006VerifyNodeHealthyLabel(c *C) {
 	assert.True(c, len(nodes) > 0, "expected healthy gpu 0 but got unhealthy")
 }
 
-func (s *E2ESuite) Test007HelmUninstall(c *C) {
+func (s *E2ESuite) Test007MarkAndVerifyGPUUnhealthyLabel(c *C) {
+	ctx := context.Background()
+	log.Print("Marking gpu 0 as unhealthy using metricsclient tool")
+	cmd := `echo "{\"ID\": \"0\",\"Fields\": [\"GPU_ECC_UNCORRECT_SEM\",\"GPU_ECC_UNCORRECT_FUSE\"],\"Counts\" : [1, 2]}" > /tmp/ecc.json`
+	_, err := s.k8sclient.ExecCmdOnPod(ctx, s.restConfig, exporterPod, "amdgpu-metrics-exporter-container", cmd)
+	if err != nil {
+		assert.Fail(c, err.Error())
+		return
+	}
+	cmd1 := "metricsclient -ecc-file-path /tmp/ecc.json"
+	_, err = s.k8sclient.ExecCmdOnPod(ctx, s.restConfig, exporterPod, "amdgpu-metrics-exporter-container", cmd1)
+	if err != nil {
+		assert.Fail(c, err.Error())
+		return
+	}
+	labelMap := make(map[string]string)
+	labelMap["amdgpu.exporter.gpu.0.state"] = "unhealthy"
+	log.Print("Verifying unhealthy label on the node(s)")
+	assert.Eventually(c, func() bool {
+		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
+		if err != nil || len(nodes) == 0 {
+			return false
+		}
+		log.Printf("Got %d nodes with unhealthy label", len(nodes))
+		return true
+	}, 90*time.Second, 10*time.Second, "expected gpu 0 to become unhealthy but got healthy")
+}
+
+func (s *E2ESuite) Test008MarkAndVerifyGPUHealthyLabel(c *C) {
+	ctx := context.Background()
+	log.Print("Marking gpu 0 back as healthy using metricsclient tool")
+	cmd := `echo "{\"ID\": \"0\",\"Fields\": [\"GPU_ECC_UNCORRECT_SEM\",\"GPU_ECC_UNCORRECT_FUSE\"],\"Counts\" : [0, 0]}" > /tmp/ecc.json`
+	_, err := s.k8sclient.ExecCmdOnPod(ctx, s.restConfig, exporterPod, "amdgpu-metrics-exporter-container", cmd)
+	if err != nil {
+		assert.Fail(c, err.Error())
+		return
+	}
+	cmd1 := "metricsclient -ecc-file-path /tmp/ecc.json"
+	_, err = s.k8sclient.ExecCmdOnPod(ctx, s.restConfig, exporterPod, "amdgpu-metrics-exporter-container", cmd1)
+	if err != nil {
+		assert.Fail(c, err.Error())
+		return
+	}
+	labelMap := make(map[string]string)
+	labelMap["amdgpu.exporter.gpu.0.state"] = "healthy"
+	log.Print("Verifying healthy label on the node(s)")
+	assert.Eventually(c, func() bool {
+		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
+		if err != nil || len(nodes) == 0 {
+			return false
+		}
+		log.Printf("Got %d nodes with healthy label", len(nodes))
+		return true
+	}, 90*time.Second, 10*time.Second, "expected gpu 0 to become healthy but got unhealthy")
+}
+
+func (s *E2ESuite) Test009HelmUninstall(c *C) {
 	err := s.helmClient.UninstallChart()
 	if err != nil {
 		assert.Fail(c, err.Error())
@@ -229,7 +285,7 @@ func (s *E2ESuite) Test007HelmUninstall(c *C) {
 	}
 }
 
-func (s *E2ESuite) Test008SecondDeplymentNoConfigMap(c *C) {
+func (s *E2ESuite) Test010SecondDeplymentNoConfigMap(c *C) {
 	ctx := context.Background()
 	log.Print("Testing helm install for exporter")
 	values := []string{
@@ -273,7 +329,7 @@ func (s *E2ESuite) Test008SecondDeplymentNoConfigMap(c *C) {
 	}, 10*time.Second, 1*time.Second)
 }
 
-func (s *E2ESuite) Test009MetricsServer(c *C) {
+func (s *E2ESuite) Test011MetricsServer(c *C) {
 	ctx := context.Background()
 	log.Print("Test noconfigmap metrics server is responding")
 	assert.Eventually(c, func() bool {
@@ -287,7 +343,7 @@ func (s *E2ESuite) Test009MetricsServer(c *C) {
 	}, 50*time.Second, 10*time.Second)
 }
 
-func (s *E2ESuite) Test010HelmUninstall(c *C) {
+func (s *E2ESuite) Test012HelmUninstall(c *C) {
 	err := s.helmClient.UninstallChart()
 	if err != nil {
 		assert.Fail(c, err.Error())

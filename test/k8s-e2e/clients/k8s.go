@@ -226,3 +226,32 @@ func (k *K8sClient) UpdateConfigMap(ctx context.Context, namespace string, name 
 func (k *K8sClient) DeleteConfigMap(ctx context.Context, namespace string, name string) error {
 	return k.client.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
+
+func (k *K8sClient) ExecCmdOnPod(ctx context.Context, rc *restclient.Config, pod *corev1.Pod, container, execCmd string) (string, error) {
+	if pod == nil {
+		return "", fmt.Errorf("No pod specified")
+	}
+	req := k.client.CoreV1().RESTClient().Post().Resource("pods").Name(pod.Name).Namespace(pod.Namespace).SubResource("exec")
+	req.VersionedParams(&corev1.PodExecOptions{
+		Container: container,
+		Command:   []string{"/bin/sh", "-c", execCmd},
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    false,
+		TTY:       false,
+	}, scheme.ParameterCodec)
+	executor, err := remotecommand.NewSPDYExecutor(rc, "POST", req.URL())
+	if err != nil {
+		return "", fmt.Errorf("failed to create command executor. Error:%v", err)
+	}
+	buf := &bytes.Buffer{}
+	err = executor.StreamWithContext(context.Background(), remotecommand.StreamOptions{
+		Stdout: buf,
+		Tty:    false,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to run command on pod %v. Error:%v", pod.Name, err)
+	}
+
+	return buf.String(), nil
+}
