@@ -1,9 +1,10 @@
-internal testing tool usage and notes
+## internal testing tool usage and notes
 
-exporter is packed with basic set of tools for debugging and testing some of
-the workflows mocking data
+exporter is packed with `metricsclient` for debugging and testing some of
+the workflows with mocking support
 
-#metricsclient -h
+```
+$ metricsclient -h
 Usage of metricsclient:
   -ecc-file-path string
         json ecc err file
@@ -19,21 +20,22 @@ Usage of metricsclient:
         metrics grpc socket path (default
         "/sockets/amdgpu_device_metrics_exporter_grpc.socket")
 
-===========================================================================
-1. list health status of gpus reported by the exporter
+```
+1. Show GPU Health
 
+```
 [root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]# metricsclient
 ID      Health  Associated Workload
 ------------------------------------------------
 0       healthy []
 ------------------------------------------------
-[root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]#
-===========================================================================
+```
 
-2. To simulate ecc error create a json file of the below format with gpu id, the
+2. Inject Mock ECC Error
+   To simulate ecc error create a json file of the below format with gpu id, the
    fields set to ecc fields and counts to respective fields to be updated and issue the below command. 
-  This will print the previous reported health status of the exporter and set of counters mocked
-
+   This will print the previous reported health status of the exporter and set of counters mocked
+```
 [root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]# cat ecc.json
 {
         "ID": "0",
@@ -52,10 +54,10 @@ ID      Health  Associated Workload
 0       healthy []
 ------------------------------------------------
 {"ID":"0","Fields":["GPU_ECC_UNCORRECT_SEM","GPU_ECC_UNCORRECT_FUSE"]}
-[root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]#
-
-3. To remove mock fields set the respective field count values to 0 on the json file
-
+```
+3. Remove ECC Mock Error
+   To remove mock fields set the respective field count values to 0 on the json file
+```
 [root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]# cat ecc_delete.json
 {
         "ID": "0",
@@ -73,7 +75,7 @@ ID      Health  Associated Workload
 0       unhealthy       []
 ------------------------------------------------
 {"ID":"0","Fields":["GPU_ECC_UNCORRECT_SEM","GPU_ECC_UNCORRECT_FUSE"]}
-[root@e2e-test-k8s-amdgpu-metrics-exporter-n8lvh ~]#
+```
 
 
 
