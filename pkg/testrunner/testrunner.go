@@ -45,9 +45,6 @@ import (
 
 var (
 	defaultGlobalTestRunnerConfig = &testrunnerGen.TestRunnerConfig{
-		SystemConfig: &testrunnerGen.TestRunnerSysConfig{
-			ResultLogDir: globals.DefaultResultLogDir,
-		},
 		TestConfig: map[string]*testrunnerGen.TestCategoryConfig{
 			testrunnerGen.TestCategory_GPU_HEALTH_CHECK.String(): {
 				TestLocationTrigger: map[string]*testrunnerGen.TestTriggerConfig{
@@ -100,6 +97,9 @@ type TestRunner struct {
 	testLocation           string
 	testTrigger            string
 	rvsTestCaseDir         string
+	testRunnerDir          string
+	resultLogDir           string
+	statusDBPath           string
 	globalTestRunnerConfig *testrunnerGen.TestRunnerConfig
 	rvsTestRunner          types.TestRunner
 	// k8s related fields
@@ -111,7 +111,7 @@ type TestRunner struct {
 
 // initTestRunner init the test runner and related configs
 // return the test location, either global or specific host name
-func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, testRunnerConfigPath, testCategory, testTrigger string) *TestRunner {
+func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, testRunnerConfigPath, testCategory, testTrigger, statusDBDir, resultLogDir string) *TestRunner {
 	runner := &TestRunner{
 		rvsPath:            rvsPath,
 		rocmSMIPath:        rocmSMIPath,
@@ -119,6 +119,8 @@ func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, tes
 		testCategory:       testCategory,
 		testTrigger:        testTrigger,
 		rvsTestCaseDir:     rvsTestCaseDir,
+		testRunnerDir:      statusDBDir,
+		resultLogDir:       resultLogDir,
 	}
 	// init test runner config
 	// testRunnerConfigPath file existence has been verified
@@ -201,8 +203,8 @@ func (tr *TestRunner) validateTestTrigger() {
 }
 
 func (tr *TestRunner) initLogger() {
-	logger.SetLogDir(filepath.Dir(globals.DefaultRunnerLogPath))
-	logger.SetLogFile(filepath.Base(globals.DefaultRunnerLogPath))
+	logger.SetLogDir(tr.testRunnerDir)
+	logger.SetLogFile(globals.DefaultRunnerLogSubPath)
 	logger.SetLogPrefix(globals.LogPrefix)
 	logger.Init(utils.IsKubernetes())
 }
@@ -237,37 +239,46 @@ func (tr *TestRunner) readTestRunnerConfig(configPath string) {
 }
 
 func (tr *TestRunner) initTestRunnerConfig() {
+	if tr.testRunnerDir == "" {
+		tr.testRunnerDir = globals.DefaultTestRunnerDir
+	}
+	if tr.resultLogDir == "" {
+		tr.resultLogDir = globals.DefaultResultLogDir
+	}
+
 	// init test runner log
-	err := os.MkdirAll(filepath.Dir(globals.DefaultRunnerLogPath), 0755)
+	err := os.MkdirAll(tr.testRunnerDir, 0755)
 	if err != nil {
-		fmt.Printf("Failed to create dir for test runner logs %+v, err: %+v\n", filepath.Dir(globals.DefaultRunnerLogPath), err)
+		fmt.Printf("Failed to create dir for test runner logs %+v, err: %+v\n", tr.testRunnerDir, err)
 		os.Exit(1)
 	}
 
 	// init test reuslt log dir
-	err = os.MkdirAll(tr.globalTestRunnerConfig.SystemConfig.ResultLogDir, 0755)
+	err = os.MkdirAll(tr.resultLogDir, 0755)
 	if err != nil {
-		fmt.Printf("Failed to create dir for test result logs %+v, err: %+v\n", tr.globalTestRunnerConfig.SystemConfig.ResultLogDir, err)
+		fmt.Printf("Failed to create dir for test result logs %+v, err: %+v\n", tr.resultLogDir, err)
 		os.Exit(1)
 	}
 	// init status db
 	// don't try to create if status db already exists
 	// test runner needs to read the existing db and rerun incomplete test before crash/restart
-	if _, err := os.Stat(globals.DefaultStatusDBPath); err != nil && os.IsNotExist(err) {
-		_, err = os.Create(globals.DefaultStatusDBPath)
+	statusDBPath := filepath.Join(tr.testRunnerDir, globals.DefaultStatusDBSubPath)
+	if _, err := os.Stat(statusDBPath); err != nil && os.IsNotExist(err) {
+		_, err = os.Create(statusDBPath)
 		if err != nil {
-			fmt.Printf("Failed to create test status db %+v, err: %+v\n", globals.DefaultStatusDBPath, err)
+			fmt.Printf("Failed to create test status db %+v, err: %+v\n", statusDBPath, err)
 			os.Exit(1)
 		}
 		runnerStatus := &testrunnerGen.TestRunnerStatus{
 			TestStatus: map[string]string{},
 		}
-		err = SaveRunnerStatus(runnerStatus)
+		err = SaveRunnerStatus(runnerStatus, statusDBPath)
 		if err != nil {
-			fmt.Printf("Failed to init test runner status db %+v, err: %+v\n", globals.DefaultStatusDBPath, err)
+			fmt.Printf("Failed to init test runner status db %+v, err: %+v\n", statusDBPath, err)
 			os.Exit(1)
 		}
 	}
+	tr.statusDBPath = statusDBPath
 	// the validation has been done previously by validateTestTrigger()
 	testParams := tr.globalTestRunnerConfig.TestConfig[tr.testCategory].TestLocationTrigger[tr.testLocation].TestParameters[tr.testTrigger]
 	testCfgPath := filepath.Join(tr.rvsTestCaseDir, testParams.TestCases[0].Recipe+".conf")
@@ -288,7 +299,7 @@ func (tr *TestRunner) TriggerTest() {
 			// init rvs test runner
 			// and start to listen for unix socket to receive the event
 			// for triggering the test run on unhealthy GPU
-			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.globalTestRunnerConfig.SystemConfig.ResultLogDir)
+			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.resultLogDir)
 			if err != nil || rvsTestRunner == nil {
 				logger.Log.Printf("failed to create rvs test runner, runner: %+v, err: %+v", rvsTestRunner, err)
 				os.Exit(1)
@@ -298,7 +309,7 @@ func (tr *TestRunner) TriggerTest() {
 			tr.watchGPUState(testParams)
 		case testrunnerGen.TestTrigger_MANUAL.String(),
 			testrunnerGen.TestTrigger_PRE_START_JOB_CHECK.String():
-			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.globalTestRunnerConfig.SystemConfig.ResultLogDir)
+			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.resultLogDir)
 			if err != nil || rvsTestRunner == nil {
 				logger.Log.Printf("failed to create rvs test runner, runner: %+v, err: %+v", rvsTestRunner, err)
 				os.Exit(1)
@@ -346,7 +357,7 @@ func (tr *TestRunner) watchGPUState(parameters *testrunnerGen.TestParameters) {
 	// handle test runner crash or restart
 	// read existing test runner status db
 	// immediately start test on interrupted test before restarting
-	statusObj, _ := LoadRunnerStatus()
+	statusObj, _ := LoadRunnerStatus(tr.statusDBPath)
 	ids := []string{}
 	if statusObj != nil && len(statusObj.TestStatus) > 0 {
 		for deviceID, status := range statusObj.TestStatus {
@@ -412,7 +423,7 @@ func (tr *TestRunner) cleanupHealthyGPUTestStatus(ids []string) {
 	// don't interrupt the running test
 	// 2. if there is test completed
 	// remove the status so that next time it turns unhealthy, test will be triggered again
-	statusObj, _ := LoadRunnerStatus()
+	statusObj, _ := LoadRunnerStatus(tr.statusDBPath)
 	writeBack := false
 	if statusObj != nil && statusObj.TestStatus != nil {
 		for _, healthyID := range ids {
@@ -426,14 +437,14 @@ func (tr *TestRunner) cleanupHealthyGPUTestStatus(ids []string) {
 		writeBack = true
 	}
 	if writeBack {
-		SaveRunnerStatus(statusObj)
+		SaveRunnerStatus(statusObj, tr.statusDBPath)
 	}
 }
 
 func (tr *TestRunner) testGPU(trigger string, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) {
 	// load ongoing test status
 	// avoid run multiple test on the same device
-	validIDs, statusObj := removeIDsWithExistingTest(trigger, globals.DefaultStatusDBPath, ids, parameters, isRerun)
+	validIDs, statusObj := removeIDsWithExistingTest(trigger, tr.statusDBPath, ids, parameters, isRerun)
 	if isRerun {
 		// for rerun after test runner restart
 		// we need to force to run the incomplete test
@@ -476,7 +487,7 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, parameters *testrunn
 		statusObj.TestStatus[id] = types.TestRunning.String()
 	}
 
-	err = SaveRunnerStatus(statusObj)
+	err = SaveRunnerStatus(statusObj, tr.statusDBPath)
 	if err != nil {
 		//TODO: add error handling here if new running status failed to be saved
 	}
@@ -495,25 +506,35 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, parameters *testrunn
 		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v completed. Result: %v", trigger, parameters.TestCases[0].Recipe, ids, result)
 		// save log into gzip file
 		if stdout := handler.Stdout(); stdout != "" {
-			SaveTestResultToGz(stdout, GetLogFilePath(tr.globalTestRunnerConfig.SystemConfig.ResultLogDir, trigger, parameters.TestCases[0].Recipe, "stdout"))
+			SaveTestResultToGz(stdout, GetLogFilePath(tr.resultLogDir, trigger, parameters.TestCases[0].Recipe, "stdout"))
 		}
 		if stderr := handler.Stderr(); stderr != "" {
-			SaveTestResultToGz(stderr, GetLogFilePath(tr.globalTestRunnerConfig.SystemConfig.ResultLogDir, trigger, parameters.TestCases[0].Recipe, "stderr"))
+			SaveTestResultToGz(stderr, GetLogFilePath(tr.resultLogDir, trigger, parameters.TestCases[0].Recipe, "stderr"))
 		}
 		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String(), result)
 		// exit on non-auto trigger's failure
 		tr.exitOnFailure(result)
 	}
 
-	statusObj, _ = LoadRunnerStatus()
+	statusObj, _ = LoadRunnerStatus(tr.statusDBPath)
 	for _, id := range validIDs {
-		// the status db is for internal usage only
-		// just mark all finished test as completed
-		// so that there won't be another test happened on the same unhealthy device
-		// the test completed status will be removed if device becomes healthy again
-		statusObj.TestStatus[id] = types.TestCompleted.String()
+		switch tr.testTrigger {
+		case testrunnerGen.TestTrigger_MANUAL.String(),
+			testrunnerGen.TestTrigger_PRE_START_JOB_CHECK.String():
+			// the status db is for internal usage only
+			// for MANUAL and PRE_START_JOB_CHECK test trigger
+			// remove the device id from status db once the test was completed
+			// so that the next time the device won't be recognized with incomplete test
+			delete(statusObj.TestStatus, id)
+		case testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String():
+			// the status db is for internal usage only
+			// for AUTO_UNHEALTHY_GPU_WATCH just mark all finished test as completed
+			// so that there won't be another test happened on the same unhealthy device
+			// the test completed status will be removed if device becomes healthy again
+			statusObj.TestStatus[id] = types.TestCompleted.String()
+		}
 	}
-	SaveRunnerStatus(statusObj)
+	SaveRunnerStatus(statusObj, tr.statusDBPath)
 }
 
 func (tr *TestRunner) exitOnFailure(result map[string]map[string]types.TestResult) {
@@ -537,10 +558,25 @@ func (tr *TestRunner) exitOnFailure(result map[string]map[string]types.TestResul
 }
 
 func (tr *TestRunner) manualTestGPU(parameters *testrunnerGen.TestParameters) {
+	// for manual test
+	// if there is no GPU detected, fail the test runner process
+	allGUIDs, err := GetAllGUIDs(tr.rocmSMIPath)
+	if err != nil {
+		logger.Log.Printf("failed to detect GPU by rocm-smi err %+v", err)
+		os.Exit(1)
+	}
+	if len(allGUIDs) == 0 {
+		logger.Log.Println("no GPU was detected by rocm-smi")
+		result := BuildNoGPUTestSummary()
+		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result)
+		// exit on non-auto trigger's failure
+		tr.exitOnFailure(result)
+	}
+
 	// handle test runner crash or restart
 	// read existing test runner status db
 	// immediately start test on interrupted test before restarting
-	statusObj, _ := LoadRunnerStatus()
+	statusObj, _ := LoadRunnerStatus(tr.statusDBPath)
 	ids := []string{}
 	if statusObj != nil && len(statusObj.TestStatus) > 0 {
 		for deviceID := range statusObj.TestStatus {

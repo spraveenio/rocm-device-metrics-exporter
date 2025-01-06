@@ -40,17 +40,9 @@ enum TestEventReason {
 
 // config specification of TestRunner
 message TestRunnerConfig {
-    // TestRunner system config
-    TestRunnerSysConfig                SystemConfig   = 1;
     // TestRunner test config
     // key is test category and value is the struct for specific config
-    map<string, TestCategoryConfig>    TestConfig     = 2;
-}
-
-// system level config for TestRunner
-message TestRunnerSysConfig {
-    // Directory to save test result logs
-    string  ResultLogDir  = 1;
+    map<string, TestCategoryConfig>    TestConfig     = 1;
 }
 
 // Test category's specific config

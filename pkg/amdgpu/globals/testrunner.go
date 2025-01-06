@@ -42,24 +42,30 @@ const (
 	GPUStateConnRetryFreq    = 5 * time.Second
 	GPUStateConnREtryTimeout = 60 * time.Second
 
-	DefaultRunnerLogPath = "/var/run/test-runner/test-runner.log"
-	DefaultResultLogDir  = "/var/run/test-runner/results/"
-	DefaultStatusDBPath  = "/var/run/test-runner/status.db"
+	// DefaultResultLogDir directory to save test runner result logs
+	DefaultResultLogDir = "/var/log/amd-test-runner-results"
+	// DefaultTestRunnerDir directory to save test runner internal log and status
+	DefaultTestRunnerDir    = "/var/run/amd-test-runner"
+	DefaultRunnerLogSubPath = "test-runner.log"
+	DefaultStatusDBSubPath  = "status.db"
+
+	// NoGPUErrMsg error message when no gpu is detected by rocm-smi for manual test trigger
+	NoGPUErrMsg = "No GPU detected by rocm-smi"
 
 	// RVS json log dir
 	RVSLogDir = "/var/tmp"
 
 	// TODO: rvs is one of offical ROCm RVS test suite names
 	// revisit after deciding the pre-defined default test case
-	DefaultUnhealthyGPUTestName           = "mem"
+	DefaultUnhealthyGPUTestName           = "gst_single"
 	DefaultUnhealthyGPUTestIterations     = 1
 	DefaultUnhealthyGPUTestStopOnFailure  = true
 	DefaultUnhealthyGPUTestTimeoutSeconds = 600
-	DefaultPreJobCheckTestName            = "tst_single"
+	DefaultPreJobCheckTestName            = "gst_single"
 	DefaultPreJobCheckTestIterations      = 1
 	DefaultPreJobCheckTestStopOnFailure   = true
 	DefaultPreJobCheckTestTimeoutSeconds  = 600
-	DefaultManualTestName                 = "mem"
+	DefaultManualTestName                 = "gst_single"
 	DefaultManualTestIterations           = 1
 	DefaultManualTestStopOnFailure        = true
 	DefaultManualTestTimeoutSeconds       = 600

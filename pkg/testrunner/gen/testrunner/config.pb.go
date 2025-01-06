@@ -186,11 +186,9 @@ type TestRunnerConfig struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// TestRunner system config
-	SystemConfig *TestRunnerSysConfig `protobuf:"bytes,1,opt,name=SystemConfig,proto3" json:"SystemConfig,omitempty"`
 	// TestRunner test config
 	// key is test category and value is the struct for specific config
-	TestConfig map[string]*TestCategoryConfig `protobuf:"bytes,2,rep,name=TestConfig,proto3" json:"TestConfig,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	TestConfig map[string]*TestCategoryConfig `protobuf:"bytes,1,rep,name=TestConfig,proto3" json:"TestConfig,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *TestRunnerConfig) Reset() {
@@ -225,67 +223,11 @@ func (*TestRunnerConfig) Descriptor() ([]byte, []int) {
 	return file_config_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *TestRunnerConfig) GetSystemConfig() *TestRunnerSysConfig {
-	if x != nil {
-		return x.SystemConfig
-	}
-	return nil
-}
-
 func (x *TestRunnerConfig) GetTestConfig() map[string]*TestCategoryConfig {
 	if x != nil {
 		return x.TestConfig
 	}
 	return nil
-}
-
-// system level config for TestRunner
-type TestRunnerSysConfig struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	// Directory to save test result logs
-	ResultLogDir string `protobuf:"bytes,1,opt,name=ResultLogDir,proto3" json:"ResultLogDir,omitempty"`
-}
-
-func (x *TestRunnerSysConfig) Reset() {
-	*x = TestRunnerSysConfig{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_config_proto_msgTypes[1]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *TestRunnerSysConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TestRunnerSysConfig) ProtoMessage() {}
-
-func (x *TestRunnerSysConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_config_proto_msgTypes[1]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TestRunnerSysConfig.ProtoReflect.Descriptor instead.
-func (*TestRunnerSysConfig) Descriptor() ([]byte, []int) {
-	return file_config_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *TestRunnerSysConfig) GetResultLogDir() string {
-	if x != nil {
-		return x.ResultLogDir
-	}
-	return ""
 }
 
 // Test category's specific config
@@ -302,7 +244,7 @@ type TestCategoryConfig struct {
 func (x *TestCategoryConfig) Reset() {
 	*x = TestCategoryConfig{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_config_proto_msgTypes[2]
+		mi := &file_config_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -315,7 +257,7 @@ func (x *TestCategoryConfig) String() string {
 func (*TestCategoryConfig) ProtoMessage() {}
 
 func (x *TestCategoryConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_config_proto_msgTypes[2]
+	mi := &file_config_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -328,7 +270,7 @@ func (x *TestCategoryConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestCategoryConfig.ProtoReflect.Descriptor instead.
 func (*TestCategoryConfig) Descriptor() ([]byte, []int) {
-	return file_config_proto_rawDescGZIP(), []int{2}
+	return file_config_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *TestCategoryConfig) GetTestLocationTrigger() map[string]*TestTriggerConfig {
@@ -351,7 +293,7 @@ type TestTriggerConfig struct {
 func (x *TestTriggerConfig) Reset() {
 	*x = TestTriggerConfig{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_config_proto_msgTypes[3]
+		mi := &file_config_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -364,7 +306,7 @@ func (x *TestTriggerConfig) String() string {
 func (*TestTriggerConfig) ProtoMessage() {}
 
 func (x *TestTriggerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_config_proto_msgTypes[3]
+	mi := &file_config_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -377,7 +319,7 @@ func (x *TestTriggerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestTriggerConfig.ProtoReflect.Descriptor instead.
 func (*TestTriggerConfig) Descriptor() ([]byte, []int) {
-	return file_config_proto_rawDescGZIP(), []int{3}
+	return file_config_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *TestTriggerConfig) GetTestParameters() map[string]*TestParameters {
@@ -398,7 +340,7 @@ type TestParameters struct {
 func (x *TestParameters) Reset() {
 	*x = TestParameters{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_config_proto_msgTypes[4]
+		mi := &file_config_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -411,7 +353,7 @@ func (x *TestParameters) String() string {
 func (*TestParameters) ProtoMessage() {}
 
 func (x *TestParameters) ProtoReflect() protoreflect.Message {
-	mi := &file_config_proto_msgTypes[4]
+	mi := &file_config_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -424,7 +366,7 @@ func (x *TestParameters) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestParameters.ProtoReflect.Descriptor instead.
 func (*TestParameters) Descriptor() ([]byte, []int) {
-	return file_config_proto_rawDescGZIP(), []int{4}
+	return file_config_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *TestParameters) GetTestCases() []*TestParameter {
@@ -448,7 +390,7 @@ type TestParameter struct {
 func (x *TestParameter) Reset() {
 	*x = TestParameter{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_config_proto_msgTypes[5]
+		mi := &file_config_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -461,7 +403,7 @@ func (x *TestParameter) String() string {
 func (*TestParameter) ProtoMessage() {}
 
 func (x *TestParameter) ProtoReflect() protoreflect.Message {
-	mi := &file_config_proto_msgTypes[5]
+	mi := &file_config_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -474,7 +416,7 @@ func (x *TestParameter) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestParameter.ProtoReflect.Descriptor instead.
 func (*TestParameter) Descriptor() ([]byte, []int) {
-	return file_config_proto_rawDescGZIP(), []int{5}
+	return file_config_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *TestParameter) GetRecipe() string {
@@ -518,7 +460,7 @@ type TestRunnerStatus struct {
 func (x *TestRunnerStatus) Reset() {
 	*x = TestRunnerStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_config_proto_msgTypes[6]
+		mi := &file_config_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -531,7 +473,7 @@ func (x *TestRunnerStatus) String() string {
 func (*TestRunnerStatus) ProtoMessage() {}
 
 func (x *TestRunnerStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_config_proto_msgTypes[6]
+	mi := &file_config_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -544,7 +486,7 @@ func (x *TestRunnerStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestRunnerStatus.ProtoReflect.Descriptor instead.
 func (*TestRunnerStatus) Descriptor() ([]byte, []int) {
-	return file_config_proto_rawDescGZIP(), []int{6}
+	return file_config_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *TestRunnerStatus) GetTestStatus() map[string]string {
@@ -558,27 +500,19 @@ var File_config_proto protoreflect.FileDescriptor
 
 var file_config_proto_rawDesc = []byte{
 	0x0a, 0x0c, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x0a,
-	0x74, 0x65, 0x73, 0x74, 0x72, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x22, 0x84, 0x02, 0x0a, 0x10, 0x54,
+	0x74, 0x65, 0x73, 0x74, 0x72, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x22, 0xbf, 0x01, 0x0a, 0x10, 0x54,
 	0x65, 0x73, 0x74, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12,
-	0x43, 0x0a, 0x0c, 0x53, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1f, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x72, 0x75, 0x6e, 0x6e,
-	0x65, 0x72, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x53, 0x79, 0x73,
-	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x0c, 0x53, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x43, 0x6f,
-	0x6e, 0x66, 0x69, 0x67, 0x12, 0x4c, 0x0a, 0x0a, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66,
-	0x69, 0x67, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x72,
-	0x75, 0x6e, 0x6e, 0x65, 0x72, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72,
-	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
-	0x67, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x0a, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66,
-	0x69, 0x67, 0x1a, 0x5d, 0x0a, 0x0f, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
-	0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x34, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1e, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x72, 0x75, 0x6e,
-	0x6e, 0x65, 0x72, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x61, 0x74, 0x65, 0x67, 0x6f, 0x72, 0x79,
-	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38,
-	0x01, 0x22, 0x39, 0x0a, 0x13, 0x54, 0x65, 0x73, 0x74, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x53,
-	0x79, 0x73, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x22, 0x0a, 0x0c, 0x52, 0x65, 0x73, 0x75,
-	0x6c, 0x74, 0x4c, 0x6f, 0x67, 0x44, 0x69, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c,
-	0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x4c, 0x6f, 0x67, 0x44, 0x69, 0x72, 0x22, 0xe6, 0x01, 0x0a,
+	0x4c, 0x0a, 0x0a, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x72, 0x75, 0x6e, 0x6e, 0x65, 0x72,
+	0x2e, 0x54, 0x65, 0x73, 0x74, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69,
+	0x67, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45, 0x6e, 0x74, 0x72,
+	0x79, 0x52, 0x0a, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x1a, 0x5d, 0x0a,
+	0x0f, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45, 0x6e, 0x74, 0x72, 0x79,
+	0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b,
+	0x65, 0x79, 0x12, 0x34, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x1e, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x72, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x2e, 0x54,
+	0x65, 0x73, 0x74, 0x43, 0x61, 0x74, 0x65, 0x67, 0x6f, 0x72, 0x79, 0x43, 0x6f, 0x6e, 0x66, 0x69,
+	0x67, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0xe6, 0x01, 0x0a,
 	0x12, 0x54, 0x65, 0x73, 0x74, 0x43, 0x61, 0x74, 0x65, 0x67, 0x6f, 0x72, 0x79, 0x43, 0x6f, 0x6e,
 	0x66, 0x69, 0x67, 0x12, 0x69, 0x0a, 0x13, 0x54, 0x65, 0x73, 0x74, 0x4c, 0x6f, 0x63, 0x61, 0x74,
 	0x69, 0x6f, 0x6e, 0x54, 0x72, 0x69, 0x67, 0x67, 0x65, 0x72, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
@@ -660,38 +594,36 @@ func file_config_proto_rawDescGZIP() []byte {
 }
 
 var file_config_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_config_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_config_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_config_proto_goTypes = []any{
-	(TestCategory)(0),           // 0: testrunner.TestCategory
-	(TestTrigger)(0),            // 1: testrunner.TestTrigger
-	(TestEventReason)(0),        // 2: testrunner.TestEventReason
-	(*TestRunnerConfig)(nil),    // 3: testrunner.TestRunnerConfig
-	(*TestRunnerSysConfig)(nil), // 4: testrunner.TestRunnerSysConfig
-	(*TestCategoryConfig)(nil),  // 5: testrunner.TestCategoryConfig
-	(*TestTriggerConfig)(nil),   // 6: testrunner.TestTriggerConfig
-	(*TestParameters)(nil),      // 7: testrunner.TestParameters
-	(*TestParameter)(nil),       // 8: testrunner.TestParameter
-	(*TestRunnerStatus)(nil),    // 9: testrunner.TestRunnerStatus
-	nil,                         // 10: testrunner.TestRunnerConfig.TestConfigEntry
-	nil,                         // 11: testrunner.TestCategoryConfig.TestLocationTriggerEntry
-	nil,                         // 12: testrunner.TestTriggerConfig.TestParametersEntry
-	nil,                         // 13: testrunner.TestRunnerStatus.TestStatusEntry
+	(TestCategory)(0),          // 0: testrunner.TestCategory
+	(TestTrigger)(0),           // 1: testrunner.TestTrigger
+	(TestEventReason)(0),       // 2: testrunner.TestEventReason
+	(*TestRunnerConfig)(nil),   // 3: testrunner.TestRunnerConfig
+	(*TestCategoryConfig)(nil), // 4: testrunner.TestCategoryConfig
+	(*TestTriggerConfig)(nil),  // 5: testrunner.TestTriggerConfig
+	(*TestParameters)(nil),     // 6: testrunner.TestParameters
+	(*TestParameter)(nil),      // 7: testrunner.TestParameter
+	(*TestRunnerStatus)(nil),   // 8: testrunner.TestRunnerStatus
+	nil,                        // 9: testrunner.TestRunnerConfig.TestConfigEntry
+	nil,                        // 10: testrunner.TestCategoryConfig.TestLocationTriggerEntry
+	nil,                        // 11: testrunner.TestTriggerConfig.TestParametersEntry
+	nil,                        // 12: testrunner.TestRunnerStatus.TestStatusEntry
 }
 var file_config_proto_depIdxs = []int32{
-	4,  // 0: testrunner.TestRunnerConfig.SystemConfig:type_name -> testrunner.TestRunnerSysConfig
-	10, // 1: testrunner.TestRunnerConfig.TestConfig:type_name -> testrunner.TestRunnerConfig.TestConfigEntry
-	11, // 2: testrunner.TestCategoryConfig.TestLocationTrigger:type_name -> testrunner.TestCategoryConfig.TestLocationTriggerEntry
-	12, // 3: testrunner.TestTriggerConfig.TestParameters:type_name -> testrunner.TestTriggerConfig.TestParametersEntry
-	8,  // 4: testrunner.TestParameters.TestCases:type_name -> testrunner.TestParameter
-	13, // 5: testrunner.TestRunnerStatus.TestStatus:type_name -> testrunner.TestRunnerStatus.TestStatusEntry
-	5,  // 6: testrunner.TestRunnerConfig.TestConfigEntry.value:type_name -> testrunner.TestCategoryConfig
-	6,  // 7: testrunner.TestCategoryConfig.TestLocationTriggerEntry.value:type_name -> testrunner.TestTriggerConfig
-	7,  // 8: testrunner.TestTriggerConfig.TestParametersEntry.value:type_name -> testrunner.TestParameters
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	9,  // 0: testrunner.TestRunnerConfig.TestConfig:type_name -> testrunner.TestRunnerConfig.TestConfigEntry
+	10, // 1: testrunner.TestCategoryConfig.TestLocationTrigger:type_name -> testrunner.TestCategoryConfig.TestLocationTriggerEntry
+	11, // 2: testrunner.TestTriggerConfig.TestParameters:type_name -> testrunner.TestTriggerConfig.TestParametersEntry
+	7,  // 3: testrunner.TestParameters.TestCases:type_name -> testrunner.TestParameter
+	12, // 4: testrunner.TestRunnerStatus.TestStatus:type_name -> testrunner.TestRunnerStatus.TestStatusEntry
+	4,  // 5: testrunner.TestRunnerConfig.TestConfigEntry.value:type_name -> testrunner.TestCategoryConfig
+	5,  // 6: testrunner.TestCategoryConfig.TestLocationTriggerEntry.value:type_name -> testrunner.TestTriggerConfig
+	6,  // 7: testrunner.TestTriggerConfig.TestParametersEntry.value:type_name -> testrunner.TestParameters
+	8,  // [8:8] is the sub-list for method output_type
+	8,  // [8:8] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_config_proto_init() }
@@ -713,18 +645,6 @@ func file_config_proto_init() {
 			}
 		}
 		file_config_proto_msgTypes[1].Exporter = func(v any, i int) any {
-			switch v := v.(*TestRunnerSysConfig); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_config_proto_msgTypes[2].Exporter = func(v any, i int) any {
 			switch v := v.(*TestCategoryConfig); i {
 			case 0:
 				return &v.state
@@ -736,7 +656,7 @@ func file_config_proto_init() {
 				return nil
 			}
 		}
-		file_config_proto_msgTypes[3].Exporter = func(v any, i int) any {
+		file_config_proto_msgTypes[2].Exporter = func(v any, i int) any {
 			switch v := v.(*TestTriggerConfig); i {
 			case 0:
 				return &v.state
@@ -748,7 +668,7 @@ func file_config_proto_init() {
 				return nil
 			}
 		}
-		file_config_proto_msgTypes[4].Exporter = func(v any, i int) any {
+		file_config_proto_msgTypes[3].Exporter = func(v any, i int) any {
 			switch v := v.(*TestParameters); i {
 			case 0:
 				return &v.state
@@ -760,7 +680,7 @@ func file_config_proto_init() {
 				return nil
 			}
 		}
-		file_config_proto_msgTypes[5].Exporter = func(v any, i int) any {
+		file_config_proto_msgTypes[4].Exporter = func(v any, i int) any {
 			switch v := v.(*TestParameter); i {
 			case 0:
 				return &v.state
@@ -772,7 +692,7 @@ func file_config_proto_init() {
 				return nil
 			}
 		}
-		file_config_proto_msgTypes[6].Exporter = func(v any, i int) any {
+		file_config_proto_msgTypes[5].Exporter = func(v any, i int) any {
 			switch v := v.(*TestRunnerStatus); i {
 			case 0:
 				return &v.state
@@ -791,7 +711,7 @@ func file_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_config_proto_rawDesc,
 			NumEnums:      3,
-			NumMessages:   11,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

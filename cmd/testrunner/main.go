@@ -29,6 +29,8 @@ import (
 const (
 	testCategoryEnv = "TEST_CATEGORY"
 	testTriggerEnv  = "TEST_TRIGGER"
+	resultLogDirEnv = "RESULT_LOG_MOUNT_DIR"
+	statusDBDirEnv  = "STATUS_DB_MOUNT_DIR"
 )
 
 var (
@@ -64,8 +66,11 @@ func main() {
 
 	testCategory := getStrFromEnvOrDefault(testCategoryEnv, globals.DefaultTestCategory)
 	testTrigger := getStrFromEnvOrDefault(testTriggerEnv, globals.DefaultTestTrigger)
+	statusDBDir := getStrFromEnvOrDefault(statusDBDirEnv, globals.DefaultTestRunnerDir)
+	resultLogDir := getStrFromEnvOrDefault(resultLogDirEnv, globals.DefaultResultLogDir)
+
 	testrunner.ValidateArgs(testCategory, testTrigger, *rvsPath, *rocmSMIPath, *rvsTestCaseDir, *exporterSocketPath)
-	runner := testrunner.NewTestRunner(*rvsPath, *rvsTestCaseDir, *rocmSMIPath, *exporterSocketPath, *testRunnerConfigPath, testCategory, testTrigger)
+	runner := testrunner.NewTestRunner(*rvsPath, *rvsTestCaseDir, *rocmSMIPath, *exporterSocketPath, *testRunnerConfigPath, testCategory, testTrigger, statusDBDir, resultLogDir)
 	logger.Log.Printf("Version : %v", Version)
 	logger.Log.Printf("BuildDate: %v", BuildDate)
 	logger.Log.Printf("GitCommit: %v", GitCommit)

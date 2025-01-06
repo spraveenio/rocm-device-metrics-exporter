@@ -92,25 +92,25 @@ func statOrExit(path string, isFolder bool) {
 	}
 }
 
-func SaveRunnerStatus(statusObj *testrunnerGen.TestRunnerStatus) error {
+func SaveRunnerStatus(statusObj *testrunnerGen.TestRunnerStatus, statusDBPath string) error {
 	statusDBLock.Lock()
 	defer statusDBLock.Unlock()
 	data, err := json.Marshal(statusObj)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(globals.DefaultStatusDBPath, data, 0644)
+	err = os.WriteFile(statusDBPath, data, 0644)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func LoadRunnerStatus() (*testrunnerGen.TestRunnerStatus, error) {
+func LoadRunnerStatus(statusDBPath string) (*testrunnerGen.TestRunnerStatus, error) {
 	statusDBLock.Lock()
 	defer statusDBLock.Unlock()
 	var status testrunnerGen.TestRunnerStatus
-	data, err := os.ReadFile(globals.DefaultStatusDBPath)
+	data, err := os.ReadFile(statusDBPath)
 	if err != nil {
 		return &status, err
 	}
@@ -205,7 +205,7 @@ func GetGUIDFromIndex(index, rocmSMIPath string) (string, error) {
 func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) ([]string, *testrunnerGen.TestRunnerStatus) {
 	// load ongoing test status
 	// avoid run multiple test on the same device
-	statusObj, err := LoadRunnerStatus()
+	statusObj, err := LoadRunnerStatus(statusDBPath)
 	if err != nil {
 		logger.Log.Printf("failed to load test runner status %+v, err: %+v", statusDBPath, err)
 		if os.IsNotExist(err) {
@@ -259,5 +259,12 @@ func BuildTimedoutTestSummary(ids []string) map[string]map[string]types.TestResu
 		result[id] = map[string]types.TestResult{}
 		result[id]["action"] = types.Timedout
 	}
+	return result
+}
+
+func BuildNoGPUTestSummary() map[string]map[string]types.TestResult {
+	result := map[string]map[string]types.TestResult{}
+	result[globals.NoGPUErrMsg] = map[string]types.TestResult{}
+	result[globals.NoGPUErrMsg]["action"] = types.Failure
 	return result
 }
