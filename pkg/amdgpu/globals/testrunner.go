@@ -43,9 +43,7 @@ const (
 	GPUStateConnREtryTimeout = 60 * time.Second
 
 	// DefaultResultLogDir directory to save test runner result logs
-	DefaultResultLogDir = "/var/log/amd-test-runner-results"
-	// DefaultTestRunnerDir directory to save test runner internal log and status
-	DefaultTestRunnerDir    = "/var/run/amd-test-runner"
+	DefaultRunnerLogDir     = "/var/log/amd-test-runner"
 	DefaultRunnerLogSubPath = "test-runner.log"
 	DefaultStatusDBSubPath  = "status.db"
 

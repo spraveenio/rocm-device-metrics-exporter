@@ -97,8 +97,7 @@ type TestRunner struct {
 	testLocation           string
 	testTrigger            string
 	rvsTestCaseDir         string
-	testRunnerDir          string
-	resultLogDir           string
+	logDir                 string
 	statusDBPath           string
 	globalTestRunnerConfig *testrunnerGen.TestRunnerConfig
 	rvsTestRunner          types.TestRunner
@@ -111,7 +110,7 @@ type TestRunner struct {
 
 // initTestRunner init the test runner and related configs
 // return the test location, either global or specific host name
-func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, testRunnerConfigPath, testCategory, testTrigger, statusDBDir, resultLogDir string) *TestRunner {
+func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, testRunnerConfigPath, testCategory, testTrigger, logDir string) *TestRunner {
 	runner := &TestRunner{
 		rvsPath:            rvsPath,
 		rocmSMIPath:        rocmSMIPath,
@@ -119,8 +118,7 @@ func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, tes
 		testCategory:       testCategory,
 		testTrigger:        testTrigger,
 		rvsTestCaseDir:     rvsTestCaseDir,
-		testRunnerDir:      statusDBDir,
-		resultLogDir:       resultLogDir,
+		logDir:             logDir,
 	}
 	// init test runner config
 	// testRunnerConfigPath file existence has been verified
@@ -203,7 +201,7 @@ func (tr *TestRunner) validateTestTrigger() {
 }
 
 func (tr *TestRunner) initLogger() {
-	logger.SetLogDir(tr.testRunnerDir)
+	logger.SetLogDir(tr.logDir)
 	logger.SetLogFile(globals.DefaultRunnerLogSubPath)
 	logger.SetLogPrefix(globals.LogPrefix)
 	logger.Init(utils.IsKubernetes())
@@ -239,30 +237,21 @@ func (tr *TestRunner) readTestRunnerConfig(configPath string) {
 }
 
 func (tr *TestRunner) initTestRunnerConfig() {
-	if tr.testRunnerDir == "" {
-		tr.testRunnerDir = globals.DefaultTestRunnerDir
-	}
-	if tr.resultLogDir == "" {
-		tr.resultLogDir = globals.DefaultResultLogDir
+	if tr.logDir == "" {
+		tr.logDir = globals.DefaultRunnerLogDir
 	}
 
 	// init test runner log
-	err := os.MkdirAll(tr.testRunnerDir, 0755)
+	err := os.MkdirAll(tr.logDir, 0755)
 	if err != nil {
-		fmt.Printf("Failed to create dir for test runner logs %+v, err: %+v\n", tr.testRunnerDir, err)
+		fmt.Printf("Failed to create dir for test runner logs %+v, err: %+v\n", tr.logDir, err)
 		os.Exit(1)
 	}
 
-	// init test reuslt log dir
-	err = os.MkdirAll(tr.resultLogDir, 0755)
-	if err != nil {
-		fmt.Printf("Failed to create dir for test result logs %+v, err: %+v\n", tr.resultLogDir, err)
-		os.Exit(1)
-	}
 	// init status db
 	// don't try to create if status db already exists
 	// test runner needs to read the existing db and rerun incomplete test before crash/restart
-	statusDBPath := filepath.Join(tr.testRunnerDir, globals.DefaultStatusDBSubPath)
+	statusDBPath := filepath.Join(tr.logDir, globals.DefaultStatusDBSubPath)
 	if _, err := os.Stat(statusDBPath); err != nil && os.IsNotExist(err) {
 		_, err = os.Create(statusDBPath)
 		if err != nil {
@@ -299,7 +288,7 @@ func (tr *TestRunner) TriggerTest() {
 			// init rvs test runner
 			// and start to listen for unix socket to receive the event
 			// for triggering the test run on unhealthy GPU
-			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.resultLogDir)
+			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.logDir)
 			if err != nil || rvsTestRunner == nil {
 				logger.Log.Printf("failed to create rvs test runner, runner: %+v, err: %+v", rvsTestRunner, err)
 				os.Exit(1)
@@ -309,7 +298,7 @@ func (tr *TestRunner) TriggerTest() {
 			tr.watchGPUState(testParams)
 		case testrunnerGen.TestTrigger_MANUAL.String(),
 			testrunnerGen.TestTrigger_PRE_START_JOB_CHECK.String():
-			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.resultLogDir)
+			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.logDir)
 			if err != nil || rvsTestRunner == nil {
 				logger.Log.Printf("failed to create rvs test runner, runner: %+v, err: %+v", rvsTestRunner, err)
 				os.Exit(1)
@@ -506,10 +495,10 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, parameters *testrunn
 		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v completed. Result: %v", trigger, parameters.TestCases[0].Recipe, ids, result)
 		// save log into gzip file
 		if stdout := handler.Stdout(); stdout != "" {
-			SaveTestResultToGz(stdout, GetLogFilePath(tr.resultLogDir, trigger, parameters.TestCases[0].Recipe, "stdout"))
+			SaveTestResultToGz(stdout, GetLogFilePath(tr.logDir, trigger, parameters.TestCases[0].Recipe, "stdout"))
 		}
 		if stderr := handler.Stderr(); stderr != "" {
-			SaveTestResultToGz(stderr, GetLogFilePath(tr.resultLogDir, trigger, parameters.TestCases[0].Recipe, "stderr"))
+			SaveTestResultToGz(stderr, GetLogFilePath(tr.logDir, trigger, parameters.TestCases[0].Recipe, "stderr"))
 		}
 		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String(), result)
 		// exit on non-auto trigger's failure
