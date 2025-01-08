@@ -270,7 +270,15 @@ func (tr *TestRunner) initTestRunnerConfig() {
 	tr.statusDBPath = statusDBPath
 	// the validation has been done previously by validateTestTrigger()
 	testParams := tr.globalTestRunnerConfig.TestConfig[tr.testCategory].TestLocationTrigger[tr.testLocation].TestParameters[tr.testTrigger]
+	gpuModelDir, err := getGPUModelTestRecipeDir(tr.rocmSMIPath)
+	if err != nil {
+		logger.Log.Printf("failed to get GPU model specific folder for test recipe err %+v, using recipe from root conf folder", err)
+	}
 	testCfgPath := filepath.Join(tr.rvsTestCaseDir, testParams.TestCases[0].Recipe+".conf")
+	if gpuModelDir != "" {
+		logger.Log.Printf("using test recipe from %+v folder", gpuModelDir)
+		testCfgPath = filepath.Join(tr.rvsTestCaseDir, gpuModelDir, testParams.TestCases[0].Recipe+".conf")
+	}
 	if _, err := os.Stat(testCfgPath); err != nil {
 		fmt.Printf("Trigger %+v cannot find corresponding test config file %+v, err: %+v\n", tr.testTrigger, testCfgPath, err)
 		os.Exit(1)

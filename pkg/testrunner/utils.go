@@ -202,6 +202,39 @@ func GetGUIDFromIndex(index, rocmSMIPath string) (string, error) {
 	return "", fmt.Errorf("failed to GUID from 'rocm-smi -i --json' output: %+v", result)
 }
 
+func getGPUModelTestRecipeDir(rocmSMIPath string) (string, error) {
+	cmd := exec.Command(rocmSMIPath, "-i", "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	// Parse the JSON response
+	var result map[string]interface{}
+	err = json.Unmarshal(output, &result)
+	if err != nil {
+		return "", err
+	}
+
+	// currently we assume the setup is homogeneous which means only same type GPUs can be installed on one node
+	for _, cardSpecMap := range result {
+		if cardSpec, ok := cardSpecMap.(map[string]interface{}); ok {
+			if deviceID, ok := cardSpec["Device ID"]; ok {
+				deviceIDStr := deviceID.(string)
+				if dir, ok := globals.GPUDeviceIDToModelName[deviceIDStr]; ok {
+					return dir, nil
+				} else {
+					// if there is no specific test recipe folder working for this GPU
+					// use test recipe directrly in /conf folder
+					return "", nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("failed to get Device ID from rocm-smi")
+}
+
 func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) ([]string, *testrunnerGen.TestRunnerStatus) {
 	// load ongoing test status
 	// avoid run multiple test on the same device
