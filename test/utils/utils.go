@@ -124,3 +124,41 @@ func ParsePrometheusMetrics(payload string) (map[string]*GPUMetric, error) {
 
 	return metrics, nil
 }
+
+func GetUncorrectableErrorFields() []string {
+	return []string{
+		"GPU_ECC_UNCORRECT_SDMA",
+		"GPU_ECC_UNCORRECT_GFX",
+		"GPU_ECC_UNCORRECT_MMHUB",
+		"GPU_ECC_UNCORRECT_ATHUB",
+		"GPU_ECC_UNCORRECT_BIF",
+		"GPU_ECC_UNCORRECT_HDP",
+		"GPU_ECC_UNCORRECT_XGMI_WAFL",
+		"GPU_ECC_UNCORRECT_DF",
+		"GPU_ECC_UNCORRECT_SMN",
+		"GPU_ECC_UNCORRECT_SEM",
+		"GPU_ECC_UNCORRECT_MP0",
+		"GPU_ECC_UNCORRECT_MP1",
+		"GPU_ECC_UNCORRECT_FUSE",
+		"GPU_ECC_UNCORRECT_UMC",
+		"GPU_ECC_UNCORRECT_MCA",
+		"GPU_ECC_UNCORRECT_VCN",
+		"GPU_ECC_UNCORRECT_JPEG",
+		"GPU_ECC_UNCORRECT_IH",
+		"GPU_ECC_UNCORRECT_MPIO",
+	}
+}
+
+func GetMockECCJSON(gpuMetricFields []string, gpuID, metricValue int) string {
+	var fields, counts string
+	for idx, field := range gpuMetricFields {
+		fields = fields + fmt.Sprintf(`\"%s\"`, field)
+		counts = counts + fmt.Sprintf(`%d `, metricValue)
+		if idx < len(gpuMetricFields)-1 {
+			fields = fields + `,`
+			counts = counts + `,`
+		}
+	}
+	str := fmt.Sprintf(`{\"ID\": \"%d\",\"Fields\": [%s],\"Counts\":[%s]}`, gpuID, fields, counts)
+	return str
+}
