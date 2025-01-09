@@ -301,3 +301,7 @@ func BuildNoGPUTestSummary() map[string]map[string]types.TestResult {
 	result[globals.NoGPUErrMsg]["action"] = types.Failure
 	return result
 }
+
+func GetTestRunningLabelKeyValue(category, trigger, recipe string) (string, string) {
+	return fmt.Sprintf("amd.testrunner.%v.%v.%v", category, trigger, recipe), "running"
+}

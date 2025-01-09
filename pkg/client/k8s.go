@@ -18,12 +18,14 @@ package k8sclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -107,6 +109,55 @@ func (k *K8sClient) GetNodelLabel(nodeName string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%+v", node.Labels), nil
+}
+
+func (k *K8sClient) AddNodeLabel(nodeName, key, val string) error {
+	k.reConnect()
+	k.Lock()
+	defer k.Unlock()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	patch := []map[string]interface{}{
+		{
+			"op":    "add",
+			"path":  "/metadata/labels",
+			"value": map[string]string{key: val},
+		},
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return fmt.Errorf("failed to marshal patch %v: %v", patch, err)
+	}
+	_, err = k.clientset.CoreV1().Nodes().Patch(ctx, nodeName, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
+	if err != nil {
+		logger.Log.Printf("failed to add label %+v to node %+v err %+v", key, nodeName, err)
+	}
+	return err
+}
+
+func (k *K8sClient) RemoveNodeLabel(nodeName, key string) error {
+	k.reConnect()
+	k.Lock()
+	defer k.Unlock()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	patch := []map[string]interface{}{
+		{
+			"op":   "remove",
+			"path": fmt.Sprintf("/metadata/labels/%v", key),
+		},
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return fmt.Errorf("failed to marshal patch %v: %v", patch, err)
+	}
+	_, err = k.clientset.CoreV1().Nodes().Patch(ctx, nodeName, types.JSONPatchType, patchBytes, metav1.PatchOptions{})
+	if err != nil {
+		logger.Log.Printf("failed to remove label %+v from node %+v err %+v", key, nodeName, err)
+	}
+	return err
 }
 
 func (k *K8sClient) UpdateHealthLabel(nodeName string, newHealthMap map[string]string) error {

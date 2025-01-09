@@ -393,7 +393,11 @@ func (tr *TestRunner) watchGPUState(parameters *testrunnerGen.TestParameters) {
 					}
 					// if any GPU is not healthy, start a test against those GPUs
 					if !strings.EqualFold(state.Health, metricssvc.GPUHealth_HEALTHY.String()) {
-						unHealthyGPUIDs = append(unHealthyGPUIDs, id)
+						if len(state.AssociatedWorkload) == 0 {
+							unHealthyGPUIDs = append(unHealthyGPUIDs, id)
+						} else {
+							logger.Log.Printf("found GPU %+v unhealthy but still associated with workload %+v", id, state.AssociatedWorkload)
+						}
 					} else {
 						healthyGPUIDs = append(healthyGPUIDs, id)
 					}
@@ -471,6 +475,9 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, parameters *testrunn
 		logger.Log.Printf("failed to start test run, err: %+v", err)
 		return
 	}
+
+	tr.AddTestRunningLabel(parameters.TestCases[0].Recipe)
+	defer tr.RemoveTestRunningLabel(parameters.TestCases[0].Recipe)
 
 	if len(validIDs) == 0 {
 		// all devices were selected
@@ -593,6 +600,22 @@ func (tr *TestRunner) ReadPodInfo() {
 	if tr.k8sPodNamespace == "" {
 		tr.k8sPodNamespace = os.Getenv("POD_NAMESPACE")
 	}
+}
+
+func (tr *TestRunner) AddTestRunningLabel(recipe string) {
+	if !tr.isK8s {
+		return
+	}
+	key, val := GetTestRunningLabelKeyValue(tr.testCategory, tr.testTrigger, recipe)
+	tr.k8sClient.AddNodeLabel(tr.hostName, key, val)
+}
+
+func (tr *TestRunner) RemoveTestRunningLabel(recipe string) {
+	if !tr.isK8s {
+		return
+	}
+	key, _ := GetTestRunningLabelKeyValue(tr.testCategory, tr.testTrigger, recipe)
+	tr.k8sClient.RemoveNodeLabel(tr.hostName, key)
 }
 
 func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string, summary map[string]map[string]types.TestResult) {
