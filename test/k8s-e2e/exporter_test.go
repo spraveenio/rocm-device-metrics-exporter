@@ -401,7 +401,7 @@ func (s *E2ESuite) Test009VerifyHealthThresholds(c *C) {
 	}, 90*time.Second, 10*time.Second, "expected gpu 0 to be healthy but got unhealthy")
 }
 
-func (s *E2ESuite) Test010HelmUninstall(c *C) {
+func (s *E2ESuite) Test100HelmUninstall(c *C) {
 	err := s.helmClient.UninstallChart()
 	if err != nil {
 		assert.Fail(c, err.Error())
@@ -415,7 +415,7 @@ func (s *E2ESuite) Test010HelmUninstall(c *C) {
 	}
 }
 
-func (s *E2ESuite) Test011SecondDeplymentNoConfigMap(c *C) {
+func (s *E2ESuite) Test101SecondDeplymentNoConfigMap(c *C) {
 	ctx := context.Background()
 	log.Print("Testing helm install for exporter")
 	values := []string{
@@ -464,7 +464,7 @@ func (s *E2ESuite) Test011SecondDeplymentNoConfigMap(c *C) {
 	}, 10*time.Second, 1*time.Second)
 }
 
-func (s *E2ESuite) Test012MetricsServer(c *C) {
+func (s *E2ESuite) Test102MetricsServer(c *C) {
 	ctx := context.Background()
 	log.Print("Test noconfigmap metrics server is responding")
 	assert.Eventually(c, func() bool {
@@ -478,7 +478,7 @@ func (s *E2ESuite) Test012MetricsServer(c *C) {
 	}, 50*time.Second, 10*time.Second)
 }
 
-func (s *E2ESuite) Test013HelmUninstall(c *C) {
+func (s *E2ESuite) Test103HelmUninstall(c *C) {
 	err := s.helmClient.UninstallChart()
 	if err != nil {
 		assert.Fail(c, err.Error())

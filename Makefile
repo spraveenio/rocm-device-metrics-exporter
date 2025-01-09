@@ -179,10 +179,6 @@ checks: gen vet
 docker-publish:
 	${MAKE} -C docker docker-publish TOP_DIR=$(CURDIR)
 
-.PHONY: docker-mock-publish
-docker-mock-publish:
-	${MAKE} -C docker docker-publish TOP_DIR=$(CURDIR) MOCK=1
-
 .PHONY: unit-test
 unit-test:
 	PATH=$$PATH LOGDIR=$(TOP_DIR)/ go test -v -cover -mod=vendor ./pkg/...

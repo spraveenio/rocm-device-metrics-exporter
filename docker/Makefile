@@ -18,7 +18,7 @@ docker:
 .PHONY:docker-publish
 docker-publish:
 	@echo "publishing amd exporter container"
-	@TOP_DIR=$(TOP_DIR) MOCK=$(MOCK) ./build_exporter_release_docker.sh -p
+	@TOP_DIR=$(TOP_DIR) ./build_exporter_release_docker.sh -p
 
 
 .PHONY: docker-cicd
