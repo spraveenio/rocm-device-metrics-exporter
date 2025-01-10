@@ -121,8 +121,8 @@ func (k *K8sClient) AddNodeLabel(nodeName, key, val string) error {
 	patch := []map[string]interface{}{
 		{
 			"op":    "add",
-			"path":  "/metadata/labels",
-			"value": map[string]string{key: val},
+			"path":  fmt.Sprintf("/metadata/labels/%v", key),
+			"value": val,
 		},
 	}
 	patchBytes, err := json.Marshal(patch)

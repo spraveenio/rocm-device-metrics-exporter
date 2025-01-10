@@ -302,6 +302,6 @@ func BuildNoGPUTestSummary() map[string]map[string]types.TestResult {
 	return result
 }
 
-func GetTestRunningLabelKeyValue(category, trigger, recipe string) (string, string) {
-	return fmt.Sprintf("amd.testrunner.%v.%v.%v", category, trigger, recipe), "running"
+func GetTestRunningLabelKeyValue(category, recipe string) (string, string) {
+	return fmt.Sprintf("amd.testrunner.%v.%v", category, recipe), "running"
 }

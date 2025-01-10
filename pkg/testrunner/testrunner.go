@@ -606,7 +606,7 @@ func (tr *TestRunner) AddTestRunningLabel(recipe string) {
 	if !tr.isK8s {
 		return
 	}
-	key, val := GetTestRunningLabelKeyValue(tr.testCategory, tr.testTrigger, recipe)
+	key, val := GetTestRunningLabelKeyValue(tr.testCategory, recipe)
 	tr.k8sClient.AddNodeLabel(tr.hostName, key, val)
 }
 
@@ -614,7 +614,7 @@ func (tr *TestRunner) RemoveTestRunningLabel(recipe string) {
 	if !tr.isK8s {
 		return
 	}
-	key, _ := GetTestRunningLabelKeyValue(tr.testCategory, tr.testTrigger, recipe)
+	key, _ := GetTestRunningLabelKeyValue(tr.testCategory, recipe)
 	tr.k8sClient.RemoveNodeLabel(tr.hostName, key)
 }
 
