@@ -31,6 +31,7 @@ var (
 	Version   string
 	BuildDate string
 	GitCommit string
+	Publish   string
 )
 
 var (
@@ -69,6 +70,15 @@ func main() {
 
 	exporterHandler := exporter.NewExporter(*agentGrpcPort, *metricsConfig)
 
-	exporterHandler.StartMain()
+	enableDebugAPI := true // default
+	// if it is a public docker publish build - disable debug apis
+	if len(Publish) != 0 {
+		enableDebugAPI = false
+	}
+
+	if enableDebugAPI {
+		logger.Log.Printf("Debug APIs enabled")
+	}
+	exporterHandler.StartMain(enableDebugAPI)
 
 }
