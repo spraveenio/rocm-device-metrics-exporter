@@ -332,7 +332,7 @@ func main() {
 			fmt.Println("not a k8s deployment")
 			return
 		}
-		kc := k8sclient.NewClient()
+		kc := k8sclient.NewClient(context.Background())
 		labels, err := kc.GetNodelLabel(nodeName)
 		if err != nil {
 			fmt.Printf("err: %+v", err)

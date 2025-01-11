@@ -41,11 +41,14 @@ import (
 
 type K8sClient struct {
 	sync.Mutex
+	ctx       context.Context
 	clientset *kubernetes.Clientset
 }
 
-func NewClient() *K8sClient {
-	return &K8sClient{}
+func NewClient(ctx context.Context) *K8sClient {
+	return &K8sClient{
+		ctx: ctx,
+	}
 }
 
 func (k *K8sClient) init() error {
@@ -79,7 +82,7 @@ func (k *K8sClient) CreateEvent(evtObj *v1.Event) error {
 	k.reConnect()
 	k.Lock()
 	defer k.Unlock()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(k.ctx)
 	defer cancel()
 
 	if evtObj == nil {
@@ -99,7 +102,7 @@ func (k *K8sClient) GetNodelLabel(nodeName string) (string, error) {
 	k.reConnect()
 	k.Lock()
 	defer k.Unlock()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(k.ctx)
 	defer cancel()
 
 	node, err := k.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -165,7 +168,7 @@ func (k *K8sClient) UpdateHealthLabel(nodeName string, newHealthMap map[string]s
 	k.Lock()
 	defer k.Unlock()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(k.ctx)
 	defer cancel()
 
 	node, err := k.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})

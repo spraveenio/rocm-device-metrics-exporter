@@ -110,7 +110,7 @@ func (ga *GPUAgentClient) Init() error {
 	ga.schedulerCl = schedulerCl
 	if utils.IsKubernetes() {
 		ga.isKubernetes = true
-		ga.k8sLabelClient = k8sclient.NewClient()
+		ga.k8sLabelClient = k8sclient.NewClient(ga.ctx)
 	}
 
 	if err := ga.populateStaticHostLabels(); err != nil {
