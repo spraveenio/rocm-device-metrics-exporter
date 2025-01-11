@@ -24,7 +24,6 @@ import (
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/config"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/testsvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"google.golang.org/grpc"
@@ -32,16 +31,14 @@ import (
 
 type SvcHandler struct {
 	grpc      *grpc.Server
-	testSvc   *TestSvcImpl
 	healthSvc *MetricsSvcImpl
 	config    *config.ConfigHandler
 }
 
-func InitSvcs() *SvcHandler {
+func InitSvcs(enableDebugAPI bool) *SvcHandler {
 	s := &SvcHandler{
 		grpc:      grpc.NewServer(),
-		healthSvc: newMetricsServer(),
-		testSvc:   newTestServer(),
+		healthSvc: newMetricsServer(enableDebugAPI),
 	}
 	return s
 }
@@ -72,7 +69,6 @@ func (s *SvcHandler) Run() error {
 
 	// server registration for grpc services
 	metricssvc.RegisterMetricsServiceServer(s.grpc, s.healthSvc)
-	testsvc.RegisterTestServiceServer(s.grpc, s.testSvc)
 
 	if err := s.grpc.Serve(lis); err != nil {
 		return fmt.Errorf("failed to serve: %v", err)

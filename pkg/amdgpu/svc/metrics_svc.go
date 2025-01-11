@@ -28,6 +28,7 @@ import (
 
 type MetricsSvcImpl struct {
 	sync.Mutex
+	enableDebugAPI bool
 	metricssvc.UnimplementedMetricsServiceServer
 	clients []HealthInterface
 }
@@ -76,6 +77,11 @@ func (m *MetricsSvcImpl) List(ctx context.Context, e *emptypb.Empty) (*metricssv
 }
 
 func (m *MetricsSvcImpl) SetError(ctx context.Context, req *metricssvc.GPUErrorRequest) (*metricssvc.GPUErrorResponse, error) {
+
+	if !m.enableDebugAPI {
+		return nil, fmt.Errorf("invalid function error")
+	}
+
 	m.Lock()
 	defer m.Unlock()
 	logger.Log.Printf("Got SetError : %+v", req)
@@ -94,9 +100,10 @@ func (m *MetricsSvcImpl) SetError(ctx context.Context, req *metricssvc.GPUErrorR
 
 func (m *MetricsSvcImpl) mustEmbedUnimplementedMetricsServiceServer() {}
 
-func newMetricsServer() *MetricsSvcImpl {
+func newMetricsServer(enableDebugAPI bool) *MetricsSvcImpl {
 	msrv := &MetricsSvcImpl{
-		clients: []HealthInterface{},
+		enableDebugAPI: enableDebugAPI,
+		clients:        []HealthInterface{},
 	}
 	return msrv
 }

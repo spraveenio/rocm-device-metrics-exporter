@@ -212,11 +212,11 @@ func ExporterWithZmqDisable(zmqDisable bool) ExporterOption {
 }
 
 // StartMain - doesn't return it exits only on failure
-func (e *Exporter) StartMain() {
+func (e *Exporter) StartMain(enableDebugAPI bool) {
 
 	logger.Init(utils.IsKubernetes())
 
-	svcHandler := metricsserver.InitSvcs()
+	svcHandler := metricsserver.InitSvcs(enableDebugAPI)
 	go func() {
 		logger.Log.Printf("metrics service starting")
 		svcHandler.Run()
