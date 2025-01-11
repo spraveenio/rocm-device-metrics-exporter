@@ -127,7 +127,7 @@ func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, tes
 	runner.initTestRunnerConfig()
 	if utils.IsKubernetes() {
 		runner.isK8s = true
-		runner.k8sClient = k8sclient.NewClient()
+		runner.k8sClient = k8sclient.NewClient(context.Background())
 		runner.hostName = os.Getenv("NODE_NAME")
 	}
 	logger.Log.Printf("Test runner isKubernetes: %+v config: %+v", runner.isK8s, runner.globalTestRunnerConfig)
