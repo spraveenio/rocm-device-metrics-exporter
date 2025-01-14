@@ -13,6 +13,14 @@ targets:
       - build-device-metrics-exporter-docker-azure
       - build-helm-artifact
       - e2e-build-mock-exporter
+  copy-test-runner-artifacts:
+    commands: ["sh", "-c", "pwd && cd ./asset-build && ./test-runner-asset-push.sh"]
+    owners: ["email:yan.sun3@amd.com"]
+    area:
+    sub-area:
+    feature:
+    build-dependencies:
+      - build-test-runner-docker
 
 image:
   bind_dir: "/go/src/github.com/pensando/device-metrics-exporter"

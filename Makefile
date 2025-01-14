@@ -45,7 +45,7 @@ gen: gopkglist gen-test-runner
 	@for c in ${TO_MOCK}; do printf "\n+++++++++++++++++ Generating mock $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} MOCK_DIR=$(MOCK_DIR) GEN_DIR=$(GEN_DIR) || exit 1; done
 
 .PHONY: gen-test-runner
-gen-test-runner:
+gen-test-runner: gopkglist
 	@for c in ${TO_GEN_TESTRUNNER}; do printf "\n+++++++++++++++++ Generating $${c} +++++++++++++++++\n"; PATH=$$PATH make -C $${c} GEN_DIR=$(GEN_DIR_TESTRUNNER) || exit 1; done
 
 .PHONY: pkg pkg-clean
@@ -163,6 +163,12 @@ docker: gen amdexporter
 .PHONY: docker-test-runner
 docker-test-runner: gen-test-runner amdtestrunner
 	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker
+
+.PHOHY: docker-test-runner-cicd
+docker-test-runner-cicd: gen-test-runner amdtestrunner
+	echo "Building test runner cicd docker for publish"
+	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker-cicd
+	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker-save
 
 .PHONY: docker-azure
 docker-azure: gen amdexporter
