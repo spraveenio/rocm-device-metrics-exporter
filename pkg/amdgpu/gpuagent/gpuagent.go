@@ -41,20 +41,21 @@ const (
 
 type GPUAgentClient struct {
 	sync.Mutex
-	conn             *grpc.ClientConn
-	mh               *metricsutil.MetricsHandler
-	gpuclient        amdgpu.GPUSvcClient
-	evtclient        amdgpu.EventSvcClient
-	m                *metrics // client specific metrics
-	k8sLabelClient   *k8sclient.K8sClient
-	schedulerCl      scheduler.SchedulerClient
-	isKubernetes     bool
-	enableZmq        bool
-	staticHostLabels map[string]string
-	ctx              context.Context
-	cancel           context.CancelFunc
-	healthState      map[string]*metricssvc.GPUState
-	mockEccField     map[string]map[string]uint32 // gpuid->fields->count
+	conn                   *grpc.ClientConn
+	mh                     *metricsutil.MetricsHandler
+	gpuclient              amdgpu.GPUSvcClient
+	evtclient              amdgpu.EventSvcClient
+	m                      *metrics // client specific metrics
+	k8sLabelClient         *k8sclient.K8sClient
+	schedulerCl            scheduler.SchedulerClient
+	isKubernetes           bool
+	enableZmq              bool
+	staticHostLabels       map[string]string
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	healthState            map[string]*metricssvc.GPUState
+	mockEccField           map[string]map[string]uint32 // gpuid->fields->count
+	computeNodeHealthState bool
 }
 
 func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclient amdgpu.GPUSvcClient, evtclient amdgpu.EventSvcClient, err error) {
@@ -80,7 +81,7 @@ func initScheduler(ctx context.Context, enableZmq bool) (scheduler.SchedulerClie
 }
 
 func NewAgent(mh *metricsutil.MetricsHandler, enableZmq bool) *GPUAgentClient {
-	ga := &GPUAgentClient{mh: mh, enableZmq: enableZmq}
+	ga := &GPUAgentClient{mh: mh, enableZmq: enableZmq, computeNodeHealthState: true}
 	ga.healthState = make(map[string]*metricssvc.GPUState)
 	ga.mockEccField = make(map[string]map[string]uint32)
 	mh.RegisterMetricsClient(ga)
@@ -186,7 +187,7 @@ func (ga *GPUAgentClient) sendNodeLabelUpdate() error {
 
 func (ga *GPUAgentClient) getMetricsAll() error {
 	// send the req to gpuclient
-	resp, err := ga.getMetrics()
+	resp, err := ga.getGPUs()
 	if err != nil {
 		return err
 	}
@@ -202,7 +203,7 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 	return nil
 }
 
-func (ga *GPUAgentClient) getMetrics() (*amdgpu.GPUGetResponse, error) {
+func (ga *GPUAgentClient) getGPUs() (*amdgpu.GPUGetResponse, error) {
 	if !ga.isActive() {
 		ga.reconnect()
 	}
