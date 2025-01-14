@@ -919,7 +919,7 @@ func getGPUInstanceID(gpu *amdgpu.GPU) int {
 func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	// send the req to gpuclient
 	wls := make(map[string]interface{})
-	resp, err := ga.getMetrics()
+	resp, err := ga.getGPUs()
 	if err != nil {
 		return err
 	}
