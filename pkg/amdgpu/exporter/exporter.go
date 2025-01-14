@@ -229,7 +229,7 @@ func (e *Exporter) StartMain() {
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()
 
-	gpuclient := gpuagent.NewAgent(mh, !e.zmqDisable)
+	gpuclient = gpuagent.NewAgent(mh, !e.zmqDisable)
 	if err := gpuclient.Init(); err != nil {
 		logger.Log.Printf("gpuclient init err :%+v", err)
 	}
@@ -240,4 +240,15 @@ func (e *Exporter) StartMain() {
 	svcHandler.RegisterHealthClient(gpuclient)
 
 	foreverWatcher()
+}
+
+// SetComputeNodeHealth sets the compute node health
+func (e *Exporter) SetComputeNodeHealth(health bool) {
+	for gpuclient == nil {
+		logger.Log.Printf("gpuclient nil, waiting for it to be created")
+		time.Sleep(time.Second)
+	}
+	if gpuclient != nil {
+		gpuclient.SetComputeNodeHealthState(health)
+	}
 }

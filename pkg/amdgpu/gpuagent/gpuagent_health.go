@@ -131,6 +131,15 @@ func (ga *GPUAgentClient) updateNewHealthState(newGPUState map[string]*metricssv
 }
 
 func (ga *GPUAgentClient) processHealthValidation() error {
+	ga.Lock()
+	if !ga.computeNodeHealthState { // unhealthy
+		ga.Unlock()
+		err := fmt.Errorf("compute node unhealthy, cannot process metrics")
+		logger.Log.Printf("err: %+v", err)
+		return err
+	}
+	ga.Unlock()
+
 	var gpumetrics *amdgpu.GPUGetResponse
 	var evtData *amdgpu.EventResponse
 	var newGPUState map[string]*metricssvc.GPUState
@@ -158,7 +167,7 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 
 	wls := make(map[string]interface{})
 	wls, _ = ga.schedulerCl.ListWorkloads()
-	gpumetrics, err = ga.getMetrics()
+	gpumetrics, err = ga.getGPUs()
 	if err != nil || (gpumetrics != nil && gpumetrics.ApiStatus != 0) {
 		errOccured = true
 		logger.Log.Printf("gpuagent get metrics failed %v", err)
@@ -240,4 +249,73 @@ func (ga *GPUAgentClient) GetGPUHealthStates() (map[string]interface{}, error) {
 	}
 
 	return healthMap, nil
+}
+
+// SetComputeNodeHealthState sets the compute node health state
+func (ga *GPUAgentClient) SetComputeNodeHealthState(state bool) {
+	ga.Lock()
+	defer ga.Unlock()
+
+	// If the state is unchanged, no action is needed.
+	if ga.computeNodeHealthState == state {
+		return
+	}
+
+	logger.Log.Printf("updating compute node health from: %v, to: %v", ga.computeNodeHealthState, state)
+	ga.computeNodeHealthState = state
+	if !state { // Mark GPUs as unavailable only if the state is unhealthy (false).
+		ga.updateAllGPUsHealthState(strings.ToLower(metricssvc.GPUHealth_UNHEALTHY.String()))
+	} else {
+		ga.updateAllGPUsHealthState(strings.ToLower(metricssvc.GPUHealth_HEALTHY.String()))
+	}
+}
+
+func (ga *GPUAgentClient) updateAllGPUsHealthState(healthStr string) {
+	// If health state is already set, mark all GPUs as unhealthy
+	if len(ga.healthState) > 0 {
+		logger.Log.Printf("GPUs are already fetched, setting health state")
+		for gpuid := range ga.healthState {
+			ga.healthState[gpuid].Health = healthStr
+		}
+		return
+	}
+
+	logger.Log.Printf("fetch GPUs and set health state")
+	// If health state is not set, fetch GPUs and mark them as unhealthy
+	wls, _ := ga.schedulerCl.ListWorkloads()
+	gpus, err := ga.getGPUs()
+	if err != nil || (gpus != nil && gpus.ApiStatus != 0) {
+		logger.Log.Printf("gpuagent get GPUs failed %v", err)
+		return
+	}
+
+	for _, gpu := range gpus.Response {
+		uuid, _ := uuid.FromBytes(gpu.Spec.Id)
+		gpuid := fmt.Sprintf("%v", gpu.Status.Index)
+		gpuuid := uuid.String()
+		deviceid := ""
+		if gpu.Status.PCIeStatus != nil {
+			deviceid = strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)
+		}
+
+		workloadInfo := "" // only one per gpu
+		if wl := ga.getWorkloadInfo(wls, gpu, false); wl != nil {
+			if ga.isKubernetes {
+				podInfo := wl.(scheduler.PodResourceInfo)
+				workloadInfo = fmt.Sprintf("pod : %v, namespace : %v, container: %v",
+					podInfo.Pod, podInfo.Namespace, podInfo.Container)
+			} else {
+				jobInfo := wl.(scheduler.JobInfo)
+				workloadInfo = fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
+					jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster)
+			}
+		}
+		ga.healthState[gpuid] = &metricssvc.GPUState{
+			ID:                 gpuid,
+			UUID:               gpuuid,
+			Health:             healthStr,
+			Device:             deviceid,
+			AssociatedWorkload: []string{workloadInfo},
+		}
+	}
 }
