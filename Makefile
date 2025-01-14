@@ -373,6 +373,12 @@ docker: gen amdexporter
 docker-test-runner: gen-test-runner amdtestrunner
 	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker
 
+.PHOHY: docker-test-runner-cicd
+docker-test-runner-cicd: gen-test-runner amdtestrunner
+	echo "Building test runner cicd docker for publish"
+	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker-cicd
+	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker-save
+
 .PHONY: docker-azure
 docker-azure: gen amdexporter
 	${MAKE} -C docker azure TOP_DIR=$(CURDIR)
