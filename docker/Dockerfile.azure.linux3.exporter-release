@@ -8,7 +8,7 @@ LABEL OS="mcr.microsoft.com/azurelinux/base/core:3.0"
 ARG ROCM_VERSION=6.2
 ARG AMDGPU_VERSION=6.2
 
-RUN tdnf clean all && tdnf install -y ca-certificates sudo procps elfutils-libelf cmake kmod file libcap-devel vim net-tools libdrm && rm -rf /var/cache/yum && rm -rf /var/cache/dnf && tdnf clean all
+RUN tdnf clean all && tdnf install -y ca-certificates sudo findutils procps elfutils-libelf cmake kmod file libcap-devel vim net-tools libdrm && rm -rf /var/cache/yum && rm -rf /var/cache/dnf && tdnf clean all
 
 ADD rhelrepofiles/amdgpu.repo /etc/yum.repos.d/amdgpu.repo 
 ADD rhelrepofiles/rocm.repo /etc/yum.repos.d/rocm.repo
