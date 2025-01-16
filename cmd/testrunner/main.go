@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
@@ -63,8 +64,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	testCategory := getStrFromEnvOrDefault(testCategoryEnv, globals.DefaultTestCategory)
-	testTrigger := getStrFromEnvOrDefault(testTriggerEnv, globals.DefaultTestTrigger)
+	testCategory := strings.ToUpper(getStrFromEnvOrDefault(testCategoryEnv, globals.DefaultTestCategory))
+	testTrigger := strings.ToUpper(getStrFromEnvOrDefault(testTriggerEnv, globals.DefaultTestTrigger))
 	logDir := getStrFromEnvOrDefault(logDirEnv, globals.DefaultRunnerLogDir)
 
 	testrunner.ValidateArgs(testCategory, testTrigger, *rvsPath, *rocmSMIPath, *rvsTestCaseDir, *exporterSocketPath)

@@ -23,11 +23,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -89,18 +93,24 @@ var (
 )
 
 type TestRunner struct {
-	hostName               string
-	rvsPath                string
-	rocmSMIPath            string
-	exporterSocketPath     string
-	testCategory           string
-	testLocation           string
-	testTrigger            string
-	rvsTestCaseDir         string
-	logDir                 string
-	statusDBPath           string
+	hostName           string
+	rvsPath            string
+	rocmSMIPath        string
+	exporterSocketPath string
+
+	testCategory   string
+	testLocation   string
+	testTrigger    string
+	rvsTestCaseDir string
+	testCfgPath    string
+
+	logDir       string
+	statusDBPath string
+
+	sync.Mutex             // mutex to protect globalTestRunnerConfig from file watcher
 	globalTestRunnerConfig *testrunnerGen.TestRunnerConfig
 	rvsTestRunner          types.TestRunner
+
 	// k8s related fields
 	isK8s           bool
 	k8sClient       *k8sclient.K8sClient
@@ -117,18 +127,20 @@ func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, tes
 		exporterSocketPath: exporterSocketPath,
 		testCategory:       testCategory,
 		testTrigger:        testTrigger,
+		testCfgPath:        testRunnerConfigPath,
 		rvsTestCaseDir:     rvsTestCaseDir,
 		logDir:             logDir,
 	}
 	// init test runner config
 	// testRunnerConfigPath file existence has been verified
+	runner.getHostName()
 	runner.readTestRunnerConfig(testRunnerConfigPath)
+	runner.initLogger()
 	runner.validateTestTrigger()
 	runner.initTestRunnerConfig()
 	if utils.IsKubernetes() {
 		runner.isK8s = true
 		runner.k8sClient = k8sclient.NewClient(context.Background())
-		runner.hostName = os.Getenv("NODE_NAME")
 	}
 	logger.Log.Printf("Test runner isKubernetes: %+v config: %+v", runner.isK8s, runner.globalTestRunnerConfig)
 	return runner
@@ -137,6 +149,9 @@ func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, tes
 // validateTestTrigger validates the test category/location/trigger existence
 // return test locaiton, either global or specific hostname
 func (tr *TestRunner) validateTestTrigger() {
+	tr.Lock()
+	defer tr.Unlock()
+
 	// 1. verify test category
 	// given category config should exist
 	if tr.globalTestRunnerConfig.TestConfig == nil {
@@ -147,15 +162,15 @@ func (tr *TestRunner) validateTestTrigger() {
 		fmt.Printf("failed to find category %+v from config %+v\n", tr.testCategory, tr.globalTestRunnerConfig)
 		os.Exit(1)
 	}
+
 	// 2. verify test location
 	// global config or given hostname's config should exist
 	categoryConfig := tr.globalTestRunnerConfig.TestConfig[tr.testCategory]
-	hostName, err := os.Hostname()
-	if err != nil {
-		logger.Log.Printf("failed to get hostname, err: %+v", err)
+	if categoryConfig == nil {
+		fmt.Printf("got empty config for test category %+v", tr.testCategory)
+		os.Exit(1)
 	}
-	tr.hostName = hostName
-	logger.Log.Printf("HostName: %v", tr.hostName)
+
 	if categoryConfig.TestLocationTrigger == nil {
 		fmt.Printf("failed to find any global or host specific test config under category %+v: %+v\n", tr.testCategory, categoryConfig)
 		os.Exit(1)
@@ -166,6 +181,7 @@ func (tr *TestRunner) validateTestTrigger() {
 		fmt.Printf("cannot find neither global test config nor host specific config under category %+v: %+v\n", tr.testCategory, categoryConfig)
 		os.Exit(1)
 	}
+
 	// 3. validate test trigger's config
 	// if host specifc config was found
 	// validate host specific config's trigger
@@ -209,10 +225,27 @@ func (tr *TestRunner) initLogger() {
 
 // readTestRunnerConfig try to user provided customized test runner config from given file
 func (tr *TestRunner) readTestRunnerConfig(configPath string) {
+	tr.Lock()
+	defer tr.Unlock()
+
+	defer func() {
+		tr.normalizeConfig()
+	}()
+
+	// if config file doesn't exist, create dir in case it doesn't exist
+	// so that fsnotify file watcher won't fail to init the watcher
+	if _, err := os.Stat(configPath); err != nil && os.IsNotExist(err) {
+		directory := path.Dir(configPath)
+		err = os.MkdirAll(directory, 0755)
+		if err != nil {
+			fmt.Printf("Failed to create dir %+v for config file %+v, err: %+v\n", directory, configPath, err)
+			os.Exit(1)
+		}
+	}
+
 	file, err := os.Open(configPath)
 	if err != nil {
 		tr.globalTestRunnerConfig = defaultGlobalTestRunnerConfig
-		tr.initLogger()
 		logger.Log.Printf("cannot read provided test runner config at %+v, err: %+v, using default test runner config", configPath, err)
 		return
 	}
@@ -220,7 +253,6 @@ func (tr *TestRunner) readTestRunnerConfig(configPath string) {
 	bytes, err := io.ReadAll(file)
 	if err != nil {
 		tr.globalTestRunnerConfig = defaultGlobalTestRunnerConfig
-		tr.initLogger()
 		logger.Log.Printf("cannot read provided test runner config at %+v, err: %+v, using default test runner config", configPath, err)
 		return
 	}
@@ -228,12 +260,10 @@ func (tr *TestRunner) readTestRunnerConfig(configPath string) {
 	err = json.Unmarshal(bytes, &config)
 	if err != nil {
 		tr.globalTestRunnerConfig = defaultGlobalTestRunnerConfig
-		tr.initLogger()
 		logger.Log.Printf("cannot read provided test runner config at %+v, err: %+v, using default test runner config", configPath, err)
 		return
 	}
 	tr.globalTestRunnerConfig = &config
-	tr.initLogger()
 }
 
 func (tr *TestRunner) initTestRunnerConfig() {
@@ -268,8 +298,10 @@ func (tr *TestRunner) initTestRunnerConfig() {
 		}
 	}
 	tr.statusDBPath = statusDBPath
-	// the validation has been done previously by validateTestTrigger()
-	testParams := tr.globalTestRunnerConfig.TestConfig[tr.testCategory].TestLocationTrigger[tr.testLocation].TestParameters[tr.testTrigger]
+
+	// the validation of globalTestRunnerConfig has been done previously by validateTestTrigger()
+	testParams := tr.getTestParameters()
+
 	gpuModelDir, err := getGPUModelTestRecipeDir(tr.rocmSMIPath)
 	if err != nil {
 		logger.Log.Printf("failed to get GPU model specific folder for test recipe err %+v, using recipe from root conf folder", err)
@@ -302,8 +334,7 @@ func (tr *TestRunner) TriggerTest() {
 				os.Exit(1)
 			}
 			tr.rvsTestRunner = rvsTestRunner
-			testParams := tr.globalTestRunnerConfig.TestConfig[tr.testCategory].TestLocationTrigger[tr.testLocation].TestParameters[tr.testTrigger]
-			tr.watchGPUState(testParams)
+			tr.watchGPUState()
 		case testrunnerGen.TestTrigger_MANUAL.String(),
 			testrunnerGen.TestTrigger_PRE_START_JOB_CHECK.String():
 			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.logDir)
@@ -312,8 +343,7 @@ func (tr *TestRunner) TriggerTest() {
 				os.Exit(1)
 			}
 			tr.rvsTestRunner = rvsTestRunner
-			testParams := tr.globalTestRunnerConfig.TestConfig[tr.testCategory].TestLocationTrigger[tr.testLocation].TestParameters[tr.testTrigger]
-			tr.manualTestGPU(testParams)
+			tr.manualTestGPU()
 		default:
 			logger.Log.Printf("unsupported test trigger %+v for category %+v", tr.testTrigger, tr.testCategory)
 			os.Exit(1)
@@ -321,7 +351,7 @@ func (tr *TestRunner) TriggerTest() {
 	}
 }
 
-func (tr *TestRunner) watchGPUState(parameters *testrunnerGen.TestParameters) {
+func (tr *TestRunner) watchGPUState() {
 	ticker := time.NewTicker(globals.GPUStateConnRetryFreq)
 	defer ticker.Stop()
 	ctx, cancel := context.WithTimeout(context.Background(), globals.GPUStateConnREtryTimeout)
@@ -363,9 +393,10 @@ func (tr *TestRunner) watchGPUState(parameters *testrunnerGen.TestParameters) {
 			}
 		}
 		logger.Log.Printf("found GPU %+v with incomplete test before restart %+v, start to rerun test", ids, statusObj)
-		go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(), ids, parameters, true)
+		go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(), ids, true)
 	}
 
+	go tr.watchConfigFile()
 	for {
 		select {
 		case <-watchTicker.C:
@@ -407,7 +438,7 @@ func (tr *TestRunner) watchGPUState(parameters *testrunnerGen.TestParameters) {
 			// start test on unhealthy GPU
 			if len(unHealthyGPUIDs) > 0 {
 				logger.Log.Printf("found GPU with unhealthy state %+v", unHealthyGPUIDs)
-				go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(), unHealthyGPUIDs, parameters, false)
+				go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(), unHealthyGPUIDs, false)
 			} else {
 				logger.Log.Printf("all GPUs are healthy, skip testing")
 			}
@@ -415,6 +446,50 @@ func (tr *TestRunner) watchGPUState(parameters *testrunnerGen.TestParameters) {
 			tr.cleanupHealthyGPUTestStatus(healthyGPUIDs)
 		}
 	}
+}
+
+func (tr *TestRunner) watchConfigFile() {
+	// Create new watcher.
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		logger.Log.Fatal(err)
+	}
+	defer watcher.Close()
+	ctx := context.Background()
+	// Start listening for events.
+	go func() {
+		for ctx.Err() == nil {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				// k8s has to many cases to handle because of symlink, to be
+				// safe handle all cases
+				if event.Has(fsnotify.Create | fsnotify.Write | fsnotify.Remove | fsnotify.Rename) {
+					logger.Log.Printf("loading new config on %v", tr.testCfgPath)
+					tr.readTestRunnerConfig(tr.testCfgPath)
+					tr.validateTestTrigger()
+					logger.Log.Printf("Test runner isKubernetes: %+v config: %+v", tr.isK8s, tr.globalTestRunnerConfig)
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					logger.Log.Printf("error watching for config file: %v", err)
+					return
+				}
+			}
+		}
+	}()
+
+	// Add a path.
+	err = watcher.Add(tr.testCfgPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	logger.Log.Printf("starting file watcher for %v", tr.testCfgPath)
+
+	<-make(chan struct{})
 }
 
 func (tr *TestRunner) cleanupHealthyGPUTestStatus(ids []string) {
@@ -442,7 +517,8 @@ func (tr *TestRunner) cleanupHealthyGPUTestStatus(ids []string) {
 	}
 }
 
-func (tr *TestRunner) testGPU(trigger string, ids []string, parameters *testrunnerGen.TestParameters, isRerun bool) {
+func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
+	parameters := tr.getTestParameters()
 	// load ongoing test status
 	// avoid run multiple test on the same device
 	validIDs, statusObj := removeIDsWithExistingTest(trigger, tr.statusDBPath, ids, parameters, isRerun)
@@ -501,6 +577,14 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, parameters *testrunn
 		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v timeout", trigger, parameters.TestCases[0].Recipe, ids)
 		result := BuildTimedoutTestSummary(validIDs)
 		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String(), result)
+		// save log into gzip file
+		if stdout := handler.Stdout(); stdout != "" {
+			SaveTestResultToGz(stdout, GetLogFilePath(tr.logDir, trigger, parameters.TestCases[0].Recipe, "stdout"))
+		}
+		if stderr := handler.Stderr(); stderr != "" {
+			SaveTestResultToGz(stderr, GetLogFilePath(tr.logDir, trigger, parameters.TestCases[0].Recipe, "stderr"))
+		}
+		handler.StopTest()
 		// exit on non-auto trigger's failure
 		tr.exitOnFailure(result)
 	case <-handler.Done():
@@ -561,7 +645,7 @@ func (tr *TestRunner) exitOnFailure(result map[string]map[string]types.TestResul
 	}
 }
 
-func (tr *TestRunner) manualTestGPU(parameters *testrunnerGen.TestParameters) {
+func (tr *TestRunner) manualTestGPU() {
 	// for manual test
 	// if there is no GPU detected, fail the test runner process
 	allGUIDs, err := GetAllGUIDs(tr.rocmSMIPath)
@@ -572,6 +656,7 @@ func (tr *TestRunner) manualTestGPU(parameters *testrunnerGen.TestParameters) {
 	if len(allGUIDs) == 0 {
 		logger.Log.Println("no GPU was detected by rocm-smi")
 		result := BuildNoGPUTestSummary()
+		parameters := tr.getTestParameters()
 		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result)
 		// exit on non-auto trigger's failure
 		tr.exitOnFailure(result)
@@ -587,9 +672,9 @@ func (tr *TestRunner) manualTestGPU(parameters *testrunnerGen.TestParameters) {
 			ids = append(ids, deviceID)
 		}
 		logger.Log.Printf("found GPU %+v with incomplete test before restart %+v, start to rerun test", ids, statusObj)
-		tr.testGPU(tr.testTrigger, ids, parameters, true)
+		tr.testGPU(tr.testTrigger, ids, true)
 	} else {
-		tr.testGPU(tr.testTrigger, ids, parameters, false)
+		tr.testGPU(tr.testTrigger, ids, false)
 	}
 }
 
@@ -616,6 +701,50 @@ func (tr *TestRunner) RemoveTestRunningLabel(recipe string) {
 	}
 	key, _ := GetTestRunningLabelKeyValue(tr.testCategory, recipe)
 	tr.k8sClient.RemoveNodeLabel(tr.hostName, key)
+}
+
+func (tr *TestRunner) normalizeConfig() {
+	// convert category to uppercase so that config map won't be case sensitive
+	if tr.globalTestRunnerConfig != nil {
+		newConfigMap := map[string]*testrunnerGen.TestCategoryConfig{}
+		for category, categoryConfig := range tr.globalTestRunnerConfig.TestConfig {
+			if categoryConfig != nil {
+				newConfigMap[strings.ToUpper(category)] = categoryConfig
+				newLocationConfig := map[string]*testrunnerGen.TestTriggerConfig{}
+				for location, triggerConfig := range categoryConfig.TestLocationTrigger {
+					if triggerConfig != nil {
+						newParams := map[string]*testrunnerGen.TestParameters{}
+						for trigger, params := range triggerConfig.TestParameters {
+							newParams[strings.ToUpper(trigger)] = params
+						}
+						newLocationConfig[location] = &testrunnerGen.TestTriggerConfig{
+							TestParameters: newParams,
+						}
+					}
+				}
+				categoryConfig.TestLocationTrigger = newLocationConfig
+			}
+		}
+		tr.globalTestRunnerConfig.TestConfig = newConfigMap
+	}
+}
+
+func (tr *TestRunner) getTestParameters() *testrunnerGen.TestParameters {
+	tr.Lock()
+	defer tr.Unlock()
+	return tr.globalTestRunnerConfig.TestConfig[tr.testCategory].TestLocationTrigger[tr.testLocation].TestParameters[tr.testTrigger]
+}
+
+func (tr *TestRunner) getHostName() {
+	hostName, err := os.Hostname()
+	if err != nil {
+		logger.Log.Printf("failed to get hostname, err: %+v", err)
+	}
+	tr.hostName = hostName
+	if utils.IsKubernetes() {
+		tr.hostName = os.Getenv("NODE_NAME")
+	}
+	logger.Log.Printf("HostName: %v", tr.hostName)
 }
 
 func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string, summary map[string]map[string]types.TestResult) {
