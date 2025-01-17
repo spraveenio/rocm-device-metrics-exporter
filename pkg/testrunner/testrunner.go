@@ -133,9 +133,9 @@ func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, tes
 	}
 	// init test runner config
 	// testRunnerConfigPath file existence has been verified
-	runner.getHostName()
-	runner.readTestRunnerConfig(testRunnerConfigPath)
 	runner.initLogger()
+	runner.readTestRunnerConfig(testRunnerConfigPath)
+	runner.getHostName()
 	runner.validateTestTrigger()
 	runner.initTestRunnerConfig()
 	if utils.IsKubernetes() {
@@ -231,17 +231,6 @@ func (tr *TestRunner) readTestRunnerConfig(configPath string) {
 	defer func() {
 		tr.normalizeConfig()
 	}()
-
-	// if config file doesn't exist, create dir in case it doesn't exist
-	// so that fsnotify file watcher won't fail to init the watcher
-	if _, err := os.Stat(configPath); err != nil && os.IsNotExist(err) {
-		directory := path.Dir(configPath)
-		err = os.MkdirAll(directory, 0755)
-		if err != nil {
-			fmt.Printf("Failed to create dir %+v for config file %+v, err: %+v\n", directory, configPath, err)
-			os.Exit(1)
-		}
-	}
 
 	file, err := os.Open(configPath)
 	if err != nil {
@@ -449,6 +438,12 @@ func (tr *TestRunner) watchGPUState() {
 }
 
 func (tr *TestRunner) watchConfigFile() {
+	// if config file doesn't exist, create dir in case it doesn't exist
+	// so that fsnotify file watcher won't fail to init the watcher
+	directory := path.Dir(tr.testCfgPath)
+	os.MkdirAll(directory, 0755)
+	logger.Log.Printf("starting file watcher for %v", directory)
+
 	// Create new watcher.
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -482,12 +477,11 @@ func (tr *TestRunner) watchConfigFile() {
 	}()
 
 	// Add a path.
-	err = watcher.Add(tr.testCfgPath)
+	err = watcher.Add(directory)
 	if err != nil {
+		logger.Log.Printf("failed to start the config file watcher err %+v", err)
 		log.Fatal(err)
 	}
-
-	logger.Log.Printf("starting file watcher for %v", tr.testCfgPath)
 
 	<-make(chan struct{})
 }
