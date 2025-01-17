@@ -32,14 +32,14 @@ setup_dir () {
 
 copy_artifacts () {
     # copy docker mock image
-    cp /device-metrics-exporter/docker/testrunner/test-runner-latest.tgz $BUNDLE_DIR/test-runner-latest-$RELEASE.tar.gz
+    cp /device-metrics-exporter/docker/testrunner/test-runner-latest.tar.gz $BUNDLE_DIR/test-runner-latest-$RELEASE.tar.gz
     # list the artifacts copied out
     ls -la $BUNDLE_DIR
 }
 
 docker_push () {
     TEST_RUNNER_IMAGE_URL=registry.test.pensando.io:5000/test-runner/test-runner
-    docker load -i /device-metrics-exporter/docker/testrunner/test-runner-latest.tgz
+    docker load -i /device-metrics-exporter/docker/testrunner/test-runner-latest.tar.gz
     docker inspect $TEST_RUNNER_IMAGE_URL:latest | grep "HOURLY"
     docker tag $TEST_RUNNER_IMAGE_URL:latest $TEST_RUNNER_IMAGE_URL:$tag
     docker push $TEST_RUNNER_IMAGE_URL:$tag
