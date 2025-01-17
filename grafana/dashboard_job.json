@@ -2558,6 +2558,7 @@
   "templating": {
     "list": [
       {
+        "allValue": "+",
         "current": {},
         "datasource": {
           "type": "prometheus",
