@@ -254,15 +254,17 @@ func (ga *GPUAgentClient) GetGPUHealthStates() (map[string]interface{}, error) {
 // SetComputeNodeHealthState sets the compute node health state
 func (ga *GPUAgentClient) SetComputeNodeHealthState(state bool) {
 	ga.Lock()
-	defer ga.Unlock()
 
 	// If the state is unchanged, no action is needed.
 	if ga.computeNodeHealthState == state {
+		ga.Unlock()
 		return
 	}
 
 	logger.Log.Printf("updating compute node health from: %v, to: %v", ga.computeNodeHealthState, state)
 	ga.computeNodeHealthState = state
+	ga.Unlock()
+
 	if !state { // Mark GPUs as unavailable only if the state is unhealthy (false).
 		ga.updateAllGPUsHealthState(strings.ToLower(metricssvc.GPUHealth_UNHEALTHY.String()))
 	} else {
