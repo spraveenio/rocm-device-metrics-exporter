@@ -50,9 +50,8 @@ builds:
   build-test-runner-docker:
     commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && HOURLY_TAG_LABEL=$RELEASE IMAGE_TAG=latest make docker-test-runner-cicd"]
     owners: ["email:yan.sun3@amd.com"]
-    area:
-    sub-area:
-    feature:
+    artifacts:
+        - /device-metrics-exporter/docker/testrunner/test-runner-latest.tar.gz
 
 targets:
   device-metrics-sanity:
