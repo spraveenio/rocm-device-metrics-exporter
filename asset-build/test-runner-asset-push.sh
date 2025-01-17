@@ -16,7 +16,7 @@ fi
 
 tag_prefix="${RELEASE%-*}"
 
-if [ "$tag_prefix" == "test-runner-0.0.1" ]; then
+if [ "$tag_prefix" == "exporter-0.0.1" ]; then
   tag="latest"
 else
   tag="$tag_prefix"
@@ -48,7 +48,7 @@ docker_push () {
     then
       echo "DOCKERHUB_TOKEN is not set"
     else
-      docker tag $TEST_RUNNER_IMAGE_URL:latest amdpsdo/test-runner:$tag
+      docker tag $TEST_RUNNER_IMAGE_URL:$tag amdpsdo/test-runner:$tag
       docker login --username=shreyajmeraamd --password-stdin <<< $DOCKERHUB_TOKEN
       docker push amdpsdo/test-runner:$tag
     fi
