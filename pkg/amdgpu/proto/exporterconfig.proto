@@ -164,6 +164,8 @@ enum GPUMetricLabel {
     VBIOS_VERSION      = 14;
     // mandatory field HOSTNAME cannot be disabled
     HOSTNAME           = 15;
+    // mandatory field GPU_PARTITION_ID cannot be disabled
+    GPU_PARTITION_ID   = 16;
 }
 
 message GPUMetricConfig {

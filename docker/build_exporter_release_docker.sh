@@ -74,15 +74,13 @@ IMAGE_DIR=$(pwd)/obj
 rm -rf $IMAGE_DIR
 mkdir -p $IMAGE_DIR
 
-# create symlinks for gpuagent and gpuctl binaries and librocm_smi64.so.2 in the
-# docker directory so that they can be added to the container
 if [ "$MOCK" == "1" ]; then
     tar -xf $TOP_DIR/assets/gpuagent_mock.bin.gz -C $TOP_DIR/docker/
 else
     tar -xf $TOP_DIR/assets/gpuagent_static.bin.gz -C $TOP_DIR/docker/
 fi
 chmod +x $TOP_DIR/docker/gpuagent
-cp -r $TOP_DIR/assets/amd_smi_lib/x86_64/lib $TOP_DIR/docker/smilib
+cp $TOP_DIR/assets/patch/rhel/libamd_smi.so.24.7.60300 $TOP_DIR/docker/
 ln -f $TOP_DIR/assets/gpuctl.gobin $TOP_DIR/docker/gpuctl
 ln -f $TOP_DIR/bin/amd-metrics-exporter $TOP_DIR/docker/amd-metrics-exporter
 ln -f $TOP_DIR/bin/metricsclient $TOP_DIR/docker/metricsclient
@@ -123,6 +121,6 @@ if [ "$SAVE_IMAGE" == 1 ]; then
 fi
 
 # remove the symlinks we created for the docker image
-rm -rf gpuagent gpuctl amd-metrics-exporter smilib metricsclient
+rm -rf gpuagent gpuctl amd-metrics-exporter metricsclient libamd_smi.so*
 
 exit 0

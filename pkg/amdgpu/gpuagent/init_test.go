@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
+    "go.uber.org/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/config"
 	amdgpu "github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
