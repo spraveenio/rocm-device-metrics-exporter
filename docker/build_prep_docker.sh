@@ -22,7 +22,7 @@
 # copy all artificates and set proper file permissions
 tar -xf $TOP_DIR/assets/gpuagent_static.bin.gz -C $TOP_DIR/docker/
 chmod +x $TOP_DIR/docker/gpuagent
-cp -r $TOP_DIR/assets/amd_smi_lib/x86_64/lib $TOP_DIR/docker/smilib
+cp $TOP_DIR/assets/patch/$OS/libamd_smi.so.24.7.60300 $TOP_DIR/docker/
 ln -f $TOP_DIR/assets/gpuctl.gobin $TOP_DIR/docker/gpuctl
 ln -f $TOP_DIR/bin/amd-metrics-exporter $TOP_DIR/docker/amd-metrics-exporter
 ln -f $TOP_DIR/bin/metricsclient $TOP_DIR/docker/metricsclient

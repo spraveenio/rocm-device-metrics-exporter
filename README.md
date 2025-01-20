@@ -20,10 +20,10 @@ _Usage of bin/amd-metrics-exporter_
       AMD metrics exporter config file (default "/etc/metrics/config.json")
 ```
 ## Supported Platforms
-  - Ubuntu 22.04
+  - Rhel 9.4, Azure Linux 3.0
 
 ## RDC version
-  - ROCM 6.2
+  - ROCM 6.2, 6.3
 
 ## Build and Run Instructions
 

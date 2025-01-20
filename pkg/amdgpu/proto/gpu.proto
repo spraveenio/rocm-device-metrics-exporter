@@ -33,10 +33,20 @@ service GPUSvc {
   rpc GPUGet(GPUGetRequest) returns (GPUGetResponse) {}
   // GPU update API
   rpc GPUUpdate(GPUUpdateRequest) returns (GPUUpdateResponse) {}
+  // GPU partition create/update API
+  rpc GPUComputePartitionSet(GPUComputePartitionSetRequest) returns (GPUComputePartitionSetResponse) {}
+  // GPU partition get API
+  rpc GPUComputePartitionGet(GPUComputePartitionGetRequest) returns (GPUComputePartitionGetResponse) {}
 
   // operational APIs or tasks
   // GPU reset API
   rpc GPUReset(GPUResetRequest) returns (GPUResetResponse) {}
+}
+
+// gRPC internal debug APIs to manage & monitor GPU resources
+service DebugGPUSvc {
+  // GPU get bad pages
+  rpc GPUBadPageGet (GPUBadPageGetRequest) returns (stream GPUBadPageGetResponse) {}
 }
 
 // admin state of GPU
@@ -107,6 +117,22 @@ message GPUClockFrequencyRange {
 message GPURASSpec {
 }
 
+// GPU compute partition type
+enum GPUComputePartitionType {
+  // unknown/invalid partition type
+  GPU_COMPUTE_PARTITION_TYPE_NONE = 0;
+  // single GPU mode
+  GPU_COMPUTE_PARTITION_TYPE_SPX  = 1;
+  // dual GPU mode
+  GPU_COMPUTE_PARTITION_TYPE_DPX  = 2;
+  // triple GPU mode
+  GPU_COMPUTE_PARTITION_TYPE_TPX  = 3;
+  // quad GPU mode
+  GPU_COMPUTE_PARTITION_TYPE_QPX  = 4;
+  // core GPU mode
+  GPU_COMPUTE_PARTITION_TYPE_CPX  = 5;
+}
+
 // config specification of physical GPU
 message GPUSpec {
   // uuid identifying the GPU
@@ -125,7 +151,9 @@ message GPUSpec {
   // fan speed; allowed range 0 - 255
   uint64                          FanSpeed         = 7;
   // RAS configuration
-  GPURASSpec                      RASSpec          = 8;
+  GPURASSpec                      RASSpec              = 8;
+  // GPU compute partition type; partition type SPX means unpartitioned GPU
+  GPUComputePartitionType         ComputePartitionType = 9;
 }
 
 // operational status of GPU
@@ -137,8 +165,8 @@ enum GPUOperStatus {
   GPU_OPER_STATUS_DOWN = 2;
 }
 
-// XGMI status of GPU
-enum GPUXGMIStatus {
+// XGMI error status of GPU
+enum GPUXGMIErrorStatus {
   GPU_XGMI_STATUS_NONE           = 0;
   // no errors since last read
   GPU_XGMI_STATUS_NO_ERROR       = 1;
@@ -146,6 +174,16 @@ enum GPUXGMIStatus {
   GPU_XGMI_STATUS_ONE_ERROR      = 2;
   // multiple errors detected since last read
   GPU_XGMI_STATUS_MULTIPLE_ERROR = 3;
+}
+
+// XGMI status of GPU
+message GPUXGMIStatus {
+  // XGMI error status
+  GPUXGMIErrorStatus ErrorStatus = 1;
+  // XGMI link width in GB/s
+  uint64             Width       = 2;
+  // XGMI link speed in GB/s
+  uint64             Speed       = 3;
 }
 
 // clock information
@@ -253,6 +291,15 @@ enum VRAMVendor {
   VRAM_VENDOR_UNKNOWN  = 11;
 }
 
+// GPU throttling status
+enum GPUThrottlingStatus {
+  GPU_THROTTLING_STATUS_NONE = 0;
+  // throttling off
+  GPU_THROTTLING_STATUS_OFF  = 1;
+  // throttling on
+  GPU_THROTTLING_STATUS_ON   = 2;
+}
+
 message GPUVRAMStatus {
   // VRAM memory type
   VRAMType   Type   = 1;
@@ -260,6 +307,45 @@ message GPUVRAMStatus {
   VRAMVendor Vendor = 2;
   // VRAM size (in MB)
   uint64     Size   = 3;
+}
+
+// GPU page status
+enum GPUPageStatus {
+  GPU_PAGE_STATUS_NONE         = 0;
+  // GPU page is reserved
+  GPU_PAGE_STATUS_RESERVED     = 1;
+  // GPU page is marked as bad and will be marked reserved at next window
+  GPU_PAGE_STATUS_PENDING      = 2;
+  // unable to reserve GPU page
+  GPU_PAGE_STATUS_UNRESERVABLE = 3;
+}
+
+// GPU bad page record
+message GPUBadPageRecord {
+  // uuid identifying the GPU
+  bytes         GPU         = 1;
+  // start address of page
+  uint64        PageAddress = 2;
+  // page size
+  uint64        PageSize    = 3;
+  // page status
+  GPUPageStatus PageStatus  = 4;
+}
+
+// GPU bad page get request
+message GPUBadPageGetRequest {
+  // list of GPU uuids
+  repeated bytes Id = 1;
+}
+
+// response to GPU bad page get request
+message GPUBadPageGetResponse {
+  // result of the API processing
+  types.ApiStatus           ApiStatus = 1;
+  // specific error code, if any
+  types.ErrorCode           ErrorCode = 2;
+  // GPU bad page records
+  repeated GPUBadPageRecord Record    = 3;
 }
 
 // operational information of a physical GPU
@@ -296,12 +382,18 @@ message GPUStatus {
   repeated uint32               KFDProcessId      = 15;
   // RAS (Reliability, Availability & Serviceability) information
   GPURASStatus                  RASStatus         = 16;
-  // XGMI error status
-  GPUXGMIStatus                 XGMIErrorStatus   = 17;
+  // XGMI status
+  GPUXGMIStatus                 XGMIStatus        = 17;
   // VRAM status
   GPUVRAMStatus                 VRAMStatus        = 18;
   // PCIe status
   GPUPCIeStatus                 PCIeStatus        = 19;
+  // throttling status
+  GPUThrottlingStatus           ThrottlingStatus  = 20;
+  // firmware timestamp in ns (10ns resolution)
+  uint64                        FWTimestamp       = 21;
+  // GPU compute partition id; only valid when partition type is not SPX
+  uint32                        PartitionId       = 22;
 }
 
 // GPU temperature information
@@ -342,17 +434,17 @@ message GPUMemoryUsage {
 
 // PCIe statistics
 message GPUPCIeStats {
-    // total number of the replays issued on the PCIe link
-    uint64 ReplayCount         = 1;
-    // total number of times the PCIe link transitioned from L0 to the recovery
-    // state
-    uint64 RecoveryCount       = 2;
-    // total number of replay rollovers issued on the PCIe link
-    uint64 ReplayRolloverCount = 3;
-    // total number of NACKs issued on the PCIe link by the device
-    uint64 NACKSentCount       = 4;
-    // total number of NACKs issued on the PCIe link by the receiver
-    uint64 NACKReceivedCount   = 5;
+  // total number of the replays issued on the PCIe link
+  uint64 ReplayCount         = 1;
+  // total number of times the PCIe link transitioned from L0 to the recovery
+  // state
+  uint64 RecoveryCount       = 2;
+  // total number of replay rollovers issued on the PCIe link
+  uint64 ReplayRolloverCount = 3;
+  // total number of NACKs issued on the PCIe link by the device
+  uint64 NACKSentCount       = 4;
+  // total number of NACKs issued on the PCIe link by the receiver
+  uint64 NACKReceivedCount   = 5;
 }
 
 // voltage statistics
@@ -385,6 +477,14 @@ message GPUVRAMUsage {
   uint64 UsedGTT          = 8;
   // free GTT (in MB)
   uint64 FreeGTT          = 9;
+}
+
+// XGMI statistics of GPU
+message GPUXGMILinkStats {
+  // XGMI data read in KB
+  uint64 DataRead  = 1;
+  // XGMI data written in KB
+  uint64 DataWrite = 2;
 }
 
 // GPU statistics
@@ -516,7 +616,15 @@ message GPUStats {
   // power usage (in Watts)
   uint64                 PowerUsage                  = 62;
   // VRAM usage
-  GPUVRAMUsage           VRAMUsage                   = 63;
+  GPUVRAMUsage               VRAMUsage                   = 63;
+  // current fan speed in RPMs
+  uint64                     FanSpeed                    = 64;
+  // graphics activity accumulated in %
+  uint64                     GFXActivityAccumulated      = 65;
+  // memory activity accumulated in %
+  uint64                     MemoryActivityAccumulated   = 66;
+  // GPU XGMI link statistics
+  repeated GPUXGMILinkStats  XGMILinkStats               = 67;
 }
 
 // GPU captures config, operational status and stat of GPU object
@@ -593,4 +701,44 @@ message GPUResetResponse {
   types.ApiStatus ApiStatus = 1;
   // specific error code, if any
   types.ErrorCode ErrorCode = 2;
+}
+
+// GPU compute partition create/update request
+message GPUComputePartitionSetRequest {
+  // list of GPU uuids
+  repeated bytes          Id            = 1;
+  // compute partitioning type to create or updated to
+  GPUComputePartitionType PartitionType = 2;
+}
+
+// GPU compute partition create/update response
+message GPUComputePartitionSetResponse {
+  // result of the API processing
+  types.ApiStatus ApiStatus = 1;
+  // specific error code, if any
+  types.ErrorCode ErrorCode = 2;
+}
+
+// GPU compute partition GET request
+message GPUComputePartitionGetRequest {
+  // list of GPU uuids
+  repeated bytes Id = 1;
+}
+
+// GPU compute partition information
+message GPUComputePartition {
+  // GPU uuid
+  bytes Id                              = 1;
+  // compute partition type
+  GPUComputePartitionType PartitionType = 2;
+}
+
+// response to GPU compute partition GET request
+message GPUComputePartitionGetResponse {
+  // result of the API processing
+  types.ApiStatus              ApiStatus = 1;
+  // specific error code, if any
+  types.ErrorCode              ErrorCode = 2;
+  // list of per GPU information
+  repeated GPUComputePartition Response  = 3;
 }

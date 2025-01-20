@@ -23,23 +23,28 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	. "gopkg.in/check.v1"
 
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gpuagent"
 	testutils "github.com/pensando/device-metrics-exporter/test/utils"
 )
 
 var (
 	maxMockGpuNodes  = 16
 	totalMetricCount = 0
-	mandatoryLables  = []string{"gpu_id", "serial_number", "card_model", "hostname"}
 	previousFields   = []string{}
 	previousLabels   = []string{}
+	mandatoryLabels  = []string{}
 )
 
 func (s *E2ESuite) Test001FirstDeplymentDefaults(c *C) {
+	for _, label := range gpuagent.GetGPUAgentMandatoryLabels() {
+		mandatoryLabels = append(mandatoryLabels, strings.ToLower(label))
+	}
 	log.Print("Testing basic http response after docker deployment")
 	var response string
 	assert.Eventually(c, func() bool {
@@ -58,7 +63,7 @@ func (s *E2ESuite) Test001FirstDeplymentDefaults(c *C) {
 		totalMetricCount = totalMetricCount + len(gpu.Fields)
 
 		for _, metricData := range gpu.Fields {
-			for _, label := range mandatoryLables {
+			for _, label := range mandatoryLabels {
 				_, ok := metricData.Labels[label]
 				assert.Equal(c, true, ok, fmt.Sprintf("expecting label %v not found", label))
 			}
@@ -82,7 +87,7 @@ func (s *E2ESuite) Test002NonMandatoryLabelUpdate(c *C) {
 	}, 3*time.Second, 1*time.Second)
 	allgpus, err := testutils.ParsePrometheusMetrics(response)
 	assert.Nil(c, err)
-	expectedLabels := append(labels, mandatoryLables...)
+	expectedLabels := append(labels, mandatoryLabels...)
 	err = verifyMetricsLablesFields(allgpus, expectedLabels, []string{})
 	assert.Nil(c, err)
 }
@@ -103,7 +108,7 @@ func (s *E2ESuite) Test003InvalidLabel(c *C) {
 	}, 3*time.Second, 1*time.Second)
 	allgpus, err := testutils.ParsePrometheusMetrics(response)
 	assert.Nil(c, err)
-	previousLabels = append(mandatoryLables, "gpu_uuid")
+	previousLabels = append(mandatoryLabels, "gpu_uuid")
 	err = verifyMetricsLablesFields(allgpus, previousLabels, []string{})
 	assert.Nil(c, err)
 }
