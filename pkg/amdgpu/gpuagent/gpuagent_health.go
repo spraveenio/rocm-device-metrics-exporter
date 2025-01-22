@@ -120,6 +120,33 @@ func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[str
 
 }
 
+// setUnhealthyGPU : reset the health status to unhealthy
+// to make all gpu unavailable through
+// device plugin - populate the old pcie bus entries with updated workload
+// list
+func (ga *GPUAgentClient) setUnhealthyGPU(wls map[string]interface{}) error {
+	if !ga.isKubernetes {
+		return nil
+	}
+	// valid only for k8s case
+	ga.Lock()
+	defer ga.Unlock()
+
+	for _, gpustate := range ga.healthState {
+		workloadInfo := []string{} // one per gpu
+		if wl, ok := wls[gpustate.Device]; ok {
+			if podInfo, ok := wl.(scheduler.PodResourceInfo); ok {
+				workloadInfo = append(workloadInfo, fmt.Sprintf("pod : %v, namespace : %v, container: %v",
+					podInfo.Pod, podInfo.Namespace, podInfo.Container))
+			}
+		}
+		gpustate.Health = strings.ToLower(metricssvc.GPUHealth_UNHEALTHY.String())
+		gpustate.AssociatedWorkload = workloadInfo
+	}
+
+	return nil
+}
+
 func (ga *GPUAgentClient) updateNewHealthState(newGPUState map[string]*metricssvc.GPUState) error {
 	ga.Lock()
 	defer ga.Unlock()
@@ -131,9 +158,13 @@ func (ga *GPUAgentClient) updateNewHealthState(newGPUState map[string]*metricssv
 }
 
 func (ga *GPUAgentClient) processHealthValidation() error {
+	wls := make(map[string]interface{})
+	wls, _ = ga.schedulerCl.ListWorkloads()
+
 	ga.Lock()
 	if !ga.computeNodeHealthState { // unhealthy
 		ga.Unlock()
+		_ = ga.setUnhealthyGPU(wls)
 		err := fmt.Errorf("compute node unhealthy, cannot process metrics")
 		logger.Log.Printf("err: %+v", err)
 		return err
@@ -165,13 +196,15 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 		}
 	}
 
-	wls := make(map[string]interface{})
-	wls, _ = ga.schedulerCl.ListWorkloads()
 	gpumetrics, err = ga.getGPUs()
 	if err != nil || (gpumetrics != nil && gpumetrics.ApiStatus != 0) {
 		errOccured = true
 		logger.Log.Printf("gpuagent get metrics failed %v", err)
 		goto ret
+	} else if len(gpumetrics.Response) == 0 {
+		// on driver crash gpuagent will return 0 gpus, handle such cases
+		// if we have old state, mark all of the gpu as unhealthy
+		return ga.setUnhealthyGPU(wls)
 	} else {
 		newGPUState = ga.processEccErrorMetrics(gpumetrics.Response, wls)
 	}
@@ -198,7 +231,8 @@ ret:
 	// disconnect on error
 	if errOccured {
 		ga.Close()
-		// set state to unknown
+		// set state to unhealthy with updated workload list
+		_ = ga.setUnhealthyGPU(wls)
 		return fmt.Errorf("data pull error occured")
 	}
 

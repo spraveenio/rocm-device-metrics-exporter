@@ -92,7 +92,6 @@ func (ga *GPUAgentClient) Init() error {
 	ga.Lock()
 	defer ga.Unlock()
 	ga.initializeContext()
-	ga.healthState = make(map[string]*metricssvc.GPUState)
 	conn, gpuclient, evtclient, err := initclients(ga.mh)
 	if err != nil {
 		logger.Log.Printf("gpu client init failure err :%v", err)
