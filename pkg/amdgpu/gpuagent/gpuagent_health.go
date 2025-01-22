@@ -300,16 +300,16 @@ func (ga *GPUAgentClient) updateAllGPUsHealthState(healthStr string) {
 			deviceid = strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)
 		}
 
-		workloadInfo := "" // only one per gpu
+		workloadInfo := []string{} // only one per gpu
 		if wl := ga.getWorkloadInfo(wls, gpu, false); wl != nil {
 			if ga.isKubernetes {
 				podInfo := wl.(scheduler.PodResourceInfo)
-				workloadInfo = fmt.Sprintf("pod : %v, namespace : %v, container: %v",
-					podInfo.Pod, podInfo.Namespace, podInfo.Container)
+				workloadInfo = append(workloadInfo, fmt.Sprintf("pod : %v, namespace : %v, container: %v",
+					podInfo.Pod, podInfo.Namespace, podInfo.Container))
 			} else {
 				jobInfo := wl.(scheduler.JobInfo)
-				workloadInfo = fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
-					jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster)
+				workloadInfo = append(workloadInfo, fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
+					jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster))
 			}
 		}
 		ga.healthState[gpuid] = &metricssvc.GPUState{
@@ -317,7 +317,7 @@ func (ga *GPUAgentClient) updateAllGPUsHealthState(healthStr string) {
 			UUID:               gpuuid,
 			Health:             healthStr,
 			Device:             deviceid,
-			AssociatedWorkload: []string{workloadInfo},
+			AssociatedWorkload: workloadInfo,
 		}
 	}
 }
