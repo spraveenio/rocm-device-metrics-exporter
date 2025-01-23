@@ -22,7 +22,7 @@ _Usage of bin/amd-metrics-exporter_
 ## Supported Platforms
   - Rhel 9.4, Azure Linux 3.0
 
-## RDC version
+## ROCM version
   - ROCM 6.2, 6.3
 
 ## Build and Run Instructions
@@ -64,9 +64,6 @@ _Usage of bin/amd-metrics-exporter_
      - Supported ROCM versions : 6.2.0 and up
      - prerequistes
        - dkms installated on the system
-       - rdc service is expected to be up and running with supported versions
-       only
-         - sample rdc.service is available in **example/rdc.service**
       - Services run on following default ports. These can be changed by updating
     the respective service file with the below option
     
@@ -91,7 +88,7 @@ _Usage of bin/amd-metrics-exporter_
 
   -  package installation
     ```
-    $ dpkg -i amdgpu-exporter_0.1_amd64.deb
+    $ dpkg -i amdgpu-exporter_1.2.0_amd64.deb
     ```
 
   - default config file path _/etc/metrics/config.json_
@@ -259,41 +256,28 @@ All dashboard json are provided under directory `grafana`
     - DKMS Installation and Setup
         [DKMS detailed
         installation](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/amdgpu-install.html)
+
+		Download Package
+		[ubuntu 22.04 jammy]
         ```
-        wget https://repo.radeon.com/amdgpu-install/6.2/ubuntu/jammy/amdgpu-install_6.2.60200-1_all.deb
- 		apt install ./amdgpu-install_6.2.60200-1_all.deb
+        wget https://repo.radeon.com/amdgpu-install/6.3.1/ubuntu/jammy/amdgpu-install_6.3.60301-1_all.deb
+        ```
+		
+		[ubuntu 24.04 noble]
+		```
+		wget https://repo.radeon.com/amdgpu-install/6.3.1/ubuntu/noble/amdgpu-install_6.3.60301-1_all.deb
+		```
+
+		```
+ 		apt install ./amdgpu-install_6.3.60301-1_all.deb 
  		apt --fix-broken install
-        apt install ./amdgpu-install_6.2.60200-1_all.deb
+        apt install ./amdgpu-install_6.3.60301-1_all.deb
         amdgpu-install --usecase=dkms
 		modprobe amdgpu
         ```
-    - RDC Installation and Setup
-        - Installation
-		[RDC detailed installation](https://rocm.docs.amd.com/projects/rdc/en/latest/install/install.html)
-
-	    ```
-	    apt-get install rdc
-	    ```
-
-	    - default behavior for rdc.service is setup to run with **rdc** user and
-	    **rdc** group. the user need to be changed to applicable user. the
-	    installed location is _/lib/systemd/system/rdc.service_. 
-
-	    update the binary **PATH** variable as per [RDC post
-	    install](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/post-install.html)
-
-	    ```
-	    export PATH=$PATH:/opt/rocm-6.2.0/bin
-	    ```
-
-	  - start the RDC service
-	    ``` 
-	    systemctl enable rdc.service
-	    systemctl start rdc.service
-	    ```
     - AMD Metrics Exporter Installation and Setup 
         ```
-        dpkg -i amdgpu-exporter_0.1_amd64.deb
+        dpkg -i amdgpu-exporter_1.2.0_amd64.deb
 
         systemctl enable amd-metrics-exporter.service
         systemctl start amd-metrics-exporter.service
