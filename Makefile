@@ -208,6 +208,8 @@ pkg: pkg-clean
 	mkdir -p ${PKG_LIB_PATH}
 	cp -rvf ${GPUAGENT_LIBS}/ ${PKG_LIB_PATH}
 	cp -rvf ${THIRDPARTY_LIBS}/ ${PKG_LIB_PATH}
+	#override patch files
+	cp -vf ${PATCH_LIBS}/libamd_smi.so.24.7.60300 ${PKG_LIB_PATH}/lib/libamd_smi.so.24.7.60301
 	#copy and strip files
 	mkdir -p ${PKG_PATH}
 	tar -xf ${ASSETS_PATH}/gpuagent_static.bin.gz -C ${PKG_PATH}/
@@ -218,13 +220,15 @@ pkg: pkg-clean
 	ls -alsh ${PKG_PATH}/gpuagent
 	cd ${PKG_PATH} && strip ${PKG_PATH}/gpuagent
 	cp -vf ${LUA_PROTO} ${PKG_LUA_PATH}/plugin.proto
-	cp -vf ${ASSETS_PATH}/gpuctl.gobin ${PKG_PATH}/
+	cp -vf ${ASSETS_PATH}/gpuctl.gobin ${PKG_PATH}/gpuctl
 	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
+	cp -vf $(CURDIR)/bin/metricsclient ${PKG_PATH}/
 	cd ${TOP_DIR}
 	dpkg-deb --build debian ${TOP_DIR}/bin
 	#remove copied files
 	rm -rf ${PKG_LIB_PATH}
 	rm -rf ${PKG_LUA_PATH}/plugin.proto
+	mv -vf $(CURDIR)/bin/amdgpu-exporter_1.2.0_amd64.deb $(CURDIR)/bin/amdgpu-exporter_1.2.0_ubuntu_${UBUNTU_VERSION_NUMBER}_amd64.deb
 
 .PHONY:clean
 clean: pkg-clean
