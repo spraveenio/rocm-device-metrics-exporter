@@ -41,6 +41,7 @@ var (
 		gpumetrics.GPUMetricLabel_CARD_MODEL.String(),
 		gpumetrics.GPUMetricLabel_HOSTNAME.String(),
 		gpumetrics.GPUMetricLabel_GPU_PARTITION_ID.String(),
+		gpumetrics.GPUMetricLabel_CLUSTER_NAME.String(),
 	}
 	exportLables    map[string]bool
 	exportFieldMap  map[string]bool
@@ -1003,7 +1004,7 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(wls map[string]interface{}, gpu 
 		case gpumetrics.GPUMetricLabel_JOB_PARTITION.String():
 			labels[key] = jobInfo.Partition
 		case gpumetrics.GPUMetricLabel_CLUSTER_NAME.String():
-			labels[key] = jobInfo.Cluster
+			labels[key] = ga.getClusterName(jobInfo)
 		case gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String():
 			labels[key] = gpu.Status.SerialNum
 		case gpumetrics.GPUMetricLabel_CARD_SERIES.String():
@@ -1025,6 +1026,13 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(wls map[string]interface{}, gpu 
 		}
 	}
 	return labels
+}
+
+func (ga *GPUAgentClient) getClusterName(jInfo scheduler.JobInfo) string {
+	if ga.isKubernetes {
+		return os.Getenv("CLUSTER_NAME")
+	}
+	return jInfo.Cluster
 }
 
 func (ga *GPUAgentClient) exporterEnabledGPU(instance int) bool {

@@ -8,6 +8,8 @@ image:
   pullPolicy: Always
   pullSecrets: ""
 
+clusterName: "amdgpu-k8s-metrics-exporter"
+
 service:
   type: ClusterIP
   ClusterIP:

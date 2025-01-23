@@ -155,9 +155,10 @@ enum GPUMetricLabel {
     JOB_ID             = 6;
     JOB_USER           = 7;
     JOB_PARTITION      = 8;
+    // mandatory CLUSTER_NAME cannot be disabled
     CLUSTER_NAME       = 9;
     CARD_SERIES        = 10;
-    // mandator CARD_MODEL cannot be disabled
+    // mandatory CARD_MODEL cannot be disabled
     CARD_MODEL         = 11;
     CARD_VENDOR        = 12;
     DRIVER_VERSION     = 13;

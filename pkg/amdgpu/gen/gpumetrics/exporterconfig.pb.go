@@ -367,9 +367,10 @@ const (
 	GPUMetricLabel_JOB_ID        GPUMetricLabel = 6
 	GPUMetricLabel_JOB_USER      GPUMetricLabel = 7
 	GPUMetricLabel_JOB_PARTITION GPUMetricLabel = 8
-	GPUMetricLabel_CLUSTER_NAME  GPUMetricLabel = 9
-	GPUMetricLabel_CARD_SERIES   GPUMetricLabel = 10
-	// mandator CARD_MODEL cannot be disabled
+	// mandatory CLUSTER_NAME cannot be disabled
+	GPUMetricLabel_CLUSTER_NAME GPUMetricLabel = 9
+	GPUMetricLabel_CARD_SERIES  GPUMetricLabel = 10
+	// mandatory CARD_MODEL cannot be disabled
 	GPUMetricLabel_CARD_MODEL     GPUMetricLabel = 11
 	GPUMetricLabel_CARD_VENDOR    GPUMetricLabel = 12
 	GPUMetricLabel_DRIVER_VERSION GPUMetricLabel = 13
