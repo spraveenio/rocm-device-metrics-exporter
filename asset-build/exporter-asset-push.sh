@@ -51,18 +51,31 @@ copy_artifacts () {
 
 docker_push () {
     EXPORTER_IMAGE_URL=registry.test.pensando.io:5000/device-metrics-exporter/exporter
+
+    # rhel 9.4 image push
     docker load -i /device-metrics-exporter/docker/exporter-latest.tar.gz
     docker inspect $EXPORTER_IMAGE_URL:latest | grep "HOURLY"
     docker tag $EXPORTER_IMAGE_URL:latest $EXPORTER_IMAGE_URL:$tag
     docker push $EXPORTER_IMAGE_URL:$tag
 
+    # azurelinux3 image push
+    azuretag="$tag-azl3"
+    docker load -i /device-metrics-exporter/docker/exporter-latest-azure.tar.gz
+    docker inspect $EXPORTER_IMAGE_URL:latest | grep "HOURLY"
+    docker tag $EXPORTER_IMAGE_URL:latest $EXPORTER_IMAGE_URL:$azuretag
+    docker push $EXPORTER_IMAGE_URL:$azuretag
+
     if [ -z $DOCKERHUB_TOKEN ]
     then
       echo "DOCKERHUB_TOKEN is not set"
     else
+      # rhel 9.4
       docker tag $EXPORTER_IMAGE_URL:latest amdpsdo/device-metrics-exporter:$tag
       docker login --username=shreyajmeraamd --password-stdin <<< $DOCKERHUB_TOKEN
       docker push amdpsdo/device-metrics-exporter:$tag
+      # azure linux3
+      docker tag $EXPORTER_IMAGE_URL:latest amdpsdo/device-metrics-exporter:$azuretag
+      docker push amdpsdo/device-metrics-exporter:$azuretag
     fi
 }
 
