@@ -41,6 +41,7 @@ var (
 		gpumetrics.GPUMetricLabel_CARD_MODEL.String(),
 		gpumetrics.GPUMetricLabel_HOSTNAME.String(),
 		gpumetrics.GPUMetricLabel_GPU_PARTITION_ID.String(),
+		gpumetrics.GPUMetricLabel_GPU_COMPUTE_PARTITION_TYPE.String(),
 		gpumetrics.GPUMetricLabel_CLUSTER_NAME.String(),
 	}
 	exportLables    map[string]bool
@@ -1021,6 +1022,10 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(wls map[string]interface{}, gpu 
 			labels[key] = ga.staticHostLabels[gpumetrics.GPUMetricLabel_HOSTNAME.String()]
 		case gpumetrics.GPUMetricLabel_GPU_PARTITION_ID.String():
 			labels[key] = fmt.Sprintf("%v", gpu.Status.PartitionId)
+		case gpumetrics.GPUMetricLabel_GPU_COMPUTE_PARTITION_TYPE.String():
+			partitionType := gpu.Spec.ComputePartitionType
+			trimmedValue := strings.TrimPrefix(partitionType.String(), "GPU_COMPUTE_PARTITION_TYPE_")
+			labels[key] = strings.ToLower(trimmedValue)
 		default:
 			logger.Log.Printf("Invalid label is ignored %v", key)
 		}
