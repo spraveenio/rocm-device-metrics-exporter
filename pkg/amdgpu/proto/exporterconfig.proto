@@ -144,29 +144,31 @@ message GPUHealthThresholds {
 }
 
 enum GPUMetricLabel {
-    GPU_UUID           = 0;
+    GPU_UUID                   = 0;
     // mandatory SERIAL_NUMBER cannot be disabled
-    SERIAL_NUMBER      = 1;
+    SERIAL_NUMBER              = 1;
     // mandatory field GPU_ID cannot be disabled
-    GPU_ID             = 2;
-    POD                = 3;
-    NAMESPACE          = 4;
-    CONTAINER          = 5;
-    JOB_ID             = 6;
-    JOB_USER           = 7;
-    JOB_PARTITION      = 8;
+    GPU_ID                     = 2;
+    POD                        = 3;
+    NAMESPACE                  = 4;
+    CONTAINER                  = 5;
+    JOB_ID                     = 6;
+    JOB_USER                   = 7;
+    JOB_PARTITION              = 8;
     // mandatory CLUSTER_NAME cannot be disabled
-    CLUSTER_NAME       = 9;
-    CARD_SERIES        = 10;
+    CLUSTER_NAME               = 9;
+    CARD_SERIES                = 10;
     // mandatory CARD_MODEL cannot be disabled
-    CARD_MODEL         = 11;
-    CARD_VENDOR        = 12;
-    DRIVER_VERSION     = 13;
-    VBIOS_VERSION      = 14;
+    CARD_MODEL                 = 11;
+    CARD_VENDOR                = 12;
+    DRIVER_VERSION             = 13;
+    VBIOS_VERSION              = 14;
     // mandatory field HOSTNAME cannot be disabled
-    HOSTNAME           = 15;
+    HOSTNAME                   = 15;
     // mandatory field GPU_PARTITION_ID cannot be disabled
-    GPU_PARTITION_ID   = 16;
+    GPU_PARTITION_ID           = 16;
+    // mandatory field GPU_COMPUTE_PARTITION_TYPE cannot be disabled
+    GPU_COMPUTE_PARTITION_TYPE = 17;
 }
 
 message GPUMetricConfig {

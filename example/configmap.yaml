@@ -116,7 +116,8 @@ data:
           "DRIVER_VERSION",
           "VBIOS_VERSION",
           "HOSTNAME",
-          "GPU_PARTITION_ID"
+          "GPU_PARTITION_ID",
+          "GPU_COMPUTE_PARTITION_TYPE"
         ],
         "HealthThresholds" : {
           "GPU_ECC_UNCORRECT_SDMA" : 0,
