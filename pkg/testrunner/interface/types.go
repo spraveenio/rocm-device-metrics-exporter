@@ -19,6 +19,7 @@ package types
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"os/exec"
 	"sync"
@@ -30,8 +31,18 @@ import (
 // DefaultTestTimeout is default test timeout
 const DefaultTestTimeout = 600 // 10 min
 
+type TestResults map[string]TestResult
+
+// IterationResult contains the result for each test iteration
+type IterationResult struct {
+	Number       uint32                 `json:"number,omitempty"`
+	Stdout       string                 `json:"stdout,omitempty"`
+	Stderr       string                 `json:"stderr,omitempty"`
+	SuitesResult map[string]TestResults `json:"suitesResult,omitempty"`
+}
+
 // ResultParser is a generic function which can be used to develop parser for different test frameworks
-type ResultParser func(val string) (map[string]map[string]TestResult, error)
+type ResultParser func(val string) (map[string]TestResults, error)
 
 // TOption fills the optional params for Test Handler
 type TOption func(*TestHandler)
@@ -57,23 +68,41 @@ func TestWithResultParser(parser ResultParser) TOption {
 	}
 }
 
+// TestWithIteration sets the iterations count
+func TestWithIteration(iterations uint32) TOption {
+	return func(th *TestHandler) {
+		th.iterations = iterations
+	}
+}
+
+// TestWithStopOnFailure sets the stop on failure option
+func TestWithStopOnFailure(stopOnFailure bool) TOption {
+	return func(th *TestHandler) {
+		th.stopOnFailure = stopOnFailure
+	}
+}
+
 // TestHandler runs a given test CLI
 type TestHandler struct {
-	testname    string
-	args        []string
-	process     *exec.Cmd
-	stdout      bytes.Buffer
-	stderr      bytes.Buffer
-	cancelFunc  context.CancelFunc
-	wg          sync.WaitGroup
-	timeout     uint
-	logFilePath string
-	logger      *log.Logger
-	status      CommandStatus
-	rwLock      sync.RWMutex
-	result      map[string]map[string]TestResult // gpuid -> test1 - pass, test2- fail
-	doneChan    chan struct{}
-	parser      ResultParser
+	testname      string
+	args          []string
+	process       *exec.Cmd
+	stdout        bytes.Buffer
+	stderr        bytes.Buffer
+	cancelFunc    context.CancelFunc
+	wg            sync.WaitGroup
+	logger        *log.Logger
+	timeout       uint
+	logFilePath   string
+	status        CommandStatus
+	rwLock        sync.RWMutex
+	result        map[string]TestResults // gpuid -> test1 - pass, test2- fail
+	doneChan      chan struct{}
+	parser        ResultParser
+	iterations    uint32
+	IterResults   []*IterationResult
+	stopTest      bool
+	stopOnFailure bool
 }
 
 // NewTestHandler returns instance of TestHandler
@@ -99,35 +128,116 @@ func NewTestHandler(testname string, logger *log.Logger, args []string, opts ...
 
 // StartTest starts the CLI execution
 func (th *TestHandler) StartTest() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(th.timeout)*time.Second)
-	th.process = exec.CommandContext(ctx, th.args[0], th.args[1:]...)
-	th.process.Stdout = &th.stdout
-	th.process.Stderr = &th.stderr
-	th.cancelFunc = cancel
-
-	if err := th.process.Start(); err != nil {
-		return err
+	if th.iterations == 0 {
+		return fmt.Errorf("iterations must be greater than 0")
 	}
-	th.setStatus(TestRunning)
-	th.logger.Printf("cmd %v [pid=%v] started running", th.testname, th.process.Process.Pid)
 	th.wg.Add(1)
-	go func() {
-		defer th.wg.Done()
-		err := th.process.Wait()
-		th.setStatus(TestCompleted)
-		th.logger.Printf("cmd %v [pid=%v] completed", th.testname, th.process.Process.Pid)
-		if err != nil {
-			th.logger.Printf("cmd %v [pid=%v] has exited with error %v", th.testname, th.process.Process.Pid, err)
-		}
+	go th.runTest()
+	return nil
+}
+
+func (th *TestHandler) runTest() {
+	defer th.wg.Done()
+	iterationDoneChan := make(chan struct{}) // Separate channel for iteration signaling
+
+	closeFunc := func() {
+		close(iterationDoneChan)
 		th.doneChan <- struct{}{}
-		th.cancelCtx()
-	}()
+	}
+
+	th.setStatus(TestRunning)
+	defer th.setStatus(TestCompleted)
+	for i := uint32(1); i <= th.iterations; i++ {
+		th.rwLock.Lock()
+		logger.Log.Printf("Starting iteration %d of %d for test: %v", i, th.iterations, th.testname)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(th.timeout)*time.Second)
+		th.process = exec.CommandContext(ctx, th.args[0], th.args[1:]...)
+		th.process.Stdout = &th.stdout
+		th.process.Stderr = &th.stderr
+		th.cancelFunc = cancel
+		th.rwLock.Unlock()
+
+		if err := th.process.Start(); err != nil {
+			logger.Log.Printf("cmd %v [iteration=%d] failed to start: %v", th.testname, i, err)
+			continue
+		}
+
+		th.setStatus(TestRunning)
+		logger.Log.Printf("cmd %v [iteration=%d, pid=%v] started running \n", th.testname, i, th.process.Process.Pid)
+		th.wg.Add(1)
+
+		go func(iter uint32) {
+			defer th.wg.Done()
+			err := th.process.Wait()
+			if err != nil {
+				logger.Log.Printf("cmd %v [iteration=%d, pid=%v] exited with error: %v \n", th.testname, iter, th.process.Process.Pid, err)
+			} else {
+				logger.Log.Printf("cmd %v [iteration=%d, pid=%v] completed successfully \n", th.testname, iter, th.process.Process.Pid)
+			}
+			iterationDoneChan <- struct{}{}
+			th.cancelCtx()
+		}(i)
+
+		// Wait for the command to finish or timeout
+		select {
+		case <-iterationDoneChan:
+			// Process completed successfully or with an error
+			logger.Log.Printf("writing logs %v [iteration=%d]: \n", th.testname, i)
+			err := th.logResults(i)
+			if err != nil {
+				logger.Log.Printf("err: %v", err)
+				closeFunc()
+				return
+			}
+		case <-ctx.Done():
+			// Timeout occurred
+			logger.Log.Printf("cmd %v [iteration=%d] timed out", th.testname, i)
+			err := th.logResults(i)
+			if err != nil {
+				logger.Log.Printf("err: %v", err)
+				closeFunc()
+				return
+			}
+			if th.stopTest {
+				closeFunc()
+				return
+			}
+		}
+
+		// Reset buffers for the next iteration
+		th.stdout.Reset()
+		th.stderr.Reset()
+	}
+	// Close the iteration signaling channel
+	closeFunc()
+}
+
+func (th *TestHandler) logResults(i uint32) error {
+	res, err := th.parser(th.stdout.String())
+	if err != nil {
+		logger.Log.Printf("error parsing test logs for %v err: %v", th.testname, err)
+		res = make(map[string]TestResults)
+	}
+	th.result = res
+	obj := &IterationResult{
+		Stdout:       th.stdout.String(),
+		Stderr:       th.stderr.String(),
+		Number:       i,
+		SuitesResult: res,
+	}
+	th.rwLock.Lock()
+	th.IterResults = append(th.IterResults, obj)
+	th.rwLock.Unlock()
+	if th.stopOnFailure && checkFailure(res) {
+		return fmt.Errorf("stopping test on failure")
+	}
 	return nil
 }
 
 // StopTest stops the current test execution
 func (th *TestHandler) StopTest() {
-	th.logger.Printf("stop test called for %v [pid=%v]", th.testname, th.process.Process.Pid)
+	logger.Log.Printf("stop test called for %v [pid=%v]", th.testname, th.process.Process.Pid)
+	th.stopTest = true
 	th.cancelCtx()
 	th.wg.Wait()
 }
@@ -164,19 +274,10 @@ func (th *TestHandler) Status() CommandStatus {
 }
 
 // Result for the test
-func (th *TestHandler) Result() map[string]map[string]TestResult {
-	// If we have already parsed the result, no need to do it again
-	if th.result != nil {
-		return th.result
-	}
-	res, err := th.parser(th.stdout.String())
-	if err != nil {
-		logger.Log.Printf("error parsing test logs for %v err: %v", th.testname, err)
-		th.result = make(map[string]map[string]TestResult)
-	} else {
-		th.result = res
-	}
-	return th.result
+func (th *TestHandler) Result() []*IterationResult {
+	th.rwLock.RLock()
+	defer th.rwLock.RUnlock()
+	return th.IterResults
 }
 
 // Done is used to signal completion of the test
@@ -191,7 +292,23 @@ func (th *TestHandler) setStatus(status CommandStatus) {
 }
 
 // defaultParser is default parser for test handler
-func defaultParser(val string) (map[string]map[string]TestResult, error) {
-	res := make(map[string]map[string]TestResult)
+func defaultParser(val string) (map[string]TestResults, error) {
+	res := make(map[string]TestResults)
 	return res, nil
+}
+
+// checkFailure checks if any test case failed or not
+func checkFailure(res map[string]TestResults) bool {
+	for gpu, val := range res {
+		if val == nil {
+			continue
+		}
+		for test, testResult := range val {
+			if testResult == Failure {
+				logger.Log.Printf("Found failure for test %v, GPU %v", test, gpu)
+				return true
+			}
+		}
+	}
+	return false
 }

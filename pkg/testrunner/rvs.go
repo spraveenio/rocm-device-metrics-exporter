@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
@@ -64,7 +65,7 @@ func (rts *RVSTestRunner) GetTestHandler(testName string, params types.TestParam
 	}
 	cmdArgs := []string{}
 	cmdArgs = append(cmdArgs, rts.binaryLocation)
-	confFile := fmt.Sprintf("%v/%v.conf", rts.testSuitesDir, testName)
+	confFile := filepath.Join(rts.testSuitesDir, fmt.Sprintf("%v.conf", testName))
 	cmdArgs = append(cmdArgs, "-c", confFile)
 
 	if len(params.DeviceIDs) > 0 {
@@ -79,7 +80,8 @@ func (rts *RVSTestRunner) GetTestHandler(testName string, params types.TestParam
 	if params.Timeout > 0 {
 		options = append(options, types.TestWithTimeout(params.Timeout))
 	}
-	options = append(options, types.TestWithResultParser(rts.parseRvsTestResult))
+	options = append(options, types.TestWithResultParser(parseRvsTestResult),
+		types.TestWithIteration(uint32(params.Iterations)), types.TestWithStopOnFailure(params.StopOnFailure))
 	return types.NewTestHandler(testName, rts.logger, cmdArgs, options...), nil
 }
 
@@ -100,7 +102,7 @@ func (rts *RVSTestRunner) loadTestSuites() error {
 	return nil
 }
 
-func (rts *RVSTestRunner) parseRvsTestResult(stdout string) (map[string]map[string]types.TestResult, error) {
+func parseRvsTestResult(stdout string) (map[string]types.TestResults, error) {
 	// get the log file
 	file, err := ExtractLogFile(stdout)
 	if err != nil {
@@ -117,7 +119,7 @@ func (rts *RVSTestRunner) parseRvsTestResult(stdout string) (map[string]map[stri
 	if err != nil {
 		return nil, err
 	}
-	testResult := make(map[string]map[string]types.TestResult)
+	testResult := make(map[string]types.TestResults)
 	for _, testsuite := range data {
 		for name, test := range testsuite {
 			for _, gpu := range test {
@@ -126,15 +128,16 @@ func (rts *RVSTestRunner) parseRvsTestResult(stdout string) (map[string]map[stri
 				}
 				if testResult[gpu.GPUID] == nil {
 					testResult[gpu.GPUID] = make(map[string]types.TestResult)
+					testResult[gpu.GPUID] = make(types.TestResults)
 				}
-				testResult[gpu.GPUID][name] = rts.getTestResultEnum(gpu.Pass)
+				testResult[gpu.GPUID][name] = getTestResultEnum(gpu.Pass)
 			}
 		}
 	}
 	return testResult, nil
 }
 
-func (rts *RVSTestRunner) getTestResultEnum(val string) types.TestResult {
+func getTestResultEnum(val string) types.TestResult {
 	if val == "true" {
 		return types.Success
 	}

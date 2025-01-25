@@ -43,7 +43,7 @@ type TestHandlerInterface interface {
 	GetLogFilePath() string
 
 	// Result
-	Result() map[string]map[string]TestResult
+	Result() []*IterationResult
 
 	// Done signals test completion
 	Done() chan struct{}
