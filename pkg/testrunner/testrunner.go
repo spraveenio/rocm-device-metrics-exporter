@@ -98,11 +98,12 @@ type TestRunner struct {
 	rocmSMIPath        string
 	exporterSocketPath string
 
-	testCategory   string
-	testLocation   string
-	testTrigger    string
-	rvsTestCaseDir string
-	testCfgPath    string
+	testCategory        string
+	testLocation        string
+	testTrigger         string
+	rvsTestCaseDir      string
+	testCfgPath         string
+	testCfgGPUModelName string
 
 	logDir       string
 	statusDBPath string
@@ -209,11 +210,28 @@ func (tr *TestRunner) validateTestTrigger() {
 	if params, ok := categoryConfig.TestLocationTrigger[globals.GlobalTestTriggerKeyword].TestParameters[tr.testTrigger]; !ok {
 		fmt.Printf("failed to get test trigger %+v under category %+v global config: %+v\n", tr.testTrigger, categoryConfig, categoryConfig.TestLocationTrigger[tr.hostName])
 		os.Exit(1)
-	} else if len(params.TestCases) == 0 {
+	} else if len(params.TestCases) == 0 || params.TestCases[0] == nil {
 		fmt.Printf("failed to get test case under category %+v trigger %+v global config: %+v\n", categoryConfig, tr.testTrigger, categoryConfig.TestLocationTrigger[tr.hostName])
 		os.Exit(1)
 	}
 	tr.testLocation = globals.GlobalTestTriggerKeyword
+	logger.Log.Printf("applied test config for %+v", tr.testLocation)
+
+	testParams := tr.getTestParameters(false)
+	gpuModelSubDir, err := getGPUModelTestRecipeDir(tr.rocmSMIPath)
+	if err != nil {
+		logger.Log.Printf("failed to get GPU model specific folder for test recipe err %+v, using recipe from root conf folder", err)
+	}
+	testCfgPath := filepath.Join(tr.rvsTestCaseDir, testParams.TestCases[0].Recipe+".conf")
+	if gpuModelSubDir != "" {
+		logger.Log.Printf("using test recipe from %+v folder", gpuModelSubDir)
+		tr.testCfgGPUModelName = gpuModelSubDir
+		testCfgPath = filepath.Join(tr.rvsTestCaseDir, gpuModelSubDir, testParams.TestCases[0].Recipe+".conf")
+	}
+	if _, err := os.Stat(testCfgPath); err != nil {
+		fmt.Printf("Trigger %+v cannot find corresponding test config file %+v, err: %+v\n", tr.testTrigger, testCfgPath, err)
+		os.Exit(1)
+	}
 }
 
 func (tr *TestRunner) initLogger() {
@@ -287,24 +305,10 @@ func (tr *TestRunner) initTestRunnerConfig() {
 		}
 	}
 	tr.statusDBPath = statusDBPath
+}
 
-	// the validation of globalTestRunnerConfig has been done previously by validateTestTrigger()
-	testParams := tr.getTestParameters()
-
-	gpuModelDir, err := getGPUModelTestRecipeDir(tr.rocmSMIPath)
-	if err != nil {
-		logger.Log.Printf("failed to get GPU model specific folder for test recipe err %+v, using recipe from root conf folder", err)
-	}
-	testCfgPath := filepath.Join(tr.rvsTestCaseDir, testParams.TestCases[0].Recipe+".conf")
-	if gpuModelDir != "" {
-		logger.Log.Printf("using test recipe from %+v folder", gpuModelDir)
-		testCfgPath = filepath.Join(tr.rvsTestCaseDir, gpuModelDir, testParams.TestCases[0].Recipe+".conf")
-	}
-	if _, err := os.Stat(testCfgPath); err != nil {
-		fmt.Printf("Trigger %+v cannot find corresponding test config file %+v, err: %+v\n", tr.testTrigger, testCfgPath, err)
-		os.Exit(1)
-	}
-	logger.Log.Printf("applied test config for %+v", tr.testLocation)
+func (tr *TestRunner) getTestRecipeDir() string {
+	return filepath.Join(tr.rvsTestCaseDir, tr.testCfgGPUModelName)
 }
 
 // the validation functions have make sure that the given category/location/trigger config exists and valid within runnerConfig
@@ -317,7 +321,7 @@ func (tr *TestRunner) TriggerTest() {
 			// init rvs test runner
 			// and start to listen for unix socket to receive the event
 			// for triggering the test run on unhealthy GPU
-			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.logDir)
+			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.getTestRecipeDir(), tr.logDir)
 			if err != nil || rvsTestRunner == nil {
 				logger.Log.Printf("failed to create rvs test runner, runner: %+v, err: %+v", rvsTestRunner, err)
 				os.Exit(1)
@@ -326,7 +330,7 @@ func (tr *TestRunner) TriggerTest() {
 			tr.watchGPUState()
 		case testrunnerGen.TestTrigger_MANUAL.String(),
 			testrunnerGen.TestTrigger_PRE_START_JOB_CHECK.String():
-			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.rvsTestCaseDir, tr.logDir)
+			rvsTestRunner, err := NewRvsTestRunner(tr.rvsPath, tr.getTestRecipeDir(), tr.logDir)
 			if err != nil || rvsTestRunner == nil {
 				logger.Log.Printf("failed to create rvs test runner, runner: %+v, err: %+v", rvsTestRunner, err)
 				os.Exit(1)
@@ -362,7 +366,6 @@ func (tr *TestRunner) watchGPUState() {
 			defer conn.Close()
 		case <-ctx.Done():
 			logger.Log.Fatalf("retry exhausted: testrunner cannot connect to %v", "unix:"+tr.exporterSocketPath)
-			return
 		}
 	}
 
@@ -381,8 +384,10 @@ func (tr *TestRunner) watchGPUState() {
 				ids = append(ids, deviceID)
 			}
 		}
-		logger.Log.Printf("found GPU %+v with incomplete test before restart %+v, start to rerun test", ids, statusObj)
-		go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(), ids, true)
+		if len(ids) > 0 {
+			logger.Log.Printf("found GPU %+v with incomplete test before restart %+v, start to rerun test", ids, statusObj)
+			go tr.testGPU(testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(), ids, true)
+		}
 	}
 
 	go tr.watchConfigFile()
@@ -512,7 +517,7 @@ func (tr *TestRunner) cleanupHealthyGPUTestStatus(ids []string) {
 }
 
 func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
-	parameters := tr.getTestParameters()
+	parameters := tr.getTestParameters(true)
 	// load ongoing test status
 	// avoid run multiple test on the same device
 	validIDs, statusObj := removeIDsWithExistingTest(trigger, tr.statusDBPath, ids, parameters, isRerun)
@@ -536,14 +541,12 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 		Timeout:       uint(parameters.TestCases[0].TimeoutSeconds),
 	})
 	if err != nil {
-		logger.Log.Printf("failed to get test run handler, err: %+v", err)
-		return
+		logger.Log.Fatalf("failed to get test run handler, err: %+v", err)
 	}
 
 	err = handler.StartTest()
 	if err != nil {
-		logger.Log.Printf("failed to start test run, err: %+v", err)
-		return
+		logger.Log.Fatalf("failed to start test run, err: %+v", err)
 	}
 
 	tr.AddTestRunningLabel(parameters.TestCases[0].Recipe)
@@ -567,35 +570,32 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 	}
 
 	select {
-	case <-time.After(time.Duration(parameters.TestCases[0].TimeoutSeconds) * time.Second):
+	case <-time.After(time.Duration(parameters.TestCases[0].TimeoutSeconds) * time.Second * time.Duration(parameters.TestCases[0].Iterations)):
 		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v timeout", trigger, parameters.TestCases[0].Recipe, ids)
 		result := BuildTimedoutTestSummary(validIDs)
 		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String(), result)
-		// save log into gzip file
-		if stdout := handler.Stdout(); stdout != "" {
-			SaveTestResultToGz(stdout, GetLogFilePath(tr.logDir, trigger, parameters.TestCases[0].Recipe, "stdout"))
-		}
-		if stderr := handler.Stderr(); stderr != "" {
-			SaveTestResultToGz(stderr, GetLogFilePath(tr.logDir, trigger, parameters.TestCases[0].Recipe, "stderr"))
-		}
 		handler.StopTest()
+		// when the test timedout
+		// save whatever test console logs that are cached
+		tr.saveHandlerLogs(handler.Result(), parameters.TestCases[0].Recipe)
 		// exit on non-auto trigger's failure
-		tr.exitOnFailure(result)
+		tr.exitOnFailure()
 	case <-handler.Done():
 		// TODO: this has to change later based on result logs parsing.
 		// for now updating same result in all GPU
 		result := handler.Result()
 		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v completed. Result: %v", trigger, parameters.TestCases[0].Recipe, ids, result)
+
 		// save log into gzip file
-		if stdout := handler.Stdout(); stdout != "" {
-			SaveTestResultToGz(stdout, GetLogFilePath(tr.logDir, trigger, parameters.TestCases[0].Recipe, "stdout"))
+		tr.saveHandlerLogs(result, parameters.TestCases[0].Recipe)
+
+		if tr.isRVSOverallPassed(result) {
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String(), result)
+		} else {
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestFailed.String(), result)
+			// exit on non-auto trigger's failure
+			tr.exitOnFailure()
 		}
-		if stderr := handler.Stderr(); stderr != "" {
-			SaveTestResultToGz(stderr, GetLogFilePath(tr.logDir, trigger, parameters.TestCases[0].Recipe, "stderr"))
-		}
-		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String(), result)
-		// exit on non-auto trigger's failure
-		tr.exitOnFailure(result)
 	}
 
 	statusObj, _ = LoadRunnerStatus(tr.statusDBPath)
@@ -619,24 +619,39 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 	SaveRunnerStatus(statusObj, tr.statusDBPath)
 }
 
-func (tr *TestRunner) exitOnFailure(result map[string]map[string]types.TestResult) {
+func (tr *TestRunner) saveHandlerLogs(results []*types.IterationResult, recipe string) {
+	for _, res := range results {
+		if res.Stdout != "" {
+			SaveTestResultToGz(res.Stdout, GetLogFilePath(tr.logDir, tr.testTrigger, recipe, fmt.Sprintf("iter_%v_stdout", res.Number)))
+		}
+		if res.Stderr != "" {
+			SaveTestResultToGz(res.Stderr, GetLogFilePath(tr.logDir, tr.testTrigger, recipe, fmt.Sprintf("iter_%v_stderr", res.Number)))
+		}
+	}
+}
+
+func (tr *TestRunner) exitOnFailure() {
 	switch tr.testTrigger {
 	case testrunnerGen.TestTrigger_MANUAL.String(),
 		testrunnerGen.TestTrigger_PRE_START_JOB_CHECK.String():
-		if result == nil {
-			logger.Log.Printf("failed to get result, exiting...")
-			os.Exit(1)
-		}
-		for guid, actionResults := range result {
+		os.Exit(1)
+	}
+}
+
+func (tr *TestRunner) isRVSOverallPassed(result []*types.IterationResult) bool {
+	overallPass := true
+	for _, iterResult := range result {
+		for guid, actionResults := range iterResult.SuitesResult {
 			for action, result := range actionResults {
 				switch result {
 				case types.Failure, types.Cancelled, types.Timedout:
-					logger.Log.Printf("error GPU %+v test action %+v failed due to %+v", guid, action, result)
-					os.Exit(1)
+					logger.Log.Printf("test on GPU %+v iteration %+v test action %+v failed due to %+v", guid, iterResult.Number, action, result)
+					overallPass = false
 				}
 			}
 		}
 	}
+	return overallPass
 }
 
 func (tr *TestRunner) manualTestGPU() {
@@ -650,10 +665,10 @@ func (tr *TestRunner) manualTestGPU() {
 	if len(allGUIDs) == 0 {
 		logger.Log.Println("no GPU was detected by rocm-smi")
 		result := BuildNoGPUTestSummary()
-		parameters := tr.getTestParameters()
+		parameters := tr.getTestParameters(true)
 		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result)
 		// exit on non-auto trigger's failure
-		tr.exitOnFailure(result)
+		tr.exitOnFailure()
 	}
 
 	// handle test runner crash or restart
@@ -723,9 +738,11 @@ func (tr *TestRunner) normalizeConfig() {
 	}
 }
 
-func (tr *TestRunner) getTestParameters() *testrunnerGen.TestParameters {
-	tr.Lock()
-	defer tr.Unlock()
+func (tr *TestRunner) getTestParameters(lock bool) *testrunnerGen.TestParameters {
+	if lock {
+		tr.Lock()
+		defer tr.Unlock()
+	}
 	return tr.globalTestRunnerConfig.TestConfig[tr.testCategory].TestLocationTrigger[tr.testLocation].TestParameters[tr.testTrigger]
 }
 
@@ -741,7 +758,7 @@ func (tr *TestRunner) getHostName() {
 	logger.Log.Printf("HostName: %v", tr.hostName)
 }
 
-func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string, summary map[string]map[string]types.TestResult) {
+func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string, summary []*types.IterationResult) {
 	if !tr.isK8s {
 		// return if it is not running in k8s cluster
 		return
@@ -753,12 +770,20 @@ func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string, summa
 		return
 	}
 
+	// don't put stdout and stderr large string into the event message
+	// they will be saved into zipped log file
+	for _, res := range summary {
+		res.Stdout = ""
+		res.Stderr = ""
+	}
+
+	// just save result into json message
 	msg, err := json.Marshal(summary)
 	if err != nil {
 		logger.Log.Panicf("failed to marshal test summary %+v err %+v", summary, err)
 		return
 	}
-	evtNamePrefix := GetEventName(tr.testCategory, tr.testTrigger, testRecipe)
+	evtNamePrefix := GetEventNamePrefix(tr.testCategory, tr.testTrigger, testRecipe)
 	// if there is no event exist, create a new one
 	currTime := time.Now().UTC()
 	evtObj := &v1.Event{

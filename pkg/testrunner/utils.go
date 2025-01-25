@@ -143,7 +143,7 @@ func SaveTestResultToGz(output, path string) {
 func GetLogFilePath(resultLogDir, trigger, testName, suffix string) string {
 	now := time.Now().UTC()
 	ts := now.Format("20060102_150405")
-	fileName := ts + "_" + trigger + "_" + testName + "_" + suffix + ".gz"
+	fileName := strings.ToLower(ts + "_" + trigger + "_" + testName + "_" + suffix + ".gz")
 	return filepath.Join(resultLogDir, fileName)
 }
 
@@ -253,7 +253,7 @@ func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, param
 	validIDs := []string{}
 	for _, id := range ids {
 		if testStatus, ok := statusObj.TestStatus[id]; ok && !isRerun {
-			logger.Log.Printf("trigger %+v is trying to run test %+v on device %+v but found existing running/completed test %+v, skip for now",
+			logger.Log.Printf("trigger %+v is trying to run test %+v on device %+v but found existing %v test, skip for now",
 				trigger, parameters.TestCases[0].Recipe, id, testStatus)
 		} else {
 			validIDs = append(validIDs, id)
@@ -262,7 +262,7 @@ func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, param
 	return validIDs, statusObj
 }
 
-func GetEventName(testCategory, testTrigger, testRecipe string) string {
+func GetEventNamePrefix(testCategory, testTrigger, testRecipe string) string {
 	return strings.ToLower("amd-test-runner-" + testCategory + "-" + testTrigger + "-" + testRecipe + "-")
 }
 
@@ -286,22 +286,30 @@ func ExtractLogFile(output string) (string, error) {
 	return filename, nil
 }
 
-func BuildTimedoutTestSummary(ids []string) map[string]map[string]types.TestResult {
-	result := map[string]map[string]types.TestResult{}
+func BuildTimedoutTestSummary(ids []string) []*types.IterationResult {
+	result := []*types.IterationResult{}
+	result = append(result, &types.IterationResult{
+		Number:       0,
+		SuitesResult: map[string]types.TestResults{},
+	})
 	for _, id := range ids {
-		result[id] = map[string]types.TestResult{}
-		result[id]["action"] = types.Timedout
+		result[0].SuitesResult[id] = map[string]types.TestResult{}
+		result[0].SuitesResult[id]["action"] = types.Timedout
 	}
 	return result
 }
 
-func BuildNoGPUTestSummary() map[string]map[string]types.TestResult {
-	result := map[string]map[string]types.TestResult{}
-	result[globals.NoGPUErrMsg] = map[string]types.TestResult{}
-	result[globals.NoGPUErrMsg]["action"] = types.Failure
+func BuildNoGPUTestSummary() []*types.IterationResult {
+	result := []*types.IterationResult{}
+	result = append(result, &types.IterationResult{
+		Number:       0,
+		SuitesResult: map[string]types.TestResults{},
+	})
+	result[0].SuitesResult[globals.NoGPUErrMsg] = map[string]types.TestResult{}
+	result[0].SuitesResult[globals.NoGPUErrMsg]["action"] = types.Failure
 	return result
 }
 
 func GetTestRunningLabelKeyValue(category, recipe string) (string, string) {
-	return fmt.Sprintf("amd.testrunner.%v.%v", category, recipe), "running"
+	return strings.ToLower(fmt.Sprintf("amd.testrunner.%v.%v", category, recipe)), "running"
 }
