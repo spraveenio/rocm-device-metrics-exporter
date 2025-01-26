@@ -38,9 +38,9 @@ copy_artifacts () {
     # copy docker mock image
     cp /device-metrics-exporter/docker/exporter-mock-latest.tgz $BUNDLE_DIR/exporter-mock-latest-$RELEASE.tar.gz
     # copy debian ubuntu 22.04 package
-    cp /device-metrics-exporter/bin/amdgpu-exporter_1.2.0_ubuntu_22.04_amd64.deb  $BUNDLE_DIR/amdgpu-exporter-$RELEASE-1.2.0_ubuntu_22.04_amd64
+    cp /device-metrics-exporter/bin/amdgpu-exporter_1.2.0_ubuntu_22.04_amd64.deb  $BUNDLE_DIR/amdgpu-exporter-$RELEASE-1.2.0_ubuntu_22.04_amd64.deb
     # copy debian ubuntu 24.04 package
-    cp /device-metrics-exporter/bin/amdgpu-exporter_1.2.0_ubuntu_24.04_amd64.deb  $BUNDLE_DIR/amdgpu-exporter-$RELEASE-1.2.0_ubuntu_24.04_amd64
+    cp /device-metrics-exporter/bin/amdgpu-exporter_1.2.0_ubuntu_24.04_amd64.deb  $BUNDLE_DIR/amdgpu-exporter-$RELEASE-1.2.0_ubuntu_24.04_amd64.deb
     # copy helm charts
     cp /device-metrics-exporter/helm-charts/amdgpu-metrics-exporter-charts-*.tgz $BUNDLE_DIR/amdgpu-metrics-exporter-charts-$RELEASE-v1.2.0.tgz
     # copy techsupport scripts
