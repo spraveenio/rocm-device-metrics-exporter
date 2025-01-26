@@ -16,7 +16,7 @@ run "install -m 0755 -d /etc/apt/keyrings"
 run "curl -k -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc"
 run "chmod a+r /etc/apt/keyrings/docker.asc"
 
-run "echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu focal stable' > /etc/apt/sources.list.d/docker.list"
+run "echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable' > /etc/apt/sources.list.d/docker.list"
 
 run "apt-get update && apt-get install -y \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \

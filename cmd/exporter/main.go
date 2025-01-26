@@ -71,10 +71,9 @@ func main() {
 	exporterHandler := exporter.NewExporter(*agentGrpcPort, *metricsConfig)
 
 	enableDebugAPI := true // default
-	// TODO : DOCKERENV is still set in nightly, revisit for better logic
-	//if len(Publish) != 0 {
-	//	enableDebugAPI = false
-	//}
+	if len(Publish) != 0 {
+		enableDebugAPI = false
+	}
 
 	if enableDebugAPI {
 		logger.Log.Printf("Debug APIs enabled")
