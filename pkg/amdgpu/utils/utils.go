@@ -25,7 +25,7 @@ import (
 
 const (
 	MaxGPUPerServer     = 16 // current max is 8, gpuagent mock has 16
-	NodeGPUHealthPrefix = "amdgpu.exporter.gpu.%v.state"
+	NodeGPUHealthPrefix = "metricsexporter.amd.com.gpu.%v.state"
 )
 
 // ParseNodeHealthLabel - converts k8s nod label to gpu,health map

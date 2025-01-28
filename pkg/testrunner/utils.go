@@ -311,5 +311,5 @@ func BuildNoGPUTestSummary() []*types.IterationResult {
 }
 
 func GetTestRunningLabelKeyValue(category, recipe string) (string, string) {
-	return strings.ToLower(fmt.Sprintf("amd.testrunner.%v.%v", category, recipe)), "running"
+	return strings.ToLower(fmt.Sprintf("testrunner.amd.com.%v.%v", category, recipe)), "running"
 }

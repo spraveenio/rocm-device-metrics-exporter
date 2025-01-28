@@ -213,7 +213,7 @@ func (s *E2ESuite) Test006VerifyNodeHealthyLabel(c *C) {
 	ctx := context.Background()
 	log.Print("Verifying gpu healthy label on node for gpu 0")
 	labelMap := make(map[string]string)
-	labelMap["amdgpu.exporter.gpu.0.state"] = "healthy"
+	labelMap["metricsexporter.amd.com.gpu.0.state"] = "healthy"
 	nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
 	if err != nil {
 		assert.Fail(c, err.Error())
@@ -238,7 +238,7 @@ func (s *E2ESuite) Test007MarkAndVerifyGPUUnhealthyLabel(c *C) {
 		return
 	}
 	labelMap := make(map[string]string)
-	labelMap["amdgpu.exporter.gpu.0.state"] = "unhealthy"
+	labelMap["metricsexporter.amd.com.gpu.0.state"] = "unhealthy"
 	log.Print("Verifying unhealthy label on the node(s)")
 	assert.Eventually(c, func() bool {
 		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
@@ -266,7 +266,7 @@ func (s *E2ESuite) Test008MarkAndVerifyGPUHealthyLabel(c *C) {
 		return
 	}
 	labelMap := make(map[string]string)
-	labelMap["amdgpu.exporter.gpu.0.state"] = "healthy"
+	labelMap["metricsexporter.amd.com.gpu.0.state"] = "healthy"
 	log.Print("Verifying healthy label on the node(s)")
 	assert.Eventually(c, func() bool {
 		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
@@ -330,7 +330,7 @@ func (s *E2ESuite) Test009VerifyHealthThresholds(c *C) {
 	//verify GPU is healthy as the counters did not exceed threshold
 	log.Print("Verifying gpu 0 is healthy")
 	labelMap := make(map[string]string)
-	labelMap["amdgpu.exporter.gpu.0.state"] = "healthy"
+	labelMap["metricsexporter.amd.com.gpu.0.state"] = "healthy"
 	log.Print("Verifying healthy label on the node(s)")
 	assert.Eventually(c, func() bool {
 		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
@@ -355,7 +355,7 @@ func (s *E2ESuite) Test009VerifyHealthThresholds(c *C) {
 		return
 	}
 
-	labelMap["amdgpu.exporter.gpu.0.state"] = "unhealthy"
+	labelMap["metricsexporter.amd.com.gpu.0.state"] = "unhealthy"
 	log.Print("Verifying unhealthy label on the node(s)")
 	assert.Eventually(c, func() bool {
 		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
@@ -389,7 +389,7 @@ func (s *E2ESuite) Test009VerifyHealthThresholds(c *C) {
 		}
 		return true
 	}, 90*time.Second, 5*time.Second)
-	labelMap["amdgpu.exporter.gpu.0.state"] = "healthy"
+	labelMap["metricsexporter.amd.com.gpu.0.state"] = "healthy"
 	log.Print("Verifying healthy label on the node(s)")
 	assert.Eventually(c, func() bool {
 		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)

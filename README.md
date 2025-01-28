@@ -8,8 +8,8 @@ state marked healthy/unhealthy as well.
 
 _Kubernets Node labels for health monitor_
 ```
-amdgpu.exporter.gpu.0.state=healthy
-amdgpu.exporter.gpu.0.state=unhealthy
+metricsexporter.amd.com.gpu.0.state=healthy
+metricsexporter.amd.com.gpu.0.state=unhealthy
 ```
 
 _Usage of bin/amd-metrics-exporter_
