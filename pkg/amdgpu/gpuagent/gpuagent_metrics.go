@@ -271,6 +271,7 @@ func (ga *GPUAgentClient) initLabelConfigs(config *gpumetrics.GPUMetricConfig) {
 	}
 
 	k8sLabels := scheduler.GetExportLabels(scheduler.Kubernetes)
+	slurmLabels := scheduler.GetExportLabels(scheduler.Slurm)
 
 	if config != nil {
 		for _, name := range config.GetLabels() {
@@ -279,6 +280,12 @@ func (ga *GPUAgentClient) initLabelConfigs(config *gpumetrics.GPUMetricConfig) {
 				// export labels must have atleast one label exported by
 				// kubernets client, otherwise don't enable the label
 				if _, ok := k8sLabels[name]; ok && !ga.isKubernetes {
+					continue
+				}
+
+				// ignore slurm labels in kubernetes
+				if _, ok := slurmLabels[name]; ok && ga.isKubernetes {
+					logger.Log.Printf("label %v ignored", name)
 					continue
 				}
 				logger.Log.Printf("label %v enabled", name)
