@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/config"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gpuagent"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
@@ -251,4 +252,23 @@ func (e *Exporter) SetComputeNodeHealth(health bool) {
 	if gpuclient != nil {
 		gpuclient.SetComputeNodeHealthState(health)
 	}
+}
+
+// GetGPUWorkloads get workloads associated with GPU
+func (e *Exporter) GetGPUWorkloads() (map[string][]string, error) {
+	workloads := map[string][]string{}
+	if gpuclient == nil {
+		return nil, fmt.Errorf("gpuclient is not ready")
+	}
+
+	hstates, err := gpuclient.GetGPUHealthStates()
+	if err != nil {
+		return nil, fmt.Errorf("health status failed, %v", err)
+	}
+	for k, v := range hstates {
+		if state, ok := v.(*metricssvc.GPUState); ok {
+			workloads[k] = append(workloads[k], state.AssociatedWorkload...)
+		}
+	}
+	return workloads, nil
 }
