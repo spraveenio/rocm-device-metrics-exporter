@@ -31,6 +31,7 @@ import (
 // DefaultTestTimeout is default test timeout
 const DefaultTestTimeout = 600 // 10 min
 
+// TestResults is map where test name is key and value is result
 type TestResults map[string]TestResult
 
 // IterationResult contains the result for each test iteration
@@ -39,6 +40,7 @@ type IterationResult struct {
 	Stdout       string                 `json:"stdout,omitempty"`
 	Stderr       string                 `json:"stderr,omitempty"`
 	SuitesResult map[string]TestResults `json:"suitesResult,omitempty"`
+	Status       CommandStatus          `json:"status,omitempty"`
 }
 
 // ResultParser is a generic function which can be used to develop parser for different test frameworks
@@ -183,7 +185,7 @@ func (th *TestHandler) runTest() {
 		case <-iterationDoneChan:
 			// Process completed successfully or with an error
 			logger.Log.Printf("writing logs %v [iteration=%d]: \n", th.testname, i)
-			err := th.logResults(i)
+			err := th.logResults(i, TestCompleted)
 			if err != nil {
 				logger.Log.Printf("err: %v", err)
 				closeFunc()
@@ -192,7 +194,7 @@ func (th *TestHandler) runTest() {
 		case <-ctx.Done():
 			// Timeout occurred
 			logger.Log.Printf("cmd %v [iteration=%d] timed out", th.testname, i)
-			err := th.logResults(i)
+			err := th.logResults(i, TestTimedOut)
 			if err != nil {
 				logger.Log.Printf("err: %v", err)
 				closeFunc()
@@ -212,7 +214,7 @@ func (th *TestHandler) runTest() {
 	closeFunc()
 }
 
-func (th *TestHandler) logResults(i uint32) error {
+func (th *TestHandler) logResults(i uint32, status CommandStatus) error {
 	res, err := th.parser(th.stdout.String())
 	if err != nil {
 		logger.Log.Printf("error parsing test logs for %v err: %v", th.testname, err)
@@ -224,11 +226,12 @@ func (th *TestHandler) logResults(i uint32) error {
 		Stderr:       th.stderr.String(),
 		Number:       i,
 		SuitesResult: res,
+		Status:       status,
 	}
 	th.rwLock.Lock()
 	th.IterResults = append(th.IterResults, obj)
 	th.rwLock.Unlock()
-	if th.stopOnFailure && checkFailure(res) {
+	if th.stopOnFailure && (checkFailure(res) || status == TestTimedOut) {
 		return fmt.Errorf("stopping test on failure")
 	}
 	return nil
@@ -249,16 +252,6 @@ func (th *TestHandler) cancelCtx() {
 	}
 	th.cancelFunc()
 	th.cancelFunc = nil
-}
-
-// Stdout return stdout of the test command
-func (th *TestHandler) Stdout() string {
-	return th.stdout.String()
-}
-
-// Stderr return stderr of the test command
-func (th *TestHandler) Stderr() string {
-	return th.stderr.String()
 }
 
 // GetLogFilePath return log file path of the test command
