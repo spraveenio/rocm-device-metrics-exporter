@@ -42,8 +42,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          - name: CLUSTER_NAME
-            value: "{{ .Values.clusterName}}"
           {{- if eq .Values.service.type "NodePort" }}
           - name: METRICS_EXPORTER_PORT
             value: "{{ .Values.service.NodePort.port }}"

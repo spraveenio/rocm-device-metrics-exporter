@@ -149,12 +149,15 @@ _Usage of bin/amd-metrics-exporter_
             array of string specifying what field to be exported
             present in [_internal/amdgpu/proto/fields.proto_:**GPUMetricField**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L32)
         - Labels
-            CARD_MODEL, GPU_ID, HOSTNAME, SERIAL_NUMBER, CLUSTER_NAME, GPU_PARTITION_ID and GPU_COMPUTE_PARTITION_TYPE are always set and cannot be removed. Labels supported are available in
+            CARD_MODEL, GPU_ID, HOSTNAME, SERIAL_NUMBER, GPU_PARTITION_ID and GPU_COMPUTE_PARTITION_TYPE are always set and cannot be removed. Labels supported are available in
             [_internal/amdgpu/proto/fields.proto_**:GPUMetricLabel**](https://github.com/pensando/device-metrics-exporter/blob/main/internal/amdgpu/proto/exporterconfig.proto#L114)
         - HealthThresholds:
             These values dictates the threshold of the ECC field counters to mark
             a GPU as unhealthy. Default is 0 if not specified, the GPU will be
             marked unhealthy once the value goes above the set threshold limit.
+        - CustomLabels
+            map of custom labels and values to be exported. Exporter supports a maximum of 10 custom labels currently. Mandatory labels mentioned above supplied as custom labels will
+            be ignored.
 
 - Invalid values in any of the field will be ignored and revert to default
   behavior for the respective fields.

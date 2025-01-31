@@ -37,4 +37,7 @@ const (
 
 	// AMDGPUResourceLabel - k8s AMD gpu resource label
 	AMDGPUResourceLabel = "amd.com/gpu"
+
+	// max number of custom labels that will be exported in the logs
+	MaxSupportedCustomLabels = 10
 )

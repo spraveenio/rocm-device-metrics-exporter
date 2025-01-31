@@ -27,6 +27,7 @@ import (
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
+	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/parserutil"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/scheduler"
@@ -42,12 +43,12 @@ var (
 		gpumetrics.GPUMetricLabel_HOSTNAME.String(),
 		gpumetrics.GPUMetricLabel_GPU_PARTITION_ID.String(),
 		gpumetrics.GPUMetricLabel_GPU_COMPUTE_PARTITION_TYPE.String(),
-		gpumetrics.GPUMetricLabel_CLUSTER_NAME.String(),
 	}
 	exportLables    map[string]bool
 	exportFieldMap  map[string]bool
 	fieldMetricsMap []prometheus.Collector
 	gpuSelectorMap  map[int]bool
+	customLabelMap  map[string]string
 )
 
 type metrics struct {
@@ -255,6 +256,22 @@ func (ga *GPUAgentClient) GetExportLabels() []string {
 		}
 		labelList = append(labelList, strings.ToLower(key))
 	}
+
+	for key := range customLabelMap {
+		exists := false
+		for _, label := range labelList {
+			if key == label {
+				exists = true
+				break
+			}
+		}
+
+		// Add only unique labels to export labels
+		if !exists {
+			labelList = append(labelList, strings.ToLower(key))
+		}
+	}
+
 	return labelList
 }
 
@@ -294,6 +311,40 @@ func (ga *GPUAgentClient) initLabelConfigs(config *gpumetrics.GPUMetricConfig) {
 		}
 	}
 	logger.Log.Printf("export-labels updated to %v", exportLables)
+}
+
+func initCustomLabels(config *gpumetrics.GPUMetricConfig) {
+	customLabelMap = make(map[string]string)
+	if config != nil && config.GetCustomLabels() != nil {
+		cl := config.GetCustomLabels()
+		labelCount := 0
+
+		for l, value := range cl {
+			if labelCount >= globals.MaxSupportedCustomLabels {
+				logger.Log.Printf("Max custom labels supported: %v, ignoring extra labels.", globals.MaxSupportedCustomLabels)
+				break
+			}
+			label := strings.ToLower(l)
+
+			// Check if custom label is a mandatory label, ignore if true
+			found := false
+			for _, mlabel := range mandatoryLables {
+				if strings.ToLower(mlabel) == label {
+					logger.Log.Printf("Detected mandatory label %s in custom label, ignoring...", mlabel)
+					found = true
+					break
+				}
+			}
+			if found {
+				continue
+			}
+
+			// Store all custom labels
+			customLabelMap[label] = value
+			labelCount++
+		}
+	}
+	logger.Log.Printf("custom labels being exported: %v", customLabelMap)
 }
 
 func initGPUSelectorConfig(config *gpumetrics.GPUMetricConfig) {
@@ -915,6 +966,7 @@ func (ga *GPUAgentClient) initFieldRegistration() error {
 func (ga *GPUAgentClient) InitConfigs() error {
 	filedConfigs := ga.mh.GetMetricsConfig()
 
+	initCustomLabels(filedConfigs)
 	ga.initLabelConfigs(filedConfigs)
 	initFieldConfig(filedConfigs)
 	initGPUSelectorConfig(filedConfigs)
@@ -1012,7 +1064,7 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(wls map[string]interface{}, gpu 
 		case gpumetrics.GPUMetricLabel_JOB_PARTITION.String():
 			labels[key] = jobInfo.Partition
 		case gpumetrics.GPUMetricLabel_CLUSTER_NAME.String():
-			labels[key] = ga.getClusterName(jobInfo)
+			labels[key] = jobInfo.Cluster
 		case gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String():
 			labels[key] = gpu.Status.SerialNum
 		case gpumetrics.GPUMetricLabel_CARD_SERIES.String():
@@ -1037,14 +1089,12 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(wls map[string]interface{}, gpu 
 			logger.Log.Printf("Invalid label is ignored %v", key)
 		}
 	}
-	return labels
-}
 
-func (ga *GPUAgentClient) getClusterName(jInfo scheduler.JobInfo) string {
-	if ga.isKubernetes {
-		return os.Getenv("CLUSTER_NAME")
+	// Add custom labels
+	for label, value := range customLabelMap {
+		labels[label] = value
 	}
-	return jInfo.Cluster
+	return labels
 }
 
 func (ga *GPUAgentClient) exporterEnabledGPU(instance int) bool {

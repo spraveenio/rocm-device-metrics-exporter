@@ -83,10 +83,10 @@ func (mh *MetricsHandler) UpdateMetrics() error {
 }
 
 func (mh *MetricsHandler) GetMetricsConfig() *gpumetrics.GPUMetricConfig {
-    config := mh.runConf.GetConfig()
-    if config != nil {
-        return config.GetGPUConfig()
-    }
+	config := mh.runConf.GetConfig()
+	if config != nil {
+		return config.GetGPUConfig()
+	}
 	return nil
 }
 

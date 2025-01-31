@@ -120,6 +120,15 @@ func (s *E2ESuite) SetFields(fields []string) error {
 	return s.WriteConfig(config)
 }
 
+func (s *E2ESuite) SetCustomLabels(customLabels map[string]string) error {
+	config := s.ReadConfig()
+	if config.GetGPUConfig() == nil {
+		config.GPUConfig = &gpumetrics.GPUMetricConfig{}
+	}
+	config.GPUConfig.CustomLabels = customLabels
+	return s.WriteConfig(config)
+}
+
 func (s *E2ESuite) SetUpSuite(c *C) {
 	if os.Getenv("DRY_RUN") != "" {
 		return

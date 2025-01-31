@@ -139,6 +139,9 @@ data:
           "GPU_ECC_UNCORRECT_JPEG" : 0,
           "GPU_ECC_UNCORRECT_IH" : 0,
           "GPU_ECC_UNCORRECT_MPIO" : 0
+        },
+        "CustomLabels" : {
+          "CLUSTER_NAME" : "amdgpu-k8s-metrics-exporter"
         }
       }
     }
