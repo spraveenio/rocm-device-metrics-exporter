@@ -155,7 +155,6 @@ enum GPUMetricLabel {
     JOB_ID                     = 6;
     JOB_USER                   = 7;
     JOB_PARTITION              = 8;
-    // mandatory CLUSTER_NAME cannot be disabled
     CLUSTER_NAME               = 9;
     CARD_SERIES                = 10;
     // mandatory CARD_MODEL cannot be disabled
@@ -183,6 +182,9 @@ message GPUMetricConfig {
 
     // GPU Health Thresholds
     GPUHealthThresholds HealthThresholds = 4;
+
+    // User Defined Custom Labels and values
+    map<string, string> CustomLabels = 5;
 }
 
 message MetricConfig {
