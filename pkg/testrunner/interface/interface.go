@@ -33,12 +33,6 @@ type TestHandlerInterface interface {
 	// Status
 	Status() CommandStatus
 
-	// Stdout
-	Stdout() string
-
-	// Stderr
-	Stderr() string
-
 	// GetLogFilePath
 	GetLogFilePath() string
 
@@ -71,6 +65,8 @@ const (
 	TestCompleted CommandStatus = "completed"
 	// TestNotStarted represents test is not started yet
 	TestNotStarted CommandStatus = "not_started"
+	// TestTimedOut represents test timed out
+	TestTimedOut CommandStatus = "timed_out"
 	// Success represents test passed
 	Success TestResult = "success"
 	// Failure represents test failed
