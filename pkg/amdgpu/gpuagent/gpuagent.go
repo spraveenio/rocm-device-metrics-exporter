@@ -37,6 +37,7 @@ import (
 const (
 	// cachgpuid are updated after this many pull request
 	refreshInterval = 30 * time.Second
+	queryTimeout   =  10 * time.Second
 )
 
 type GPUAgentClient struct {
@@ -207,7 +208,7 @@ func (ga *GPUAgentClient) getGPUs() (*amdgpu.GPUGetResponse, error) {
 		ga.reconnect()
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(ga.ctx, queryTimeout)
 	defer cancel()
 
 	req := &amdgpu.GPUGetRequest{}
