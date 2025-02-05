@@ -4,11 +4,11 @@ Health Monitoring for each of the GPU is done by the exporter in a 30s
 interval. The GPU will be marked as healthy/unhealthy on the grpc service
 hosted on /sockets/amdgpu_device_metrics_exporter_grpc.socket for external clients. In case of
 Kubernets environment the respective node will have the labels with each gpu
-state marked healthy/unhealthy as well.
+state marked as unhealthy in such case, no labels will be present when gpu is
+in healthy state.
 
 _Kubernets Node labels for health monitor_
 ```
-metricsexporter.amd.com.gpu.0.state=healthy
 metricsexporter.amd.com.gpu.0.state=unhealthy
 ```
 
@@ -126,7 +126,7 @@ _Usage of bin/amd-metrics-exporter_
     proto : `/usr/local/etc/metrics/plugin.proto`
 ### Default config behavior
 - ServerPort : 5000
-- Labels Defaults : `gpu_id, serial_number, card_model, hostname`
+- Labels Defaults : `gpu_id, serial_number, card_model, hostname, gpu_partition_id, gpu_compute_partition_type`
 - Fields Defaults : all fields supported
 
 ### Custom metrics config

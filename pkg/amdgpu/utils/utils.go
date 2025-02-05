@@ -52,6 +52,9 @@ func RemoveNodeHealthLabel(nodeLabels map[string]string) {
 // add all health labels to node label from map
 func AddNodeHealthLabel(nodeLabels map[string]string, healthMap map[string]string) {
 	for gpuid, state := range healthMap {
+		if state == "healthy" {
+			continue
+		}
 		labelKey := fmt.Sprintf(NodeGPUHealthPrefix, gpuid)
 		nodeLabels[labelKey] = state
 	}

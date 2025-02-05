@@ -209,19 +209,6 @@ func (s *E2ESuite) Test005HealthFieldUpdate(c *C) {
 	}, 90*time.Second, 5*time.Second)
 }
 
-func (s *E2ESuite) Test006VerifyNodeHealthyLabel(c *C) {
-	ctx := context.Background()
-	log.Print("Verifying gpu healthy label on node for gpu 0")
-	labelMap := make(map[string]string)
-	labelMap["metricsexporter.amd.com.gpu.0.state"] = "healthy"
-	nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
-	if err != nil {
-		assert.Fail(c, err.Error())
-		return
-	}
-	assert.True(c, len(nodes) > 0, "expected healthy gpu 0 but got unhealthy")
-}
-
 func (s *E2ESuite) Test007MarkAndVerifyGPUUnhealthyLabel(c *C) {
 	ctx := context.Background()
 	log.Print("Marking gpu 0 as unhealthy using metricsclient tool")
@@ -266,15 +253,15 @@ func (s *E2ESuite) Test008MarkAndVerifyGPUHealthyLabel(c *C) {
 		return
 	}
 	labelMap := make(map[string]string)
-	labelMap["metricsexporter.amd.com.gpu.0.state"] = "healthy"
+	labelMap["metricsexporter.amd.com.gpu.0.state"] = "unhealthy"
 	log.Print("Verifying healthy label on the node(s)")
 	assert.Eventually(c, func() bool {
 		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
 		if err != nil || len(nodes) == 0 {
-			return false
+			return true
 		}
 		log.Printf("Got %d nodes with healthy label", len(nodes))
-		return true
+		return false
 	}, 90*time.Second, 10*time.Second, "expected gpu 0 to become healthy but got unhealthy")
 }
 
@@ -330,15 +317,15 @@ func (s *E2ESuite) Test009VerifyHealthThresholds(c *C) {
 	//verify GPU is healthy as the counters did not exceed threshold
 	log.Print("Verifying gpu 0 is healthy")
 	labelMap := make(map[string]string)
-	labelMap["metricsexporter.amd.com.gpu.0.state"] = "healthy"
+	labelMap["metricsexporter.amd.com.gpu.0.state"] = "unhealthy"
 	log.Print("Verifying healthy label on the node(s)")
 	assert.Eventually(c, func() bool {
 		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
 		if err != nil || len(nodes) == 0 {
-			return false
+			return true
 		}
 		log.Printf("Got %d nodes with healthy label", len(nodes))
-		return true
+		return false
 	}, 90*time.Second, 10*time.Second, "expected gpu 0 to be healthy but got unhealthy")
 
 	log.Print("Increasing metrics values to exceed thresholds")
@@ -394,10 +381,10 @@ func (s *E2ESuite) Test009VerifyHealthThresholds(c *C) {
 	assert.Eventually(c, func() bool {
 		nodes, err := s.k8sclient.GetNodesByLabel(ctx, labelMap)
 		if err != nil || len(nodes) == 0 {
-			return false
+			return true
 		}
 		log.Printf("Got %d nodes with healthy label", len(nodes))
-		return true
+		return false
 	}, 90*time.Second, 10*time.Second, "expected gpu 0 to be healthy but got unhealthy")
 }
 
