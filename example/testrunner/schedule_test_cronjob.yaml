@@ -117,6 +117,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: JOB_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['job-name']
           restartPolicy: Never
       backoffLimit: 1
       ttlSecondsAfterFinished: 120

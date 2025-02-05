@@ -31,6 +31,8 @@ const (
 	testCategoryEnv = "TEST_CATEGORY"
 	testTriggerEnv  = "TEST_TRIGGER"
 	logDirEnv       = "LOG_MOUNT_DIR"
+	jobNameEnv      = "JOB_NAME"
+	nodeNameEnv     = "NODE_NAME"
 )
 
 var (
@@ -126,9 +128,11 @@ func main() {
 	testCategory := strings.ToUpper(getStrFromEnvOrDefault(testCategoryEnv, globals.DefaultTestCategory))
 	testTrigger := strings.ToUpper(getStrFromEnvOrDefault(testTriggerEnv, globals.DefaultTestTrigger))
 	logDir := getStrFromEnvOrDefault(logDirEnv, globals.DefaultRunnerLogDir)
+	jobName := getStrFromEnvOrDefault(jobNameEnv, "")
+	nodeName := getStrFromEnvOrDefault(nodeNameEnv, "")
 
 	testrunner.ValidateArgs(testCategory, testTrigger, *rvsPath, *rocmSMIPath, *rvsTestCaseDir, *exporterSocketPath)
-	runner := testrunner.NewTestRunner(*rvsPath, *rvsTestCaseDir, *rocmSMIPath, *exporterSocketPath, *testRunnerConfigPath, testCategory, testTrigger, logDir)
+	runner := testrunner.NewTestRunner(*rvsPath, *rvsTestCaseDir, *rocmSMIPath, *exporterSocketPath, *testRunnerConfigPath, testCategory, testTrigger, logDir, jobName, nodeName)
 	logger.Log.Printf("Version : %v", Version)
 	logger.Log.Printf("BuildDate: %v", BuildDate)
 	logger.Log.Printf("GitCommit: %v", GitCommit)

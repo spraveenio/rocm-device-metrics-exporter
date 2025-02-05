@@ -180,6 +180,52 @@ func (TestEventReason) EnumDescriptor() ([]byte, []int) {
 	return file_config_proto_rawDescGZIP(), []int{2}
 }
 
+type TestLogsExportConfig_CloudProvider int32
+
+const (
+	TestLogsExportConfig_Aws   TestLogsExportConfig_CloudProvider = 0
+	TestLogsExportConfig_Azure TestLogsExportConfig_CloudProvider = 1
+)
+
+// Enum value maps for TestLogsExportConfig_CloudProvider.
+var (
+	TestLogsExportConfig_CloudProvider_name = map[int32]string{
+		0: "Aws",
+		1: "Azure",
+	}
+	TestLogsExportConfig_CloudProvider_value = map[string]int32{
+		"Aws":   0,
+		"Azure": 1,
+	}
+)
+
+func (x TestLogsExportConfig_CloudProvider) Enum() *TestLogsExportConfig_CloudProvider {
+	p := new(TestLogsExportConfig_CloudProvider)
+	*p = x
+	return p
+}
+
+func (x TestLogsExportConfig_CloudProvider) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TestLogsExportConfig_CloudProvider) Descriptor() protoreflect.EnumDescriptor {
+	return file_config_proto_enumTypes[3].Descriptor()
+}
+
+func (TestLogsExportConfig_CloudProvider) Type() protoreflect.EnumType {
+	return &file_config_proto_enumTypes[3]
+}
+
+func (x TestLogsExportConfig_CloudProvider) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TestLogsExportConfig_CloudProvider.Descriptor instead.
+func (TestLogsExportConfig_CloudProvider) EnumDescriptor() ([]byte, []int) {
+	return file_config_proto_rawDescGZIP(), []int{5, 0}
+}
+
 // config specification of TestRunner
 type TestRunnerConfig struct {
 	state         protoimpl.MessageState
@@ -334,7 +380,8 @@ type TestParameters struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TestCases []*TestParameter `protobuf:"bytes,1,rep,name=TestCases,proto3" json:"TestCases,omitempty"`
+	TestCases        []*TestParameter        `protobuf:"bytes,1,rep,name=TestCases,proto3" json:"TestCases,omitempty"`
+	LogsExportConfig []*TestLogsExportConfig `protobuf:"bytes,2,rep,name=LogsExportConfig,proto3" json:"LogsExportConfig,omitempty"`
 }
 
 func (x *TestParameters) Reset() {
@@ -372,6 +419,13 @@ func (*TestParameters) Descriptor() ([]byte, []int) {
 func (x *TestParameters) GetTestCases() []*TestParameter {
 	if x != nil {
 		return x.TestCases
+	}
+	return nil
+}
+
+func (x *TestParameters) GetLogsExportConfig() []*TestLogsExportConfig {
+	if x != nil {
+		return x.LogsExportConfig
 	}
 	return nil
 }
@@ -468,7 +522,7 @@ type TestRunnerStatus struct {
 func (x *TestRunnerStatus) Reset() {
 	*x = TestRunnerStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_config_proto_msgTypes[5]
+		mi := &file_config_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -481,7 +535,7 @@ func (x *TestRunnerStatus) String() string {
 func (*TestRunnerStatus) ProtoMessage() {}
 
 func (x *TestRunnerStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_config_proto_msgTypes[5]
+	mi := &file_config_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -494,7 +548,7 @@ func (x *TestRunnerStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestRunnerStatus.ProtoReflect.Descriptor instead.
 func (*TestRunnerStatus) Descriptor() ([]byte, []int) {
-	return file_config_proto_rawDescGZIP(), []int{5}
+	return file_config_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *TestRunnerStatus) GetTestStatus() map[string]string {
@@ -602,37 +656,41 @@ func file_config_proto_rawDescGZIP() []byte {
 	return file_config_proto_rawDescData
 }
 
-var file_config_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_config_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_config_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_config_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_config_proto_goTypes = []any{
-	(TestCategory)(0),          // 0: testrunner.TestCategory
-	(TestTrigger)(0),           // 1: testrunner.TestTrigger
-	(TestEventReason)(0),       // 2: testrunner.TestEventReason
-	(*TestRunnerConfig)(nil),   // 3: testrunner.TestRunnerConfig
-	(*TestCategoryConfig)(nil), // 4: testrunner.TestCategoryConfig
-	(*TestTriggerConfig)(nil),  // 5: testrunner.TestTriggerConfig
-	(*TestParameters)(nil),     // 6: testrunner.TestParameters
-	(*TestParameter)(nil),      // 7: testrunner.TestParameter
-	(*TestRunnerStatus)(nil),   // 8: testrunner.TestRunnerStatus
-	nil,                        // 9: testrunner.TestRunnerConfig.TestConfigEntry
-	nil,                        // 10: testrunner.TestCategoryConfig.TestLocationTriggerEntry
-	nil,                        // 11: testrunner.TestTriggerConfig.TestParametersEntry
-	nil,                        // 12: testrunner.TestRunnerStatus.TestStatusEntry
+	(TestCategory)(0),                       // 0: testrunner.TestCategory
+	(TestTrigger)(0),                        // 1: testrunner.TestTrigger
+	(TestEventReason)(0),                    // 2: testrunner.TestEventReason
+	(TestLogsExportConfig_CloudProvider)(0), // 3: testrunner.TestLogsExportConfig.CloudProvider
+	(*TestRunnerConfig)(nil),                // 4: testrunner.TestRunnerConfig
+	(*TestCategoryConfig)(nil),              // 5: testrunner.TestCategoryConfig
+	(*TestTriggerConfig)(nil),               // 6: testrunner.TestTriggerConfig
+	(*TestParameters)(nil),                  // 7: testrunner.TestParameters
+	(*TestParameter)(nil),                   // 8: testrunner.TestParameter
+	(*TestLogsExportConfig)(nil),            // 9: testrunner.TestLogsExportConfig
+	(*TestRunnerStatus)(nil),                // 10: testrunner.TestRunnerStatus
+	nil,                                     // 11: testrunner.TestRunnerConfig.TestConfigEntry
+	nil,                                     // 12: testrunner.TestCategoryConfig.TestLocationTriggerEntry
+	nil,                                     // 13: testrunner.TestTriggerConfig.TestParametersEntry
+	nil,                                     // 14: testrunner.TestRunnerStatus.TestStatusEntry
 }
 var file_config_proto_depIdxs = []int32{
-	9,  // 0: testrunner.TestRunnerConfig.TestConfig:type_name -> testrunner.TestRunnerConfig.TestConfigEntry
-	10, // 1: testrunner.TestCategoryConfig.TestLocationTrigger:type_name -> testrunner.TestCategoryConfig.TestLocationTriggerEntry
-	11, // 2: testrunner.TestTriggerConfig.TestParameters:type_name -> testrunner.TestTriggerConfig.TestParametersEntry
-	7,  // 3: testrunner.TestParameters.TestCases:type_name -> testrunner.TestParameter
-	12, // 4: testrunner.TestRunnerStatus.TestStatus:type_name -> testrunner.TestRunnerStatus.TestStatusEntry
-	4,  // 5: testrunner.TestRunnerConfig.TestConfigEntry.value:type_name -> testrunner.TestCategoryConfig
-	5,  // 6: testrunner.TestCategoryConfig.TestLocationTriggerEntry.value:type_name -> testrunner.TestTriggerConfig
-	6,  // 7: testrunner.TestTriggerConfig.TestParametersEntry.value:type_name -> testrunner.TestParameters
-	8,  // [8:8] is the sub-list for method output_type
-	8,  // [8:8] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	11, // 0: testrunner.TestRunnerConfig.TestConfig:type_name -> testrunner.TestRunnerConfig.TestConfigEntry
+	12, // 1: testrunner.TestCategoryConfig.TestLocationTrigger:type_name -> testrunner.TestCategoryConfig.TestLocationTriggerEntry
+	13, // 2: testrunner.TestTriggerConfig.TestParameters:type_name -> testrunner.TestTriggerConfig.TestParametersEntry
+	8,  // 3: testrunner.TestParameters.TestCases:type_name -> testrunner.TestParameter
+	9,  // 4: testrunner.TestParameters.LogsExportConfig:type_name -> testrunner.TestLogsExportConfig
+	3,  // 5: testrunner.TestLogsExportConfig.Provider:type_name -> testrunner.TestLogsExportConfig.CloudProvider
+	14, // 6: testrunner.TestRunnerStatus.TestStatus:type_name -> testrunner.TestRunnerStatus.TestStatusEntry
+	5,  // 7: testrunner.TestRunnerConfig.TestConfigEntry.value:type_name -> testrunner.TestCategoryConfig
+	6,  // 8: testrunner.TestCategoryConfig.TestLocationTriggerEntry.value:type_name -> testrunner.TestTriggerConfig
+	7,  // 9: testrunner.TestTriggerConfig.TestParametersEntry.value:type_name -> testrunner.TestParameters
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_config_proto_init() }
@@ -702,6 +760,18 @@ func file_config_proto_init() {
 			}
 		}
 		file_config_proto_msgTypes[5].Exporter = func(v any, i int) any {
+			switch v := v.(*TestLogsExportConfig); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_config_proto_msgTypes[6].Exporter = func(v any, i int) any {
 			switch v := v.(*TestRunnerStatus); i {
 			case 0:
 				return &v.state
@@ -719,8 +789,8 @@ func file_config_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_config_proto_rawDesc,
-			NumEnums:      3,
-			NumMessages:   10,
+			NumEnums:      4,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

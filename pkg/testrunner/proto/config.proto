@@ -59,7 +59,8 @@ message TestTriggerConfig {
 }
 
 message TestParameters {
-    repeated TestParameter TestCases = 1;
+    repeated TestParameter TestCases               = 1;
+    repeated TestLogsExportConfig LogsExportConfig = 2;
 }
 
 message TestParameter {
@@ -68,6 +69,16 @@ message TestParameter {
     uint32             Iterations     = 3;
     bool               StopOnFailure  = 4;
     repeated string    DeviceIDs      = 5;
+}
+
+message TestLogsExportConfig {
+    enum CloudProvider {
+        Aws   = 0;
+        Azure = 1;
+    }
+    CloudProvider Provider = 1;
+    string BucketName      = 2;
+    string SecretName      = 3;
 }
 
 // maintain a tiny db to record TestRunner running status

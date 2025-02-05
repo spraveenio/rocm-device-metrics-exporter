@@ -19,16 +19,17 @@
 package testrunner
 
 import (
+	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/logger"
@@ -140,10 +141,8 @@ func SaveTestResultToGz(output, path string) {
 	}
 }
 
-func GetLogFilePath(resultLogDir, trigger, testName, suffix string) string {
-	now := time.Now().UTC()
-	ts := now.Format("20060102_150405")
-	fileName := strings.ToLower(ts + "_" + trigger + "_" + testName + "_" + suffix + ".gz")
+func GetLogFilePath(resultLogDir, ts, trigger, testName, suffix string) string {
+	fileName := ts + "_" + trigger + "_" + testName + "_" + suffix + ".gz"
 	return filepath.Join(resultLogDir, fileName)
 }
 
