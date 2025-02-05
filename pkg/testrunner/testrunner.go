@@ -108,6 +108,9 @@ type TestRunner struct {
 	logDir       string
 	statusDBPath string
 
+	jobName  string
+	nodeName string
+
 	sync.Mutex             // mutex to protect globalTestRunnerConfig from file watcher
 	globalTestRunnerConfig *testrunnerGen.TestRunnerConfig
 	rvsTestRunner          types.TestRunner
@@ -121,7 +124,7 @@ type TestRunner struct {
 
 // initTestRunner init the test runner and related configs
 // return the test location, either global or specific host name
-func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, testRunnerConfigPath, testCategory, testTrigger, logDir string) *TestRunner {
+func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, testRunnerConfigPath, testCategory, testTrigger, logDir, jobName, nodeName string) *TestRunner {
 	runner := &TestRunner{
 		rvsPath:            rvsPath,
 		rocmSMIPath:        rocmSMIPath,
@@ -131,6 +134,8 @@ func NewTestRunner(rvsPath, rvsTestCaseDir, rocmSMIPath, exporterSocketPath, tes
 		testCfgPath:        testRunnerConfigPath,
 		rvsTestCaseDir:     rvsTestCaseDir,
 		logDir:             logDir,
+		jobName:            jobName,
+		nodeName:           nodeName,
 	}
 	// init test runner config
 	// testRunnerConfigPath file existence has been verified
@@ -577,7 +582,8 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 		handler.StopTest()
 		// when the test timedout
 		// save whatever test console logs that are cached
-		tr.saveHandlerLogs(handler.Result(), parameters.TestCases[0].Recipe)
+		tr.saveAndExportHandlerLogs(handler, ids, parameters.TestCases[0].Recipe)
+
 		// exit on non-auto trigger's failure
 		tr.exitOnFailure()
 	case <-handler.Done():
@@ -587,7 +593,7 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v completed. Result: %v", trigger, parameters.TestCases[0].Recipe, ids, result)
 
 		// save log into gzip file
-		tr.saveHandlerLogs(result, parameters.TestCases[0].Recipe)
+		tr.saveAndExportHandlerLogs(handler, ids, parameters.TestCases[0].Recipe)
 
 		if tr.isRVSOverallPassed(result) {
 			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String(), result)
@@ -619,13 +625,53 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 	SaveRunnerStatus(statusObj, tr.statusDBPath)
 }
 
-func (tr *TestRunner) saveHandlerLogs(results []*types.IterationResult, recipe string) {
-	for _, res := range results {
+func (tr *TestRunner) saveAndExportHandlerLogs(handler types.TestHandlerInterface, ids []string, recipe string) {
+	for _, res := range handler.Result() {
+		var filesToExport []string
+		resultsJson, err := ExtractLogFile(res.Stdout)
+		if err != nil {
+			logger.Log.Printf("Unable to locate results json file")
+		}
+		if resultsJson != "" {
+			resultsJson = filepath.Join(globals.RVSLogDir, resultsJson)
+			filesToExport = append(filesToExport, resultsJson)
+		}
+		now := time.Now().UTC()
+		timestamp := now.Format("2006-01-02T15_04_05Z")
 		if res.Stdout != "" {
-			SaveTestResultToGz(res.Stdout, GetLogFilePath(tr.logDir, tr.testTrigger, recipe, fmt.Sprintf("iter_%v_stdout", res.Number)))
+			stdoutFilePath := GetLogFilePath(tr.logDir, timestamp, tr.testTrigger, recipe, "stdout")
+			SaveTestResultToGz(res.Stdout, stdoutFilePath)
+			filesToExport = append(filesToExport, stdoutFilePath)
 		}
 		if res.Stderr != "" {
-			SaveTestResultToGz(res.Stderr, GetLogFilePath(tr.logDir, tr.testTrigger, recipe, fmt.Sprintf("iter_%v_stderr", res.Number)))
+			stderrFilePath := GetLogFilePath(tr.logDir, timestamp, tr.testTrigger, recipe, "stderr")
+			SaveTestResultToGz(res.Stderr, stderrFilePath)
+			filesToExport = append(filesToExport, stderrFilePath)
+		}
+		if len(filesToExport) == 0 {
+			continue
+		}
+		cloudFileName := timestamp + ".tar.gz"
+		localCombinedTar := filepath.Join(globals.RVSLogDir, cloudFileName)
+		err = CreateTarFile(localCombinedTar, filesToExport)
+		// export the logs to cloud provider
+		if err == nil {
+			cloudFolderPath := filepath.Join(tr.testTrigger, tr.jobName, tr.nodeName)
+			gpuids := strings.Join(ids, "_")
+			if gpuids != "" {
+				cloudFolderPath = cloudFolderPath + "_" + gpuids
+			}
+			cloudFolderPath = filepath.Join(cloudFolderPath, timestamp)
+			exportConfigs := tr.getLogsExportConfig()
+			for _, exportConf := range exportConfigs {
+				logger.Log.Printf("exporting logs to provider=%s bucketName=%s under folder=%s", exportConf.Provider.String(), exportConf.BucketName, cloudFolderPath)
+				e1 := UploadFileToCloudBucket(exportConf.Provider.String(), exportConf.BucketName, cloudFolderPath, cloudFileName, localCombinedTar, exportConf.SecretName)
+				if e1 != nil {
+					logger.Log.Printf("export logs to provider=%s bucket=%s failed", exportConf.Provider.String(), exportConf.BucketName)
+				} else {
+					logger.Log.Printf("export logs to provider=%s bucket=%s succeeded", exportConf.Provider.String(), exportConf.BucketName)
+				}
+			}
 		}
 	}
 }
@@ -744,6 +790,12 @@ func (tr *TestRunner) getTestParameters(lock bool) *testrunnerGen.TestParameters
 		defer tr.Unlock()
 	}
 	return tr.globalTestRunnerConfig.TestConfig[tr.testCategory].TestLocationTrigger[tr.testLocation].TestParameters[tr.testTrigger]
+}
+
+func (tr *TestRunner) getLogsExportConfig() []*testrunnerGen.TestLogsExportConfig {
+	tr.Lock()
+	defer tr.Unlock()
+	return tr.globalTestRunnerConfig.TestConfig[tr.testCategory].TestLocationTrigger[tr.testLocation].TestParameters[tr.testTrigger].LogsExportConfig
 }
 
 func (tr *TestRunner) getHostName() {

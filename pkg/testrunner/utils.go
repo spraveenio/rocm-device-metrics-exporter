@@ -19,16 +19,17 @@
 package testrunner
 
 import (
+	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
@@ -140,10 +141,8 @@ func SaveTestResultToGz(output, path string) {
 	}
 }
 
-func GetLogFilePath(resultLogDir, trigger, testName, suffix string) string {
-	now := time.Now().UTC()
-	ts := now.Format("20060102_150405")
-	fileName := strings.ToLower(ts + "_" + trigger + "_" + testName + "_" + suffix + ".gz")
+func GetLogFilePath(resultLogDir, ts, trigger, testName, suffix string) string {
+	fileName := ts + "_" + trigger + "_" + testName + "_" + suffix + ".gz"
 	return filepath.Join(resultLogDir, fileName)
 }
 
@@ -312,4 +311,52 @@ func BuildNoGPUTestSummary() []*types.IterationResult {
 
 func GetTestRunningLabelKeyValue(category, recipe string) (string, string) {
 	return strings.ToLower(fmt.Sprintf("testrunner.amd.com.%v.%v", category, recipe)), "running"
+}
+
+func addFileToTar(tw *tar.Writer, path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		logger.Log.Printf("Unable to open file %s. Error:%v", path, err)
+		return err
+	}
+	defer file.Close()
+	if stat, err := file.Stat(); err == nil {
+		// create metadata
+		header := new(tar.Header)
+		header.Name = path
+		header.Size = stat.Size()
+		header.Mode = int64(stat.Mode())
+		header.ModTime = stat.ModTime()
+		// write the header to the tarball archive
+		if err := tw.WriteHeader(header); err != nil {
+			logger.Log.Printf("Unable to write %s header info to tar. Error:%v", path, err)
+			return err
+		}
+		// copy the file data to the tarball
+		if _, err := io.Copy(tw, file); err != nil {
+			logger.Log.Printf("Unable to copy file %s to tar. Error:%v", path, err)
+			return err
+		}
+	}
+	return nil
+}
+
+func CreateTarFile(outputPath string, inputPaths []string) error {
+	file, err := os.Create(outputPath)
+	if err != nil {
+		logger.Log.Printf("Unable to create tar file. Err:%v", err)
+		return fmt.Errorf("Unable to create tar file. Err:%v", err)
+	}
+	defer file.Close()
+	gw := gzip.NewWriter(file)
+	defer gw.Close()
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+	for i := range inputPaths {
+		if err = addFileToTar(tw, inputPaths[i]); err != nil {
+			logger.Log.Printf("Unable to add %s file to tar. Error:%v", inputPaths[i], err)
+			continue
+		}
+	}
+	return err
 }

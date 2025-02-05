@@ -124,6 +124,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        name: JOB_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.labels['job-name']
       containers:
       - name: pytorch-gpu-workload
         image: busybox:latest
