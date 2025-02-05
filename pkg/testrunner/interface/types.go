@@ -194,6 +194,8 @@ func (th *TestHandler) runTest() {
 		case <-ctx.Done():
 			// Timeout occurred
 			logger.Log.Printf("cmd %v [iteration=%d] timed out", th.testname, i)
+			// wait for the command routine to complete
+			<-iterationDoneChan
 			err := th.logResults(i, TestTimedOut)
 			if err != nil {
 				logger.Log.Printf("err: %v", err)
