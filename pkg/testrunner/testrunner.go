@@ -595,10 +595,15 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 		// save log into gzip file
 		tr.saveAndExportHandlerLogs(handler, ids, parameters.TestCases[0].Recipe)
 
-		if tr.isRVSOverallPassed(result) {
+		switch tr.getOverallResult(result) {
+		case types.Success:
 			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String(), result)
-		} else {
-			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestFailed.String(), result)
+		case types.Failure:
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result)
+			// exit on non-auto trigger's failure
+			tr.exitOnFailure()
+		case types.Timedout:
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String(), result)
 			// exit on non-auto trigger's failure
 			tr.exitOnFailure()
 		}
@@ -684,20 +689,28 @@ func (tr *TestRunner) exitOnFailure() {
 	}
 }
 
-func (tr *TestRunner) isRVSOverallPassed(result []*types.IterationResult) bool {
-	overallPass := true
+func (tr *TestRunner) getOverallResult(result []*types.IterationResult) types.TestResult {
+	foundTimedout := false
 	for _, iterResult := range result {
 		for guid, actionResults := range iterResult.SuitesResult {
 			for action, result := range actionResults {
 				switch result {
-				case types.Failure, types.Cancelled, types.Timedout:
-					logger.Log.Printf("test on GPU %+v iteration %+v test action %+v failed due to %+v", guid, iterResult.Number, action, result)
-					overallPass = false
+				case types.Failure:
+					logger.Log.Printf("test on GPU %+v iteration %+v test action %+v didn't pass due to %+v", guid, iterResult.Number, action, result)
+					return types.Failure // if there is any failed action, directly mark overall test run failed
+				case types.Timedout:
+					foundTimedout = true
 				}
 			}
 		}
+		if iterResult.Status == types.TestTimedOut {
+			foundTimedout = true
+		}
 	}
-	return overallPass
+	if foundTimedout {
+		return types.Timedout
+	}
+	return types.Success
 }
 
 func (tr *TestRunner) manualTestGPU() {
@@ -835,13 +848,14 @@ func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string, summa
 		logger.Log.Panicf("failed to marshal test summary %+v err %+v", summary, err)
 		return
 	}
-	evtNamePrefix := GetEventNamePrefix(tr.testCategory, tr.testTrigger, testRecipe)
+	evtNamePrefix := GetEventNamePrefix(tr.testCategory)
 	// if there is no event exist, create a new one
 	currTime := time.Now().UTC()
 	evtObj := &v1.Event{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: evtNamePrefix,
 			Namespace:    tr.k8sPodNamespace,
+			Labels:       GetEventLabels(tr.testCategory, tr.testTrigger, testRecipe, tr.hostName),
 		},
 		FirstTimestamp: metav1.Time{
 			Time: currTime,

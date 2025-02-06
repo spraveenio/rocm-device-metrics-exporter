@@ -261,8 +261,8 @@ func removeIDsWithExistingTest(trigger, statusDBPath string, ids []string, param
 	return validIDs, statusObj
 }
 
-func GetEventNamePrefix(testCategory, testTrigger, testRecipe string) string {
-	return strings.ToLower("amd-test-runner-" + testCategory + "-" + testTrigger + "-" + testRecipe + "-")
+func GetEventNamePrefix(testCategory string) string {
+	return strings.ToLower("amd-test-runner-" + testCategory + "-")
 }
 
 // ExtractLogFile uses a simple regex to find the json log file path
@@ -311,6 +311,15 @@ func BuildNoGPUTestSummary() []*types.IterationResult {
 
 func GetTestRunningLabelKeyValue(category, recipe string) (string, string) {
 	return strings.ToLower(fmt.Sprintf("testrunner.amd.com.%v.%v", category, recipe)), "running"
+}
+
+func GetEventLabels(category, trigger, recipe, hostName string) map[string]string {
+	return map[string]string{
+		"testrunner.amd.com/category": strings.ToLower(category),
+		"testrunner.amd.com/trigger":  strings.ToLower(trigger),
+		"testrunner.amd.com/recipe":   recipe,
+		"testrunner.amd.com/hostname": hostName,
+	}
 }
 
 func addFileToTar(tw *tar.Writer, path string) error {
