@@ -244,6 +244,7 @@ func (th *TestHandler) StopTest() {
 	logger.Log.Printf("stop test called for %v [pid=%v]", th.testname, th.process.Process.Pid)
 	th.stopTest = true
 	th.cancelCtx()
+	<-th.doneChan
 	th.wg.Wait()
 }
 
