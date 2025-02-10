@@ -64,10 +64,11 @@ message TestParameters {
 }
 
 message TestParameter {
-    string  Recipe         = 1;
-    uint32  TimeoutSeconds = 2;
-    uint32  Iterations     = 3;
-    bool    StopOnFailure  = 4;
+    string             Recipe         = 1;
+    uint32             TimeoutSeconds = 2;
+    uint32             Iterations     = 3;
+    bool               StopOnFailure  = 4;
+    repeated string    DeviceIDs      = 5;
 }
 
 message TestLogsExportConfig {

@@ -285,27 +285,31 @@ func ExtractLogFile(output string) (string, error) {
 	return filename, nil
 }
 
-func BuildTimedoutTestSummary(ids []string) []*types.IterationResult {
-	result := []*types.IterationResult{}
-	result = append(result, &types.IterationResult{
-		Number:       0,
-		SuitesResult: map[string]types.TestResults{},
-	})
+func AppendTimedoutTestSummary(existingResults []*types.IterationResult, ids []string) []*types.IterationResult {
 	for _, id := range ids {
-		result[0].SuitesResult[id] = map[string]types.TestResult{}
-		result[0].SuitesResult[id]["action"] = types.Timedout
+		newIteration := uint32(len(existingResults) + 1)
+		newResult := map[string]types.TestResults{}
+		newResult[id] = map[string]types.TestResult{}
+		newResult[id]["result"] = types.Timedout
+
+		existingResults = append(existingResults, &types.IterationResult{
+			Number:       newIteration,
+			SuitesResult: newResult,
+			Status:       types.TestTimedOut,
+		})
 	}
-	return result
+	return existingResults
 }
 
 func BuildNoGPUTestSummary() []*types.IterationResult {
 	result := []*types.IterationResult{}
 	result = append(result, &types.IterationResult{
-		Number:       0,
+		Number:       1,
 		SuitesResult: map[string]types.TestResults{},
+		Status:       types.TestCompleted,
 	})
 	result[0].SuitesResult[globals.NoGPUErrMsg] = map[string]types.TestResult{}
-	result[0].SuitesResult[globals.NoGPUErrMsg]["action"] = types.Failure
+	result[0].SuitesResult[globals.NoGPUErrMsg]["detect_gpu"] = types.Failure
 	return result
 }
 
@@ -313,13 +317,24 @@ func GetTestRunningLabelKeyValue(category, recipe string) (string, string) {
 	return strings.ToLower(fmt.Sprintf("testrunner.amd.com.%v.%v", category, recipe)), "running"
 }
 
-func GetEventLabels(category, trigger, recipe, hostName string) map[string]string {
-	return map[string]string{
+func GetEventLabels(category, trigger, recipe, hostName string, gpuIndexes, kfdIDs []string) map[string]string {
+	labels := map[string]string{
 		"testrunner.amd.com/category": strings.ToLower(category),
 		"testrunner.amd.com/trigger":  strings.ToLower(trigger),
 		"testrunner.amd.com/recipe":   recipe,
 		"testrunner.amd.com/hostname": hostName,
 	}
+	// find the commonly shorter length of 2 list: gpuIndexes and kfdIDs
+	// make sure the loop is not out of boundary
+	size := len(kfdIDs)
+	if len(gpuIndexes) < size {
+		size = len(gpuIndexes)
+	}
+	for i := 0; i < size; i++ {
+		labels[fmt.Sprintf("testrunner.amd.com/gpu.id.%v", gpuIndexes[i])] = kfdIDs[i]
+		labels[fmt.Sprintf("testrunner.amd.com/gpu.kfd.%v", kfdIDs[i])] = gpuIndexes[i]
+	}
+	return labels
 }
 
 func addFileToTar(tw *tar.Writer, path string) error {
