@@ -69,13 +69,13 @@ docker_push () {
     then
       echo "DOCKERHUB_TOKEN is not set"
     else
-      # rhel 9.4
-      docker tag $EXPORTER_IMAGE_URL:latest amdpsdo/device-metrics-exporter:$tag
       docker login --username=shreyajmeraamd --password-stdin <<< $DOCKERHUB_TOKEN
-      docker push amdpsdo/device-metrics-exporter:$tag
+      # rhel 9.4
+      docker tag $EXPORTER_IMAGE_URL:$tag amdpsdo/device-metrics-exporter:$RELEASE
+      docker push amdpsdo/device-metrics-exporter:$RELEASE
       # azure linux3
-      docker tag $EXPORTER_IMAGE_URL:latest amdpsdo/device-metrics-exporter:$azuretag
-      docker push amdpsdo/device-metrics-exporter:$azuretag
+      docker tag $EXPORTER_IMAGE_URL:$azuretag amdpsdo/device-metrics-exporter:$RELEASE-azl3
+      docker push amdpsdo/device-metrics-exporter:$RELEASE-azl3
     fi
 }
 

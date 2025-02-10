@@ -48,9 +48,9 @@ docker_push () {
     then
       echo "DOCKERHUB_TOKEN is not set"
     else
-      docker tag $TEST_RUNNER_IMAGE_URL:$tag amdpsdo/test-runner:$tag
       docker login --username=shreyajmeraamd --password-stdin <<< $DOCKERHUB_TOKEN
-      docker push amdpsdo/test-runner:$tag
+      docker tag $TEST_RUNNER_IMAGE_URL:$tag amdpsdo/test-runner:$RELEASE
+      docker push amdpsdo/test-runner:$RELEASE
     fi
 }
 
