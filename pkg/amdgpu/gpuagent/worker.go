@@ -22,7 +22,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 	"golang.org/x/sync/errgroup"
 )
 

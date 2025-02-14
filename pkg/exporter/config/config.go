@@ -20,39 +20,39 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 )
 
 // Config - holds dynamic value changes to the config file
 type Config struct {
 	serverPort    uint32
-	metricsConfig *gpumetrics.MetricConfig
+	metricsConfig *exportermetrics.MetricConfig
 }
 
 func NewConfig() *Config {
 	c := &Config{
 		serverPort:    globals.AMDListenPort,
-		metricsConfig: &gpumetrics.MetricConfig{},
+		metricsConfig: &exportermetrics.MetricConfig{},
 	}
 	return c
 }
 
-func (c *Config) Update(newConfig *gpumetrics.MetricConfig) error {
+func (c *Config) Update(newConfig *exportermetrics.MetricConfig) error {
 	c.serverPort = globals.AMDListenPort
 	if newConfig != nil && newConfig.GetServerPort() != 0 {
 		c.serverPort = newConfig.GetServerPort()
 	}
 	// reset to default
-	c.metricsConfig = &gpumetrics.MetricConfig{}
+	c.metricsConfig = &exportermetrics.MetricConfig{}
 	if newConfig != nil {
 		c.metricsConfig = newConfig
 	}
 	return nil
 }
 
-func (c *Config) GetConfig() *gpumetrics.MetricConfig {
+func (c *Config) GetConfig() *exportermetrics.MetricConfig {
 	return c.metricsConfig
 }
 

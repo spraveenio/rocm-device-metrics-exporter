@@ -19,8 +19,8 @@ package metricsutil
 import (
 	"sync"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/config"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/config"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -82,7 +82,7 @@ func (mh *MetricsHandler) UpdateMetrics() error {
 	return nil
 }
 
-func (mh *MetricsHandler) GetMetricsConfig() *gpumetrics.GPUMetricConfig {
+func (mh *MetricsHandler) GetMetricsConfig() *exportermetrics.GPUMetricConfig {
 	config := mh.runConf.GetConfig()
 	if config != nil {
 		return config.GetGPUConfig()

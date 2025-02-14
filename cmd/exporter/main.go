@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/exporter"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/utils"
 )
 
 var (

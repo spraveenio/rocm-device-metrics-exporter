@@ -77,8 +77,8 @@ func (c *ConfigHandler) GetServerPort() uint32 {
 	return c.runningConfig.GetServerPort()
 }
 
-func readConfig(filepath string) (*gpumetrics.MetricConfig, error) {
-	var config_fields gpumetrics.MetricConfig
+func readConfig(filepath string) (*exportermetrics.MetricConfig, error) {
+	var config_fields exportermetrics.MetricConfig
 	pmConfigs := &config_fields
 	mConfigs, err := ioutil.ReadFile(filepath)
 	if err != nil {

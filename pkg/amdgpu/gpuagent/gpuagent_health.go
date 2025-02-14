@@ -28,7 +28,7 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-func (ga *GPUAgentClient) getHealthThreshholds() *gpumetrics.GPUHealthThresholds {
+func (ga *GPUAgentClient) getHealthThreshholds() *exportermetrics.GPUHealthThresholds {
 	rConfig := ga.mh.GetRunConfig()
 	// config is never nil as the handler preserves default config
 	if rConfig != nil && rConfig.GetConfig() != nil {
@@ -38,7 +38,7 @@ func (ga *GPUAgentClient) getHealthThreshholds() *gpumetrics.GPUHealthThresholds
 		}
 	}
 	// default is all zero
-	return &gpumetrics.GPUHealthThresholds{}
+	return &exportermetrics.GPUHealthThresholds{}
 }
 
 // returns list of
