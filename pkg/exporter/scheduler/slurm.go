@@ -28,15 +28,15 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	zmq "github.com/go-zeromq/zmq4"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 )
 
 var SlurmLabels = map[string]bool{
-	gpumetrics.GPUMetricLabel_JOB_ID.String(): true,
-	gpumetrics.GPUMetricLabel_JOB_USER.String(): true,
-	gpumetrics.GPUMetricLabel_JOB_PARTITION.String():true,
+	exportermetrics.GPUMetricLabel_JOB_ID.String():        true,
+	exportermetrics.GPUMetricLabel_JOB_USER.String():      true,
+	exportermetrics.GPUMetricLabel_JOB_PARTITION.String(): true,
 }
 
 type client struct {

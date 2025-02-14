@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	kube "k8s.io/kubelet/pkg/apis/podresources/v1alpha1"
@@ -33,9 +33,9 @@ import (
 )
 
 var KubernetesLabels = map[string]bool{
-	gpumetrics.GPUMetricLabel_POD.String():       true,
-	gpumetrics.GPUMetricLabel_NAMESPACE.String(): true,
-	gpumetrics.GPUMetricLabel_CONTAINER.String(): true,
+	exportermetrics.GPUMetricLabel_POD.String():       true,
+	exportermetrics.GPUMetricLabel_NAMESPACE.String(): true,
+	exportermetrics.GPUMetricLabel_CONTAINER.String(): true,
 }
 
 type podResourcesClient struct {

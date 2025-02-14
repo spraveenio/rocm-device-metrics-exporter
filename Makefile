@@ -1,4 +1,4 @@
-TO_GEN := pkg/amdgpu/proto
+TO_GEN := pkg/amdgpu/proto pkg/exporter/proto
 TO_MOCK := pkg/amdgpu/mock
 OUT_DIR := bin
 export BUILD_CONTAINER ?= registry.test.pensando.io:5000/metrics-exporter-bld:1

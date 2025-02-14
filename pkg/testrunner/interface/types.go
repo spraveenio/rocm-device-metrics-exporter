@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 )
 
 // DefaultTestTimeout is default test timeout

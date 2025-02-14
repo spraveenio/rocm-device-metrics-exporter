@@ -31,8 +31,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 	testrunnerGen "github.com/pensando/device-metrics-exporter/pkg/testrunner/gen/testrunner"
 	types "github.com/pensando/device-metrics-exporter/pkg/testrunner/interface"
 )

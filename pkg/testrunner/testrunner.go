@@ -39,11 +39,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
 	k8sclient "github.com/pensando/device-metrics-exporter/pkg/client"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/utils"
 	testrunnerGen "github.com/pensando/device-metrics-exporter/pkg/testrunner/gen/testrunner"
 	types "github.com/pensando/device-metrics-exporter/pkg/testrunner/interface"
 )

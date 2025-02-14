@@ -24,8 +24,8 @@ limitations under the License.
 
 
 syntax = "proto3";
-option go_package = "gen/gpumetrics"; 
-package gpumetrics;
+option go_package = "gen/exportermetrics";
+package exportermetrics;
 
 enum GPUMetricField {
     GPU_NODES_TOTAL             = 0;

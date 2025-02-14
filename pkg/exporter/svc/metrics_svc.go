@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

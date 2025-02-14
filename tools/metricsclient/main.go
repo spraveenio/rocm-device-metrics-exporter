@@ -27,10 +27,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/testsvc"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
 	k8sclient "github.com/pensando/device-metrics-exporter/pkg/client"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"

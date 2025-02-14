@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	. "gopkg.in/check.v1"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
 	testutils "github.com/pensando/device-metrics-exporter/test/utils"
 )
 
@@ -50,8 +50,8 @@ func Test(t *testing.T) {
 
 var _ = Suite(&E2ESuite{})
 
-func (s *E2ESuite) ReadConfig() *gpumetrics.MetricConfig {
-	var config gpumetrics.MetricConfig
+func (s *E2ESuite) ReadConfig() *exportermetrics.MetricConfig {
+	var config exportermetrics.MetricConfig
 	pmConfig := &config
 	mConfigs, err := ioutil.ReadFile(s.configPath)
 	if err == nil {
@@ -60,7 +60,7 @@ func (s *E2ESuite) ReadConfig() *gpumetrics.MetricConfig {
 	return pmConfig
 }
 
-func (s *E2ESuite) WriteConfig(data *gpumetrics.MetricConfig) error {
+func (s *E2ESuite) WriteConfig(data *exportermetrics.MetricConfig) error {
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		fmt.Println("Error marshaling JSON:", err)
@@ -105,7 +105,7 @@ func (s *E2ESuite) SetServerPort(port uint32) error {
 func (s *E2ESuite) SetLabels(labels []string) error {
 	config := s.ReadConfig()
 	if config.GetGPUConfig() == nil {
-		config.GPUConfig = &gpumetrics.GPUMetricConfig{}
+		config.GPUConfig = &exportermetrics.GPUMetricConfig{}
 	}
 	config.GPUConfig.Labels = labels
 	return s.WriteConfig(config)
@@ -114,7 +114,7 @@ func (s *E2ESuite) SetLabels(labels []string) error {
 func (s *E2ESuite) SetFields(fields []string) error {
 	config := s.ReadConfig()
 	if config.GetGPUConfig() == nil {
-		config.GPUConfig = &gpumetrics.GPUMetricConfig{}
+		config.GPUConfig = &exportermetrics.GPUMetricConfig{}
 	}
 	config.GPUConfig.Fields = fields
 	return s.WriteConfig(config)
@@ -123,7 +123,7 @@ func (s *E2ESuite) SetFields(fields []string) error {
 func (s *E2ESuite) SetCustomLabels(customLabels map[string]string) error {
 	config := s.ReadConfig()
 	if config.GetGPUConfig() == nil {
-		config.GPUConfig = &gpumetrics.GPUMetricConfig{}
+		config.GPUConfig = &exportermetrics.GPUMetricConfig{}
 	}
 	config.GPUConfig.CustomLabels = customLabels
 	return s.WriteConfig(config)
@@ -189,7 +189,7 @@ func (s *E2ESuite) SetUpSuite(c *C) {
 	}
 	s.exporterClient = &http.Client{Transport: tr}
 	// empty config is default
-	err = s.WriteConfig(&gpumetrics.MetricConfig{})
+	err = s.WriteConfig(&exportermetrics.MetricConfig{})
 	assert.Nil(c, err)
 	log.Printf("SetUpSuite done with config path :%v", exporterConfigPath)
 }

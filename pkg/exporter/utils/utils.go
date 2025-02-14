@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
 )
 
 const (

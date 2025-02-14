@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 	trproto "github.com/pensando/device-metrics-exporter/pkg/testrunner/gen/testrunner"
 
 	"gocloud.dev/blob"

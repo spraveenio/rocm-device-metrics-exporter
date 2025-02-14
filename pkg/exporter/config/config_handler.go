@@ -22,8 +22,8 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 )
 
 // ConfigHandler to update/read config data layer
@@ -39,16 +39,16 @@ type ConfigHandler struct {
 func NewConfigHandler(configPath string, port int) *ConfigHandler {
 	logger.Log.Printf("Running Config :%+v, gpuagent port %v", configPath, port)
 	c := &ConfigHandler{
-		configPath: configPath,
-		runningConfig:  NewConfig(),
-		grpcAgentPort:  port,
+		configPath:    configPath,
+		runningConfig: NewConfig(),
+		grpcAgentPort: port,
 	}
 	return c
 }
 
 func (c *ConfigHandler) RefreshConfig() error {
-    c.Lock()
-    defer c.Unlock()
+	c.Lock()
+	defer c.Unlock()
 	newConfig, err := readConfig(c.configPath)
 	if err != nil {
 		logger.Log.Printf("config read err: %v, reverting to defaults", err)
@@ -65,20 +65,20 @@ func (c *ConfigHandler) GetAgentAddr() string {
 	return fmt.Sprintf("0.0.0.0:%v", c.grpcAgentPort)
 }
 
-func (c *ConfigHandler) GetConfig() *gpumetrics.MetricConfig {
-    c.Lock()
-    defer c.Unlock()
+func (c *ConfigHandler) GetConfig() *exportermetrics.MetricConfig {
+	c.Lock()
+	defer c.Unlock()
 	return c.runningConfig.GetConfig()
 }
 
 func (c *ConfigHandler) GetServerPort() uint32 {
-    c.Lock()
-    defer c.Unlock()
+	c.Lock()
+	defer c.Unlock()
 	return c.runningConfig.GetServerPort()
 }
 
-func readConfig(filepath string) (*gpumetrics.MetricConfig, error) {
-	var config_fields gpumetrics.MetricConfig
+func readConfig(filepath string) (*exportermetrics.MetricConfig, error) {
+	var config_fields exportermetrics.MetricConfig
 	pmConfigs := &config_fields
 	mConfigs, err := ioutil.ReadFile(filepath)
 	if err != nil {

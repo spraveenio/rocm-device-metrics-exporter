@@ -29,8 +29,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/utils"
 	//
 	// Uncomment to load all auth plugins
 	// _ "k8s.io/client-go/plugin/pkg/client/auth"

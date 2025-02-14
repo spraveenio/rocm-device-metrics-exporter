@@ -23,13 +23,13 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/scheduler"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/scheduler"
 )
 
-func (ga *GPUAgentClient) getHealthThreshholds() *gpumetrics.GPUHealthThresholds {
+func (ga *GPUAgentClient) getHealthThreshholds() *exportermetrics.GPUHealthThresholds {
 	rConfig := ga.mh.GetRunConfig()
 	// config is never nil as the handler preserves default config
 	if rConfig != nil && rConfig.GetConfig() != nil {
@@ -39,7 +39,7 @@ func (ga *GPUAgentClient) getHealthThreshholds() *gpumetrics.GPUHealthThresholds
 		}
 	}
 	// default is all zero
-	return &gpumetrics.GPUHealthThresholds{}
+	return &exportermetrics.GPUHealthThresholds{}
 }
 
 // returns list of

@@ -22,14 +22,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/scheduler"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/scheduler"
 
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/metricsutil"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/utils"
 	k8sclient "github.com/pensando/device-metrics-exporter/pkg/client"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/metricsutil"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -37,7 +37,7 @@ import (
 const (
 	// cachgpuid are updated after this many pull request
 	refreshInterval = 30 * time.Second
-	queryTimeout   =  10 * time.Second
+	queryTimeout    = 10 * time.Second
 )
 
 type GPUAgentClient struct {

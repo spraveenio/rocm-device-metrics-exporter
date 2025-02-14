@@ -25,24 +25,24 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/gpumetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/parserutil"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/scheduler"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/parserutil"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/scheduler"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // local variables
 var (
 	mandatoryLables = []string{
-		gpumetrics.GPUMetricLabel_GPU_ID.String(),
-		gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String(),
-		gpumetrics.GPUMetricLabel_CARD_MODEL.String(),
-		gpumetrics.GPUMetricLabel_HOSTNAME.String(),
-		gpumetrics.GPUMetricLabel_GPU_PARTITION_ID.String(),
-		gpumetrics.GPUMetricLabel_GPU_COMPUTE_PARTITION_TYPE.String(),
+		exportermetrics.GPUMetricLabel_GPU_ID.String(),
+		exportermetrics.GPUMetricLabel_SERIAL_NUMBER.String(),
+		exportermetrics.GPUMetricLabel_CARD_MODEL.String(),
+		exportermetrics.GPUMetricLabel_HOSTNAME.String(),
+		exportermetrics.GPUMetricLabel_GPU_PARTITION_ID.String(),
+		exportermetrics.GPUMetricLabel_GPU_COMPUTE_PARTITION_TYPE.String(),
 	}
 	exportLables    map[string]bool
 	exportFieldMap  map[string]bool
@@ -275,11 +275,11 @@ func (ga *GPUAgentClient) GetExportLabels() []string {
 	return labelList
 }
 
-func (ga *GPUAgentClient) initLabelConfigs(config *gpumetrics.GPUMetricConfig) {
+func (ga *GPUAgentClient) initLabelConfigs(config *exportermetrics.GPUMetricConfig) {
 
 	// list of mandatory labels
 	exportLables = make(map[string]bool)
-	for _, name := range gpumetrics.GPUMetricLabel_name {
+	for _, name := range exportermetrics.GPUMetricLabel_name {
 		exportLables[name] = false
 	}
 	// only mandatory labels are set for default
@@ -313,7 +313,7 @@ func (ga *GPUAgentClient) initLabelConfigs(config *gpumetrics.GPUMetricConfig) {
 	logger.Log.Printf("export-labels updated to %v", exportLables)
 }
 
-func initCustomLabels(config *gpumetrics.GPUMetricConfig) {
+func initCustomLabels(config *exportermetrics.GPUMetricConfig) {
 	customLabelMap = make(map[string]string)
 	if config != nil && config.GetCustomLabels() != nil {
 		cl := config.GetCustomLabels()
@@ -347,7 +347,7 @@ func initCustomLabels(config *gpumetrics.GPUMetricConfig) {
 	logger.Log.Printf("custom labels being exported: %v", customLabelMap)
 }
 
-func initGPUSelectorConfig(config *gpumetrics.GPUMetricConfig) {
+func initGPUSelectorConfig(config *exportermetrics.GPUMetricConfig) {
 	if config != nil && config.GetSelector() != "" {
 		selector := config.GetSelector()
 		indices, err := parserutil.RangeStrToIntIndices(selector)
@@ -362,7 +362,7 @@ func initGPUSelectorConfig(config *gpumetrics.GPUMetricConfig) {
 	}
 }
 
-func initFieldConfig(config *gpumetrics.GPUMetricConfig) {
+func initFieldConfig(config *exportermetrics.GPUMetricConfig) {
 	exportFieldMap = make(map[string]bool)
 	// setup metric fields in map to be monitored
 	// init the map with all supported strings from enum
@@ -370,7 +370,7 @@ func initFieldConfig(config *gpumetrics.GPUMetricConfig) {
 	if config != nil && len(config.GetFields()) != 0 {
 		enable_default = false
 	}
-	for _, name := range gpumetrics.GPUMetricField_name {
+	for _, name := range exportermetrics.GPUMetricField_name {
 		exportFieldMap[name] = enable_default
 	}
 	if config == nil || len(config.GetFields()) == 0 {
@@ -952,7 +952,7 @@ func (ga *GPUAgentClient) initFieldRegistration() error {
 		if !enabled {
 			continue
 		}
-		fieldIndex, ok := gpumetrics.GPUMetricField_value[field]
+		fieldIndex, ok := exportermetrics.GPUMetricField_value[field]
 		if !ok {
 			logger.Log.Printf("Invalid field %v, ignored", field)
 			continue
@@ -1046,42 +1046,42 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(wls map[string]interface{}, gpu 
 		}
 		key := strings.ToLower(ckey)
 		switch ckey {
-		case gpumetrics.GPUMetricLabel_GPU_UUID.String():
+		case exportermetrics.GPUMetricLabel_GPU_UUID.String():
 			uuid, _ := uuid.FromBytes(gpu.Spec.Id)
 			labels[key] = uuid.String()
-		case gpumetrics.GPUMetricLabel_GPU_ID.String():
+		case exportermetrics.GPUMetricLabel_GPU_ID.String():
 			labels[key] = fmt.Sprintf("%v", getGPUInstanceID(gpu))
-		case gpumetrics.GPUMetricLabel_POD.String():
+		case exportermetrics.GPUMetricLabel_POD.String():
 			labels[key] = podInfo.Pod
-		case gpumetrics.GPUMetricLabel_NAMESPACE.String():
+		case exportermetrics.GPUMetricLabel_NAMESPACE.String():
 			labels[key] = podInfo.Namespace
-		case gpumetrics.GPUMetricLabel_CONTAINER.String():
+		case exportermetrics.GPUMetricLabel_CONTAINER.String():
 			labels[key] = podInfo.Container
-		case gpumetrics.GPUMetricLabel_JOB_ID.String():
+		case exportermetrics.GPUMetricLabel_JOB_ID.String():
 			labels[key] = jobInfo.Id
-		case gpumetrics.GPUMetricLabel_JOB_USER.String():
+		case exportermetrics.GPUMetricLabel_JOB_USER.String():
 			labels[key] = jobInfo.User
-		case gpumetrics.GPUMetricLabel_JOB_PARTITION.String():
+		case exportermetrics.GPUMetricLabel_JOB_PARTITION.String():
 			labels[key] = jobInfo.Partition
-		case gpumetrics.GPUMetricLabel_CLUSTER_NAME.String():
+		case exportermetrics.GPUMetricLabel_CLUSTER_NAME.String():
 			labels[key] = jobInfo.Cluster
-		case gpumetrics.GPUMetricLabel_SERIAL_NUMBER.String():
+		case exportermetrics.GPUMetricLabel_SERIAL_NUMBER.String():
 			labels[key] = gpu.Status.SerialNum
-		case gpumetrics.GPUMetricLabel_CARD_SERIES.String():
+		case exportermetrics.GPUMetricLabel_CARD_SERIES.String():
 			labels[key] = gpu.Status.CardSeries
-		case gpumetrics.GPUMetricLabel_CARD_MODEL.String():
+		case exportermetrics.GPUMetricLabel_CARD_MODEL.String():
 			labels[key] = gpu.Status.CardModel
-		case gpumetrics.GPUMetricLabel_CARD_VENDOR.String():
+		case exportermetrics.GPUMetricLabel_CARD_VENDOR.String():
 			labels[key] = gpu.Status.CardVendor
-		case gpumetrics.GPUMetricLabel_DRIVER_VERSION.String():
+		case exportermetrics.GPUMetricLabel_DRIVER_VERSION.String():
 			labels[key] = gpu.Status.DriverVersion
-		case gpumetrics.GPUMetricLabel_VBIOS_VERSION.String():
+		case exportermetrics.GPUMetricLabel_VBIOS_VERSION.String():
 			labels[key] = gpu.Status.VBIOSVersion
-		case gpumetrics.GPUMetricLabel_HOSTNAME.String():
-			labels[key] = ga.staticHostLabels[gpumetrics.GPUMetricLabel_HOSTNAME.String()]
-		case gpumetrics.GPUMetricLabel_GPU_PARTITION_ID.String():
+		case exportermetrics.GPUMetricLabel_HOSTNAME.String():
+			labels[key] = ga.staticHostLabels[exportermetrics.GPUMetricLabel_HOSTNAME.String()]
+		case exportermetrics.GPUMetricLabel_GPU_PARTITION_ID.String():
 			labels[key] = fmt.Sprintf("%v", gpu.Status.PartitionId)
-		case gpumetrics.GPUMetricLabel_GPU_COMPUTE_PARTITION_TYPE.String():
+		case exportermetrics.GPUMetricLabel_GPU_COMPUTE_PARTITION_TYPE.String():
 			partitionType := gpu.Spec.ComputePartitionType
 			trimmedValue := strings.TrimPrefix(partitionType.String(), "GPU_COMPUTE_PARTITION_TYPE_")
 			labels[key] = strings.ToLower(trimmedValue)
@@ -1308,7 +1308,7 @@ func (ga *GPUAgentClient) populateStaticHostLabels() error {
 		return err
 	}
 	logger.Log.Printf("hostame %v", hostname)
-	ga.staticHostLabels[gpumetrics.GPUMetricLabel_HOSTNAME.String()] = hostname
+	ga.staticHostLabels[exportermetrics.GPUMetricLabel_HOSTNAME.String()] = hostname
 	return nil
 }
 
