@@ -65,8 +65,8 @@ export AMDSMI_BUILDER_AZURE_IMAGE
 export GPUAGENT_BASE_IMAGE
 export ROCPROFILER_BUILDER_IMAGE
 
-TO_GEN := pkg/amdgpu/proto pkg/exporter/proto
-TO_MOCK := pkg/amdgpu/mock
+TO_GEN := pkg/amdgpu/proto pkg/exporter/proto pkg/amdnic/proto
+TO_MOCK := pkg/amdgpu/mock pkg/exporter/scheduler
 OUT_DIR := bin
 CUR_USER:=$(shell whoami)
 CUR_TIME:=$(shell date +%Y-%m-%d_%H.%M.%S)
@@ -263,6 +263,7 @@ gopkglist:
 	go install go.uber.org/mock/mockgen@v0.5.0
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
 	go install golang.org/x/tools/cmd/goimports@latest
+	go install github.com/alta/protopatch/cmd/protoc-gen-go-patch@latest
 
 amdexporter: metricsclient
 	@echo "building amd metrics exporter"
