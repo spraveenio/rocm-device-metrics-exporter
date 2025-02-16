@@ -42,7 +42,7 @@ func (ga *GPUAgentClient) getHealthThreshholds() *exportermetrics.GPUHealthThres
 }
 
 // returns list of
-func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[string]interface{}) map[string]*metricssvc.GPUState {
+func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[string]scheduler.Workload) map[string]*metricssvc.GPUState {
 
 	gpuHealthMap := make(map[string]*metricssvc.GPUState)
 	metricErrCheck := func(gpuid string, fieldName string, threshold uint32, count float64) {
@@ -74,12 +74,12 @@ func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[str
 		workloadInfo := []string{} // only one per gpu
 
 		if wl := ga.getWorkloadInfo(wls, gpu, false); wl != nil {
-			if ga.isKubernetes {
-				podInfo := wl.(scheduler.PodResourceInfo)
+			if wl.Type == scheduler.Kubernetes {
+				podInfo := wl.Info.(scheduler.PodResourceInfo)
 				workloadInfo = append(workloadInfo, fmt.Sprintf("pod : %v, namespace : %v, container: %v",
 					podInfo.Pod, podInfo.Namespace, podInfo.Container))
 			} else {
-				jobInfo := wl.(scheduler.JobInfo)
+				jobInfo := wl.Info.(scheduler.JobInfo)
 				workloadInfo = append(workloadInfo, fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
 					jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster))
 			}
@@ -123,7 +123,7 @@ func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[str
 // to make all gpu unavailable through
 // device plugin - populate the old pcie bus entries with updated workload
 // list
-func (ga *GPUAgentClient) setUnhealthyGPU(wls map[string]interface{}) error {
+func (ga *GPUAgentClient) setUnhealthyGPU(wls map[string]scheduler.Workload) error {
 	if !ga.isKubernetes {
 		return nil
 	}
@@ -134,10 +134,13 @@ func (ga *GPUAgentClient) setUnhealthyGPU(wls map[string]interface{}) error {
 	for _, gpustate := range ga.healthState {
 		workloadInfo := []string{} // one per gpu
 		if wl, ok := wls[gpustate.Device]; ok {
-			if podInfo, ok := wl.(scheduler.PodResourceInfo); ok {
-				workloadInfo = append(workloadInfo, fmt.Sprintf("pod : %v, namespace : %v, container: %v",
-					podInfo.Pod, podInfo.Namespace, podInfo.Container))
+			if wl.Type == scheduler.Kubernetes {
+				if podInfo, ok := wl.Info.(scheduler.PodResourceInfo); ok {
+					workloadInfo = append(workloadInfo, fmt.Sprintf("pod : %v, namespace : %v, container: %v",
+						podInfo.Pod, podInfo.Namespace, podInfo.Container))
+				}
 			}
+
 		}
 		gpustate.Health = strings.ToLower(metricssvc.GPUHealth_UNHEALTHY.String())
 		gpustate.AssociatedWorkload = workloadInfo
@@ -157,8 +160,8 @@ func (ga *GPUAgentClient) updateNewHealthState(newGPUState map[string]*metricssv
 }
 
 func (ga *GPUAgentClient) processHealthValidation() error {
-	wls := make(map[string]interface{})
-	wls, _ = ga.schedulerCl.ListWorkloads()
+	wls := make(map[string]scheduler.Workload)
+	wls, _ = ga.ListWorkloads()
 
 	ga.Lock()
 	if !ga.computeNodeHealthState { // unhealthy
@@ -289,7 +292,7 @@ func (ga *GPUAgentClient) updateAllGPUsHealthState(healthStr string) {
 
 	logger.Log.Printf("fetch GPUs and set health state")
 	// If health state is not set, fetch GPUs and mark them as unhealthy
-	wls, _ := ga.schedulerCl.ListWorkloads()
+	wls, _ := ga.ListWorkloads()
 	gpus, err := ga.getGPUs()
 	if err != nil || (gpus != nil && gpus.ApiStatus != 0) {
 		logger.Log.Printf("gpuagent get GPUs failed %v", err)
@@ -307,12 +310,12 @@ func (ga *GPUAgentClient) updateAllGPUsHealthState(healthStr string) {
 
 		workloadInfo := []string{} // only one per gpu
 		if wl := ga.getWorkloadInfo(wls, gpu, false); wl != nil {
-			if ga.isKubernetes {
-				podInfo := wl.(scheduler.PodResourceInfo)
+			if wl.Type == scheduler.Kubernetes {
+				podInfo := wl.Info.(scheduler.PodResourceInfo)
 				workloadInfo = append(workloadInfo, fmt.Sprintf("pod : %v, namespace : %v, container: %v",
 					podInfo.Pod, podInfo.Namespace, podInfo.Container))
 			} else {
-				jobInfo := wl.(scheduler.JobInfo)
+				jobInfo := wl.Info.(scheduler.JobInfo)
 				workloadInfo = append(workloadInfo, fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
 					jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster))
 			}

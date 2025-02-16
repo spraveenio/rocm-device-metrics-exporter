@@ -30,6 +30,7 @@ import (
 	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/pensando/device-metrics-exporter/pkg/exporter/metricsutil"
+	"github.com/pensando/device-metrics-exporter/pkg/exporter/scheduler"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gotest.tools/assert"
@@ -122,9 +123,9 @@ func getNewAgent(t *testing.T) *GPUAgentClient {
 	ga.initializeContext()
 	ga.gpuclient = gpuMockCl
 	ga.evtclient = eventMockCl
-	schedulerCl, err := initScheduler(ga.ctx, ga.enableZmq)
+	schedulerCl, err := scheduler.NewSlurmClient(ga.ctx, ga.enableZmq)
 	assert.Assert(t, err == nil, "error creating new agent : %v", err)
-	ga.schedulerCl = schedulerCl
+	ga.slurmScheduler = schedulerCl
 	ga.isKubernetes = false
 	return ga
 }

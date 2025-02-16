@@ -23,9 +23,14 @@ const (
 	Slurm
 )
 
+type Workload struct {
+	Type SchedulerType
+	Info interface{}
+}
+
 type SchedulerClient interface {
 	// List of JobInfo/PodResourceInfo map
-	ListWorkloads() (map[string]interface{}, error)
+	ListWorkloads() (map[string]Workload, error)
 	CheckExportLabels(labels map[string]bool) bool
 	Close() error
 	Type() SchedulerType

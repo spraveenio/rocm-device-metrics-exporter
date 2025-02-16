@@ -59,7 +59,7 @@ func NewKubernetesClient(ctx context.Context) (SchedulerClient, error) {
 
 }
 
-func (pr *podResourcesClient) ListWorkloads() (map[string]interface{}, error) {
+func (pr *podResourcesClient) ListWorkloads() (map[string]Workload, error) {
 	prCl := kube.NewPodResourcesListerClient(pr.clientConn)
 	ctx, cancel := context.WithTimeout(pr.ctx, time.Second*10)
 	defer cancel()
@@ -69,16 +69,19 @@ func (pr *podResourcesClient) ListWorkloads() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to list pod resources, %v", err)
 	}
 
-	podInfo := make(map[string]interface{})
+	podInfo := make(map[string]Workload)
 	for _, pod := range resp.PodResources {
 		for _, container := range pod.Containers {
 			for _, devs := range container.GetDevices() {
 				if devs.ResourceName == globals.AMDGPUResourceLabel {
 					for _, devId := range devs.DeviceIds {
-						podInfo[strings.ToLower(devId)] = PodResourceInfo{
-							Pod:       pod.Name,
-							Namespace: pod.Namespace,
-							Container: container.Name,
+						podInfo[strings.ToLower(devId)] = Workload{
+							Type: Kubernetes,
+							Info: PodResourceInfo{
+								Pod:       pod.Name,
+								Namespace: pod.Namespace,
+								Container: container.Name,
+							},
 						}
 					}
 				}

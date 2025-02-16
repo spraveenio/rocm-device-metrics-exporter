@@ -163,12 +163,15 @@ func (cl *client) processSlurm(op fsnotify.Op, name string, buff []byte) {
 	}
 }
 
-func (cl *client) ListWorkloads() (map[string]interface{}, error) {
-	jobs := make(map[string]interface{})
+func (cl *client) ListWorkloads() (map[string]Workload, error) {
+	jobs := make(map[string]Workload)
 	cl.Lock()
 	defer cl.Unlock()
 	for k, v := range cl.GpuJobs {
-		jobs[k] = v
+		jobs[k] = Workload{
+			Type: Slurm,
+			Info: v,
+		}
 	}
 	return jobs, nil
 }
