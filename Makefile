@@ -247,4 +247,4 @@ helm-build: helm-lint
 
 .PHONY: slurm-sim
 slurm-sim:
-	${MAKE} -C pkg/scheduler/slurmsim TOP_DIR=$(CURDIR)
+	${MAKE} -C pkg/amdgpu/scheduler/slurmsim TOP_DIR=$(CURDIR)

@@ -48,7 +48,8 @@ type GPUAgentClient struct {
 	evtclient              amdgpu.EventSvcClient
 	m                      *metrics // client specific metrics
 	k8sLabelClient         *k8sclient.K8sClient
-	schedulerCl            scheduler.SchedulerClient
+	k8sScheduler           scheduler.SchedulerClient
+	slurmScheduler         scheduler.SchedulerClient
 	isKubernetes           bool
 	enableZmq              bool
 	staticHostLabels       map[string]string
@@ -70,15 +71,6 @@ func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclie
 	gpuclient = amdgpu.NewGPUSvcClient(conn)
 	evtclient = amdgpu.NewEventSvcClient(conn)
 	return
-}
-
-func initScheduler(ctx context.Context, enableZmq bool) (scheduler.SchedulerClient, error) {
-	if utils.IsKubernetes() {
-		logger.Log.Printf("NewKubernetesClient creating")
-		return scheduler.NewKubernetesClient(ctx)
-	}
-	logger.Log.Printf("NewSlurmClient creating")
-	return scheduler.NewSlurmClient(ctx, enableZmq)
 }
 
 func NewAgent(mh *metricsutil.MetricsHandler, enableZmq bool) *GPUAgentClient {
@@ -103,22 +95,28 @@ func (ga *GPUAgentClient) Init() error {
 	ga.gpuclient = gpuclient
 	ga.evtclient = evtclient
 
-	schedulerCl, err := initScheduler(ga.ctx, ga.enableZmq)
+	if utils.IsKubernetes() {
+		ga.isKubernetes = true
+		k8sScl, err := scheduler.NewKubernetesClient(ga.ctx)
+		if err != nil {
+			logger.Log.Printf("gpu client init failure err :%v", err)
+			return err
+		}
+		ga.k8sScheduler = k8sScl
+	}
+	slurmScl, err := scheduler.NewSlurmClient(ga.ctx, ga.enableZmq)
 	if err != nil {
 		logger.Log.Printf("gpu client init failure err :%v", err)
 		return err
 	}
-	ga.schedulerCl = schedulerCl
-	if utils.IsKubernetes() {
-		ga.isKubernetes = true
+	ga.slurmScheduler = slurmScl
+	if ga.isKubernetes {
 		ga.k8sLabelClient = k8sclient.NewClient(ga.ctx)
 	}
 
 	if err := ga.populateStaticHostLabels(); err != nil {
 		return fmt.Errorf("error in populating static host labels, %v", err)
 	}
-
-	logger.Log.Printf("monitor %v jobs", map[bool]string{true: "kubernetes", false: "slurm"}[ga.isKubernetes])
 
 	return nil
 }
@@ -195,7 +193,7 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 		logger.Log.Printf("resp status :%v", resp.ApiStatus)
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
-	wls, _ := ga.schedulerCl.ListWorkloads()
+	wls, _ := ga.ListWorkloads()
 	for _, gpu := range resp.Response {
 		ga.updateGPUInfoToMetrics(wls, gpu)
 	}
@@ -231,6 +229,38 @@ func (ga *GPUAgentClient) getEvents(severity amdgpu.EventSeverity) (*amdgpu.Even
 	return res, err
 }
 
+// ListWorkloads - get all workloads from every client , lock must be taken by
+// the caller
+func (ga *GPUAgentClient) ListWorkloads() (wls map[string]scheduler.Workload, err error) {
+	if ga.isKubernetes {
+		wls, err = ga.k8sScheduler.ListWorkloads()
+		if err != nil {
+			return
+		}
+	}
+	swls, err := ga.slurmScheduler.ListWorkloads()
+	if err != nil {
+		return
+	}
+	// return combined list
+	for k, wl := range swls {
+		wls[k] = wl
+	}
+	return
+}
+
+func (ga *GPUAgentClient) checkExportLabels(exportLabels map[string]bool) bool {
+	if ga.isKubernetes {
+		if ga.k8sScheduler.CheckExportLabels(exportLabels) {
+			return true
+		}
+	}
+	if ga.slurmScheduler.CheckExportLabels(exportLabels) {
+		return true
+	}
+	return false
+}
+
 func (ga *GPUAgentClient) Close() {
 	ga.Lock()
 	defer ga.Unlock()
@@ -240,9 +270,15 @@ func (ga *GPUAgentClient) Close() {
 		ga.gpuclient = nil
 		ga.conn = nil
 	}
-	if ga.schedulerCl != nil {
-		logger.Log.Printf("gpuagent scheduler closing")
-		ga.schedulerCl.Close()
-		ga.schedulerCl = nil
+	if ga.k8sScheduler != nil {
+		logger.Log.Printf("gpuagent k8s scheduler closing")
+		ga.k8sScheduler.Close()
+		ga.k8sScheduler = nil
+	}
+
+	if ga.slurmScheduler != nil {
+		logger.Log.Printf("gpuagent slurm scheduler closing")
+		ga.slurmScheduler.Close()
+		ga.slurmScheduler = nil
 	}
 }
