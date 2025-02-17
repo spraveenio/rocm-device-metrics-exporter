@@ -12,6 +12,9 @@ run "apt-get update && apt-get install -y wget protobuf-compiler \
   curl locales ca-certificates build-essential git"
 run "install -m 0755 -d /etc/apt/keyrings"
 
+# add amd DNS nameserver
+run "echo 'nameserver 192.168.64.2' | tee -a /etc/resolv.conf > /dev/null"
+
 #download docker
 run "curl -k -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc"
 run "chmod a+r /etc/apt/keyrings/docker.asc"

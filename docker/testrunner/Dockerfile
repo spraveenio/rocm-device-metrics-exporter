@@ -24,7 +24,7 @@ baseurl=https://artifactory-cdn.amd.com/artifactory/list/rhel-remote/9.2/x86_64/
 enabled=1 \n\
 gpgcheck=0"> /etc/yum.repos.d/internal-rhel.repo && \
     dnf install https://artifactory-cdn.amd.com:8443/artifactory/list/amdgpu-rpm-remote/rhel/amd-nonfree-radeon-9-1.noarch.rpm -y && \
-    amdgpu-repo --amdgpu-build=2096344 --rocm-build=compute-rocm-dkms-no-npi-hipclang/15302 && \
+    amdgpu-repo --amdgpu-build=2123252 --rocm-build=compute-rocm-dkms-no-npi-hipclang/15634 && \
     dnf clean all
 
 RUN dnf install yaml-cpp rocm-smi-lib rocrand -y && \
