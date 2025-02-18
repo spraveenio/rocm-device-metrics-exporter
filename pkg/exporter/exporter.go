@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gpuagent"
+	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/nicagent"
 	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/config"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
@@ -50,6 +51,7 @@ var (
 	mh                 *metricsutil.MetricsHandler
 	gpuclient          *gpuagent.GPUAgentClient
 	runConf            *config.ConfigHandler
+	nicAgent           *nicagent.NICAgentClient
 	debounceDuration   = 3 * time.Second // debounce duration for file watcher
 	defaultBindAddress = "0.0.0.0"
 )
@@ -65,6 +67,7 @@ type Exporter struct {
 	bindAddr      string
 	k8sApiClient  *k8sclient.K8sClient
 	svcHandler    *metricsserver.SvcHandler
+	enableNICAgent bool
 	ctx           context.Context
 	cancel        context.CancelFunc
 }
@@ -290,6 +293,13 @@ func (e *Exporter) startWatchers() {
 	go gpuclient.StartMonitor()
 }
 
+func ExporterWithNICAgentEnable(enableNICAgent bool) ExporterOption {
+	return func(e *Exporter) {
+		logger.Log.Printf("NIC Agent enable %v", enableNICAgent)
+		e.enableNICAgent = enableNICAgent
+	}
+}
+
 // StartMain - doesn't return it exits only on failure
 func (e *Exporter) StartMain(enableDebugAPI bool) {
 
@@ -314,7 +324,15 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 		logger.Log.Printf("health client registration err: %+v", err)
 	}
 
-	foreverWatcher(e)
+
+	if e.enableNICAgent {
+		nicAgent = nicagent.NewAgent(mh)
+		if err := nicAgent.Init(); err != nil {
+			logger.Log.Printf("nic client init err :%+v", err)
+		}
+	}
+
+	foreverWatcher(e.ctx)
 }
 
 // Close - closes the exporter and all its resources

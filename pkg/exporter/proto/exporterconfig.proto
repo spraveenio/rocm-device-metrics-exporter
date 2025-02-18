@@ -201,7 +201,6 @@ enum GPUMetricField {
     // MeanOccupancyPerActiveCU
     GPU_PROF_OCCUPANCY_PER_ACTIVE_CU                         = 1011;
 }
-
 message GPUHealthThresholds {
     uint32 GPU_ECC_UNCORRECT_SDMA = 1;
     uint32 GPU_ECC_UNCORRECT_GFX = 2;
@@ -300,6 +299,32 @@ message CommonConfig {
     HealthServiceConfig HealthService = 2;
 }
 
+enum NICMetricField {
+    NIC_NODES_TOTAL             = 0;
+    NIC_MAX_SPEED               = 1;
+}
+
+enum NICMetricLabel {
+    NIC_UUID                 = 0;
+    // mandatory SERIAL_NUMBER cannot be disabled
+    NIC_SERIAL_NUMBER              = 1;
+    // mandatory field NIC_ID cannot be disabled
+    NIC_ID                   = 2;
+    // mandatory field HOSTNAME cannot be disabled
+    NIC_HOSTNAME                   = 3;
+}
+
+message NICMetricConfig {
+    // list of all NICMetricField to be exported
+    repeated string Fields = 1;
+
+    // list of labels to be exported
+    repeated string Labels = 2;
+
+    // User Defined Custom Labels and values
+    map<string, string> CustomLabels = 3;
+}
+
 message MetricConfig {
     // server config port
     uint32 ServerPort         = 1;
@@ -309,4 +334,7 @@ message MetricConfig {
 	
 	// Exporter Common Configuration
 	CommonConfig CommonConfig = 3;
+
+    // NIC Metric config for export
+    NICMetricConfig NICConfig = 4;
 }

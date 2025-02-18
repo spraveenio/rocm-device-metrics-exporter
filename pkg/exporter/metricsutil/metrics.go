@@ -110,6 +110,13 @@ func (mh *MetricsHandler) GetMetricsConfig() *exportermetrics.GPUMetricConfig {
 	}
 	return nil
 }
+func (mh *MetricsHandler) GetNICMetricsConfig() *exportermetrics.NICMetricConfig {
+	config := mh.runConf.GetConfig()
+	if config != nil {
+		return config.GetNICConfig()
+	}
+	return nil
+}
 
 // GetHealthServiceState : returns the health service state
 // true : health service is enabled
