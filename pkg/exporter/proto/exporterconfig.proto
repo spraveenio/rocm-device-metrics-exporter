@@ -302,16 +302,39 @@ message CommonConfig {
 enum NICMetricField {
     NIC_NODES_TOTAL             = 0;
     NIC_MAX_SPEED               = 1;
+
+    // Port Stats Field defines the various statistics fields for port-level metrics. 
+    // Each field represents a different type of statistic related to the port's performance and health, 
+    // such as frames received successfully, total frames received, and other specific metrics.
+    NIC_PORT_STATS_FRAMES_RX_BAD_FCS         = 2;
+    NIC_PORT_STATS_FRAMES_RX_BAD_ALL         = 3;
+    NIC_PORT_STATS_FRAMES_RX_PAUSE           = 4;
+    NIC_PORT_STATS_FRAMES_RX_BAD_LENGTH      = 5;
+    NIC_PORT_STATS_FRAMES_RX_UNDERSIZED      = 6;
+    NIC_PORT_STATS_FRAMES_RX_OVERSIZED       = 7;
+    NIC_PORT_STATS_FRAMES_RX_FRAGMENTS       = 8;
+    NIC_PORT_STATS_FRAMES_RX_JABBER          = 9;
+    NIC_PORT_STATS_FRAMES_RX_PRIPAUSE        = 10;
+    NIC_PORT_STATS_FRAMES_RX_STOMPED_CRC     = 11;
+    NIC_PORT_STATS_FRAMES_RX_TOO_LONG        = 12;
+    NIC_PORT_STATS_FRAMES_RX_DROPPED         = 13;
+    NIC_PORT_STATS_FRAMES_TX_BAD             = 14;
+    NIC_PORT_STATS_FRAMES_TX_PAUSE           = 15;
+    NIC_PORT_STATS_FRAMES_TX_PRIPAUSE        = 16;
+    NIC_PORT_STATS_FRAMES_TX_LESS_THAN_64B   = 17;
+    NIC_PORT_STATS_FRAMES_TX_TRUNCATED       = 18;
+    NIC_PORT_STATS_RSFEC_CORRECTABLE_WORD    = 19;
+    NIC_PORT_STATS_RSFEC_CH_SYMBOL_ERR_CNT   = 20;
 }
 
 enum NICMetricLabel {
-    NIC_UUID                 = 0;
+    NIC_UUID                        = 0;
     // mandatory SERIAL_NUMBER cannot be disabled
-    NIC_SERIAL_NUMBER              = 1;
+    NIC_SERIAL_NUMBER               = 1;
     // mandatory field NIC_ID cannot be disabled
-    NIC_ID                   = 2;
+    NIC_ID                          = 2;
     // mandatory field HOSTNAME cannot be disabled
-    NIC_HOSTNAME                   = 3;
+    NIC_HOSTNAME                    = 3;
 }
 
 message NICMetricConfig {
