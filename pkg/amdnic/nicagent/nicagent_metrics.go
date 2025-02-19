@@ -19,6 +19,7 @@ package nicagent
 import (
 	"strings"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/nicagent/utils"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
@@ -42,11 +43,52 @@ var (
 type metrics struct {
 	nicNodesTotal prometheus.Gauge
 	nicMaxSpeed   prometheus.GaugeVec
+
+	// Port stats
+	nicPortStatsFramesRxBadFcs       prometheus.GaugeVec
+	nicPortStatsFramesRxBadAll       prometheus.GaugeVec
+	nicPortStatsFramesRxPause        prometheus.GaugeVec
+	nicPortStatsFramesRxBadLength    prometheus.GaugeVec
+	nicPortStatsFramesRxUndersized   prometheus.GaugeVec
+	nicPortStatsFramesRxOversized    prometheus.GaugeVec
+	nicPortStatsFramesRxFragments    prometheus.GaugeVec
+	nicPortStatsFramesRxJabber       prometheus.GaugeVec
+	nicPortStatsFramesRxPripause     prometheus.GaugeVec
+	nicPortStatsFramesRxStompedCrc   prometheus.GaugeVec
+	nicPortStatsFramesRxTooLong      prometheus.GaugeVec
+	nicPortStatsFramesRxDropped      prometheus.GaugeVec
+	nicPortStatsFramesTxBad          prometheus.GaugeVec
+	nicPortStatsFramesTxPause        prometheus.GaugeVec
+	nicPortStatsFramesTxPripause     prometheus.GaugeVec
+	nicPortStatsFramesTxLessThan64b  prometheus.GaugeVec
+	nicPortStatsFramesTxTruncated    prometheus.GaugeVec
+	nicPortStatsRsfecCorrectableWord prometheus.GaugeVec
+	nicPortStatsRsfecChSymbolErrCnt  prometheus.GaugeVec
 }
 
 func (na *NICAgentClient) ResetMetrics() error {
 	// reset all label based fields
 	na.m.nicMaxSpeed.Reset()
+	na.m.nicPortStatsFramesRxBadFcs.Reset()
+	na.m.nicPortStatsFramesRxBadAll.Reset()
+	na.m.nicPortStatsFramesRxPause.Reset()
+	na.m.nicPortStatsFramesRxBadLength.Reset()
+	na.m.nicPortStatsFramesRxUndersized.Reset()
+	na.m.nicPortStatsFramesRxOversized.Reset()
+	na.m.nicPortStatsFramesRxFragments.Reset()
+	na.m.nicPortStatsFramesRxJabber.Reset()
+	na.m.nicPortStatsFramesRxPripause.Reset()
+	na.m.nicPortStatsFramesRxStompedCrc.Reset()
+	na.m.nicPortStatsFramesRxTooLong.Reset()
+	na.m.nicPortStatsFramesRxDropped.Reset()
+	na.m.nicPortStatsFramesTxBad.Reset()
+	na.m.nicPortStatsFramesTxPause.Reset()
+	na.m.nicPortStatsFramesTxPripause.Reset()
+	na.m.nicPortStatsFramesTxLessThan64b.Reset()
+	na.m.nicPortStatsFramesTxTruncated.Reset()
+	na.m.nicPortStatsRsfecCorrectableWord.Reset()
+	na.m.nicPortStatsRsfecChSymbolErrCnt.Reset()
+
 	return nil
 }
 
@@ -110,7 +152,7 @@ func (na *NICAgentClient) initLabelConfigs(config *exportermetrics.NICMetricConf
 	logger.Log.Printf("export-labels updated to %v", exportLabels)
 }
 
-func initCustomLabels(config *exportermetrics.NICMetricConfig) {
+func (na *NICAgentClient) initCustomLabels(config *exportermetrics.NICMetricConfig) {
 	customLabelMap = make(map[string]string)
 	if config != nil && config.GetCustomLabels() != nil {
 		cl := config.GetCustomLabels()
@@ -144,7 +186,7 @@ func initCustomLabels(config *exportermetrics.NICMetricConfig) {
 	logger.Log.Printf("custom labels being exported: %v", customLabelMap)
 }
 
-func initFieldConfig(config *exportermetrics.NICMetricConfig) {
+func (na *NICAgentClient) initFieldConfig(config *exportermetrics.NICMetricConfig) {
 	exportFieldMap = make(map[string]bool)
 	// setup metric fields in map to be monitored
 	// init the map with all supported strings from enum
@@ -177,24 +219,135 @@ func (na *NICAgentClient) initFieldMetricsMap() {
 	fieldMetricsMap = []prometheus.Collector{
 		na.m.nicNodesTotal,
 		na.m.nicMaxSpeed,
+		na.m.nicPortStatsFramesRxBadFcs,
+		na.m.nicPortStatsFramesRxBadAll,
+		na.m.nicPortStatsFramesRxPause,
+		na.m.nicPortStatsFramesRxBadLength,
+		na.m.nicPortStatsFramesRxUndersized,
+		na.m.nicPortStatsFramesRxOversized,
+		na.m.nicPortStatsFramesRxFragments,
+		na.m.nicPortStatsFramesRxJabber,
+		na.m.nicPortStatsFramesRxPripause,
+		na.m.nicPortStatsFramesRxStompedCrc,
+		na.m.nicPortStatsFramesRxTooLong,
+		na.m.nicPortStatsFramesRxDropped,
+		na.m.nicPortStatsFramesTxBad,
+		na.m.nicPortStatsFramesTxPause,
+		na.m.nicPortStatsFramesTxPripause,
+		na.m.nicPortStatsFramesTxLessThan64b,
+		na.m.nicPortStatsFramesTxTruncated,
+		na.m.nicPortStatsRsfecCorrectableWord,
+		na.m.nicPortStatsRsfecChSymbolErrCnt,
 	}
-
 }
 
 func (na *NICAgentClient) initPrometheusMetrics() {
 	labels := na.GetExportLabels()
 	na.m = &metrics{
-		nicNodesTotal: prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Name: "ainic_nodes_total",
-				Help: "Number of NICs in the node",
-			},
-		),
+		nicNodesTotal: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_NODES_TOTAL.String()),
+			Help: "Number of NICs in the node",
+		}),
+
 		nicMaxSpeed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "ainic_max_speed",
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_MAX_SPEED.String()),
 			Help: "Maximum NIC speed in Gbps",
-		},
-			labels),
+		}, labels),
+
+		nicPortStatsFramesRxBadFcs: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_BAD_FCS.String()),
+			Help: "Bad frames received due to a Frame Check Sequence (FCS) error on a network port",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxBadAll: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_BAD_ALL.String()),
+			Help: "Total number of frames received on a network port that are bad",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxPause: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_PAUSE.String()),
+			Help: "Total number of pause frames received on a network port",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxBadLength: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_BAD_LENGTH.String()),
+			Help: "Total number of frames received that have an incorrect or invalid length",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxUndersized: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_UNDERSIZED.String()),
+			Help: "Total number of frames received that are smaller than the minimum frame size allowed by the network protocol",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxOversized: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_OVERSIZED.String()),
+			Help: " Total number of frames received that exceed the maximum allowed size for the network protocol",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxFragments: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_FRAGMENTS.String()),
+			Help: "Total number of frames received that are fragments of larger packets",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxJabber: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_JABBER.String()),
+			Help: "Total number of frames received that are considered jabber frames",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxPripause: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_PRIPAUSE.String()),
+			Help: "Total number of priority pause frames received",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxStompedCrc: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_STOMPED_CRC.String()),
+			Help: "Total number of frames received that had a valid CRC (Cyclic Redundancy Check) but were stomped",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxTooLong: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_TOO_LONG.String()),
+			Help: "Total number of frames received that exceed the maximum allowable size for frames on the network",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesRxDropped: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_DROPPED.String()),
+			Help: "Total number of frames that were received but dropped due to various reasons such as buffer overflows or hardware limitations",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesTxBad: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_BAD.String()),
+			Help: "Total number of transmitted frames that are considered bad",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesTxPause: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_PAUSE.String()),
+			Help: "Total number of pause frames transmitted",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesTxPripause: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_PRIPAUSE.String()),
+			Help: "Total number of priority pause frames transmitted",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesTxLessThan64b: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_LESS_THAN_64B.String()),
+			Help: "Total number of frames transmitted that are smaller than the minimum frame size i.e 64 bytes",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsFramesTxTruncated: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_TRUNCATED.String()),
+			Help: "Total number of frames that were transmitted but truncated",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsRsfecCorrectableWord: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_RSFEC_CORRECTABLE_WORD.String()),
+			Help: "Total number of RS-FEC (Reed-Solomon Forward Error Correction) correctable words received or transmitted",
+		}, append([]string{utils.LabelPortName}, labels...)),
+
+		nicPortStatsRsfecChSymbolErrCnt: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_RSFEC_CH_SYMBOL_ERR_CNT.String()),
+			Help: "Total count of channel symbol errors detected by the RS-FEC (Reed-Solomon Forward Error Correction) mechanism.",
+		}, append([]string{utils.LabelPortName}, labels...)),
 	}
 	na.initFieldMetricsMap()
 }
@@ -218,10 +371,9 @@ func (na *NICAgentClient) initFieldRegistration() error {
 func (na *NICAgentClient) InitConfigs() error {
 	filedConfigs := na.mh.GetNICMetricsConfig()
 
-	initCustomLabels(filedConfigs)
+	na.initCustomLabels(filedConfigs)
 	na.initLabelConfigs(filedConfigs)
-	initFieldConfig(filedConfigs)
-	//initAinicSelectorConfig(filedConfigs)
+	na.initFieldConfig(filedConfigs)
 	na.initPrometheusMetrics()
 	return na.initFieldRegistration()
 }
@@ -236,7 +388,6 @@ func (na *NICAgentClient) UpdateMetricsStats() error {
 }
 
 func (na *NICAgentClient) populateLabelsFromNIC() map[string]string {
-
 	labels := make(map[string]string)
 
 	for ckey, enabled := range exportLabels {
