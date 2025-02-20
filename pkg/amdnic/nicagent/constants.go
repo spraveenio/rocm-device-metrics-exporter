@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package utils
+package nicagent
 
 const (
 	// Port name label for port metrics
 	LabelPortName = "port_name"
+	// Port ID label for port metrics
+	LabelPortID = "port_id"
 )

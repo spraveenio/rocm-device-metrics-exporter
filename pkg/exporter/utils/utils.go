@@ -21,6 +21,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
@@ -207,4 +208,13 @@ func NormalizeUint64(x interface{}) float64 {
 	}
 	logger.Log.Fatalf("only uint64, uint32, uint16, uint8 are expected but got %v", reflect.TypeOf(x))
 	return 0
+}
+
+func StringToUint64(str string) uint64 {
+	val, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		logger.Log.Printf("error converting string to uint64, err: %v", err)
+		return 0
+	}
+	return val
 }

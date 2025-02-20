@@ -31,6 +31,7 @@ type NICAgentClient struct {
 	mh           *metricsutil.MetricsHandler
 	m            *metrics // client specific metrics
 	isKubernetes bool
+	nics         map[string]*NIC
 	ctx          context.Context
 	cancel       context.CancelFunc
 }
@@ -70,6 +71,13 @@ func (na *NICAgentClient) Init() error {
 	if utils.IsKubernetes() {
 		na.isKubernetes = true
 	}
+
+	// fetch all the static data that doesn't change (NIC, Port, Lif, etc.)
+	nics, err := na.getNICs()
+	if err != nil {
+		return err
+	}
+	na.nics = nics
 
 	return nil
 }

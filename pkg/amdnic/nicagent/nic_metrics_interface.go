@@ -22,3 +22,19 @@ type NICInterface interface {
 	// Initiate connection and return connection status
 	Init() error
 }
+
+// NIC represents the card data
+type NIC struct {
+	Index        string
+	UUID         string `json:"id"`
+	ProductName  string `json:"product_name"`
+	SerialNumber string `json:"serial_number"`
+	Ports        map[string]*Port
+}
+
+// Port represents the network port data
+type Port struct {
+	Index string
+	UUID  string `json:"id"`
+	Name  string `json:"name"`
+}

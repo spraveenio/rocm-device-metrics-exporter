@@ -17,9 +17,11 @@
 package nicagent
 
 import (
+	"encoding/json"
+	"fmt"
+	"os/exec"
 	"strings"
 
-	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/nicagent/utils"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
@@ -257,97 +259,97 @@ func (na *NICAgentClient) initPrometheusMetrics() {
 		nicPortStatsFramesRxBadFcs: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_BAD_FCS.String()),
 			Help: "Bad frames received due to a Frame Check Sequence (FCS) error on a network port",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxBadAll: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_BAD_ALL.String()),
 			Help: "Total number of frames received on a network port that are bad",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxPause: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_PAUSE.String()),
 			Help: "Total number of pause frames received on a network port",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxBadLength: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_BAD_LENGTH.String()),
 			Help: "Total number of frames received that have an incorrect or invalid length",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxUndersized: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_UNDERSIZED.String()),
 			Help: "Total number of frames received that are smaller than the minimum frame size allowed by the network protocol",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxOversized: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_OVERSIZED.String()),
 			Help: " Total number of frames received that exceed the maximum allowed size for the network protocol",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxFragments: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_FRAGMENTS.String()),
 			Help: "Total number of frames received that are fragments of larger packets",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxJabber: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_JABBER.String()),
 			Help: "Total number of frames received that are considered jabber frames",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxPripause: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_PRIPAUSE.String()),
 			Help: "Total number of priority pause frames received",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxStompedCrc: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_STOMPED_CRC.String()),
 			Help: "Total number of frames received that had a valid CRC (Cyclic Redundancy Check) but were stomped",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxTooLong: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_TOO_LONG.String()),
 			Help: "Total number of frames received that exceed the maximum allowable size for frames on the network",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesRxDropped: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_RX_DROPPED.String()),
 			Help: "Total number of frames that were received but dropped due to various reasons such as buffer overflows or hardware limitations",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesTxBad: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_BAD.String()),
 			Help: "Total number of transmitted frames that are considered bad",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesTxPause: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_PAUSE.String()),
 			Help: "Total number of pause frames transmitted",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesTxPripause: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_PRIPAUSE.String()),
 			Help: "Total number of priority pause frames transmitted",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesTxLessThan64b: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_LESS_THAN_64B.String()),
 			Help: "Total number of frames transmitted that are smaller than the minimum frame size i.e 64 bytes",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsFramesTxTruncated: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_FRAMES_TX_TRUNCATED.String()),
 			Help: "Total number of frames that were transmitted but truncated",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsRsfecCorrectableWord: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_RSFEC_CORRECTABLE_WORD.String()),
 			Help: "Total number of RS-FEC (Reed-Solomon Forward Error Correction) correctable words received or transmitted",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 
 		nicPortStatsRsfecChSymbolErrCnt: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_PORT_STATS_RSFEC_CH_SYMBOL_ERR_CNT.String()),
 			Help: "Total count of channel symbol errors detected by the RS-FEC (Reed-Solomon Forward Error Correction) mechanism.",
-		}, append([]string{utils.LabelPortName}, labels...)),
+		}, append([]string{LabelPortName, LabelPortID}, labels...)),
 	}
 	na.initFieldMetricsMap()
 }
@@ -387,8 +389,22 @@ func (na *NICAgentClient) UpdateMetricsStats() error {
 	return na.getMetricsAll()
 }
 
-func (na *NICAgentClient) populateLabelsFromNIC() map[string]string {
+func GetNICMandatoryLabels() []string {
+	return mandatoryLables
+}
+
+func (na *NICAgentClient) GetNICCustomeLabels() map[string]string {
+	return customLabelMap
+}
+
+func (na *NICAgentClient) populateLabelsFromNIC(UUID string) map[string]string {
 	labels := make(map[string]string)
+
+	nic, found := na.nics[UUID]
+	if !found {
+		logger.Log.Printf("could not find NIC: %s from the local cache", UUID)
+		return labels
+	}
 
 	for ckey, enabled := range exportLabels {
 		if !enabled {
@@ -397,11 +413,11 @@ func (na *NICAgentClient) populateLabelsFromNIC() map[string]string {
 		key := strings.ToLower(ckey)
 		switch ckey {
 		case exportermetrics.NICMetricLabel_NIC_UUID.String():
-			labels[key] = "42424650-4c32-3434-3530-304534000000" //TODO
+			labels[key] = nic.UUID
 		case exportermetrics.NICMetricLabel_NIC_ID.String():
-			labels[key] = "8" //TODO
+			labels[key] = nic.Index
 		case exportermetrics.NICMetricLabel_NIC_SERIAL_NUMBER.String():
-			labels[key] = "FPL244500E4" //TODO
+			labels[key] = nic.SerialNumber
 		case exportermetrics.NICMetricLabel_NIC_HOSTNAME.String():
 			labels[key] = "ubuntu" //TODO
 		default:
@@ -416,6 +432,69 @@ func (na *NICAgentClient) populateLabelsFromNIC() map[string]string {
 	return labels
 }
 
-func GetNICAgentMandatoryLabels() []string {
-	return mandatoryLables
+// getNICs fetches all the static data that we need related to NIC including port
+func (na *NICAgentClient) getNICs() (map[string]*NIC, error) {
+	type Response struct {
+		NIC []struct {
+			ID           string `json:"id"`
+			ProductName  string `json:"product_name"`
+			SerialNumber string `json:"serial_number"`
+			Port         []struct {
+				Spec struct {
+					ID   string `json:"id"`
+					Name string `json:"name"`
+				} `json:"spec"`
+			} `json:"port"`
+		} `json:"nic"`
+	}
+
+	nics := map[string]*NIC{}
+
+	nicResp, err := exec.Command("/bin/bash", "-c", "nicctl show card --json").Output()
+	if err != nil {
+		logger.Log.Printf("failed to get nic data, err: %+v", err)
+		return nics, err
+	}
+	var resp Response
+	err = json.Unmarshal(nicResp, &resp)
+	if err != nil {
+		logger.Log.Printf("error unmarshalling nic data: %v", err)
+		return nics, err
+	}
+
+	// fetch port details for each NIC
+	for index, nic := range resp.NIC {
+		nics[nic.ID] = &NIC{
+			Index:        fmt.Sprintf("%v", index),
+			UUID:         nic.ID,
+			ProductName:  nic.ProductName,
+			SerialNumber: nic.SerialNumber,
+		}
+
+		cmd := fmt.Sprintf("nicctl show port --card %s --json", nic.ID)
+		portResp, err := exec.Command("/bin/bash", "-c", cmd).Output()
+		if err != nil {
+			logger.Log.Printf("NIC: %s, failed to get port data, err: %+v", nic.ID, err)
+			return nics, err
+		}
+		var resp Response
+		err = json.Unmarshal(portResp, &resp)
+		if err != nil {
+			logger.Log.Printf("NIC: %s, error unmarshalling port data: %v", nic.ID, err)
+			return nics, err
+		}
+
+		for _, nic := range resp.NIC {
+			nics[nic.ID].Ports = map[string]*Port{}
+			for index, port := range nic.Port {
+				nics[nic.ID].Ports[port.Spec.ID] = &Port{
+					Index: fmt.Sprintf("%v", index),
+					UUID:  port.Spec.ID,
+					Name:  port.Spec.Name,
+				}
+			}
+		}
+	}
+
+	return nics, nil
 }

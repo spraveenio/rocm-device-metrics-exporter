@@ -71,8 +71,6 @@ func (nc *NICCtlClient) UpdateCardStats() error {
 func (nc *NICCtlClient) UpdatePortStats() error {
 	nc.Lock()
 	defer nc.Unlock()
-	labels := nc.na.populateLabelsFromNIC()
-	nc.na.m.nicMaxSpeed.With(labels).Set(float64(400))
 
 	portStatsOut, err := exec.Command("/bin/bash", "-c", "nicctl show port statistics -j").Output()
 	if err != nil {
@@ -90,33 +88,35 @@ func (nc *NICCtlClient) UpdatePortStats() error {
 
 	// for each reported port stats, find out the port name and report metrics to prometheus
 	for _, nic := range portStats.NIC {
+		labels := nc.na.populateLabelsFromNIC(nic.ID)
 		for _, port := range nic.Port {
-			portName := utils.GetPortName(port.GetID())
-			if len(portName) > 0 {
-				labels[utils.LabelPortName] = portName
-				// rx counters
-				nc.na.m.nicPortStatsFramesRxBadFcs.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_BAD_FCS)))
-				nc.na.m.nicPortStatsFramesRxBadAll.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_BAD_ALL)))
-				nc.na.m.nicPortStatsFramesRxPause.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_PAUSE)))
-				nc.na.m.nicPortStatsFramesRxBadLength.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_BAD_LENGTH)))
-				nc.na.m.nicPortStatsFramesRxUndersized.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_UNDERSIZED)))
-				nc.na.m.nicPortStatsFramesRxOversized.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_OVERSIZED)))
-				nc.na.m.nicPortStatsFramesRxFragments.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_FRAGMENTS)))
-				nc.na.m.nicPortStatsFramesRxJabber.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_JABBER)))
-				nc.na.m.nicPortStatsFramesRxPripause.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_PRIPAUSE)))
-				nc.na.m.nicPortStatsFramesRxStompedCrc.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_STOMPED_CRC)))
-				nc.na.m.nicPortStatsFramesRxTooLong.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_TOO_LONG)))
-				nc.na.m.nicPortStatsFramesRxDropped.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_DROPPED)))
+			portName := nc.na.nics[nic.ID].Ports[port.ID].Name
+			portID := nc.na.nics[nic.ID].Ports[port.ID].Index
+			labels[LabelPortName] = portName
+			labels[LabelPortID] = portID
 
-				//tx counter
-				nc.na.m.nicPortStatsFramesTxBad.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_BAD)))
-				nc.na.m.nicPortStatsFramesTxPause.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_PAUSE)))
-				nc.na.m.nicPortStatsFramesTxPripause.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_PRIPAUSE)))
-				nc.na.m.nicPortStatsFramesTxLessThan64b.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_LESS_THAN_64B)))
-				nc.na.m.nicPortStatsFramesTxTruncated.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_TRUNCATED)))
-				nc.na.m.nicPortStatsRsfecCorrectableWord.With(labels).Set(float64(utils.StringToUint64(port.RSFEC_CORRECTABLE_WORD)))
-				nc.na.m.nicPortStatsRsfecChSymbolErrCnt.With(labels).Set(float64(utils.StringToUint64(port.RSFEC_CH_SYMBOL_ERR_CNT)))
-			}
+			// rx counters
+			nc.na.m.nicPortStatsFramesRxBadFcs.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_BAD_FCS)))
+			nc.na.m.nicPortStatsFramesRxBadAll.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_BAD_ALL)))
+			nc.na.m.nicPortStatsFramesRxPause.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_PAUSE)))
+			nc.na.m.nicPortStatsFramesRxBadLength.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_BAD_LENGTH)))
+			nc.na.m.nicPortStatsFramesRxUndersized.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_UNDERSIZED)))
+			nc.na.m.nicPortStatsFramesRxOversized.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_OVERSIZED)))
+			nc.na.m.nicPortStatsFramesRxFragments.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_FRAGMENTS)))
+			nc.na.m.nicPortStatsFramesRxJabber.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_JABBER)))
+			nc.na.m.nicPortStatsFramesRxPripause.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_PRIPAUSE)))
+			nc.na.m.nicPortStatsFramesRxStompedCrc.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_STOMPED_CRC)))
+			nc.na.m.nicPortStatsFramesRxTooLong.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_TOO_LONG)))
+			nc.na.m.nicPortStatsFramesRxDropped.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_RX_DROPPED)))
+
+			//tx counter
+			nc.na.m.nicPortStatsFramesTxBad.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_BAD)))
+			nc.na.m.nicPortStatsFramesTxPause.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_PAUSE)))
+			nc.na.m.nicPortStatsFramesTxPripause.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_PRIPAUSE)))
+			nc.na.m.nicPortStatsFramesTxLessThan64b.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_LESS_THAN_64B)))
+			nc.na.m.nicPortStatsFramesTxTruncated.With(labels).Set(float64(utils.StringToUint64(port.FRAMES_TX_TRUNCATED)))
+			nc.na.m.nicPortStatsRsfecCorrectableWord.With(labels).Set(float64(utils.StringToUint64(port.RSFEC_CORRECTABLE_WORD)))
+			nc.na.m.nicPortStatsRsfecChSymbolErrCnt.With(labels).Set(float64(utils.StringToUint64(port.RSFEC_CH_SYMBOL_ERR_CNT)))
 		}
 	}
 
