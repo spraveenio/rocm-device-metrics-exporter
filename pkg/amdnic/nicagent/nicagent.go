@@ -40,7 +40,7 @@ func (na *NICAgentClient) initClients() (err error) {
 	logger.Log.Printf("Establishing connection to NIC clients")
 	for _, client := range na.nicClients {
 		if err = client.Init(); err != nil {
-			logger.Log.Printf("NICCTL client init err :%+v", err)
+			logger.Log.Printf("%s init err :%+v", client.GetClientName(), err)
 			return err
 		}
 	}
@@ -60,6 +60,9 @@ func (na *NICAgentClient) Init() error {
 
 	nicCtlClient := newNICCtlClient(na)
 	na.nicClients = append(na.nicClients, nicCtlClient)
+
+	rdmaStatsClient := newRDMAStatsClient(na)
+	na.nicClients = append(na.nicClients, rdmaStatsClient)
 
 	err := na.initClients()
 	if err != nil {

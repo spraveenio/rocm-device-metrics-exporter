@@ -1,0 +1,93 @@
+/*
+Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the \"License\");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an \"AS IS\" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+
+//----------------------------------------------------------------------------
+///
+/// \file
+/// AMD NIC RDMA  Metrics
+///
+//----------------------------------------------------------------------------
+
+syntax = "proto3";
+option go_package = "gen/nicmetrics";
+package nicmetrics;
+
+import "github.com/alta/protopatch/patch/go.proto";
+
+/*
+// Snipped output of rdma core statistics
+[
+  {
+    "ifname": "rocep132s0",
+    "port": 1,
+    "tx_rdma_ucast_pkts": 0,
+    "rx_rdma_cnp_pkts": 0,
+  },
+  {
+    "ifname": "rocep100s0",
+    "port": 1,
+    "tx_rdma_ucast_pkts": 0,
+    "rx_rdma_cnp_pkts": 0,
+  }
+]
+*/
+
+// RDMAStats represents the statistics of RDMA link, identified by a unique ifname.
+message RDMAStats {
+    // Unique identifier for the rdma link
+    string IFNAME                           = 1 [(go.field).tags = 'json:"ifname,omitempty"'];
+    uint32 PORT                             = 2 [(go.field).tags = 'json:"port,omitempty"'];
+    uint64 RDMA_TX_UCAST_PKTS               = 3 [(go.field).tags = 'json:"tx_rdma_ucast_pkts,omitempty"'];
+    uint64 RDMA_TX_CNP_PKTS                 = 4 [(go.field).tags = 'json:"tx_rdma_cnp_pkts,omitempty"'];
+    uint64 RDMA_RX_UCAST_PKTS               = 5 [(go.field).tags = 'json:"rx_rdma_ucast_pkts,omitempty"'];
+    uint64 RDMA_RX_CNP_PKTS                 = 6 [(go.field).tags = 'json:"rx_rdma_cnp_pkts,omitempty"'];
+    uint64 RDMA_RX_ECN_PKTS                 = 7 [(go.field).tags = 'json:"rx_rdma_ecn_pkts,omitempty"'];
+
+    uint64 RDMA_REQ_RX_PKT_SEQ_ERR          = 8 [(go.field).tags = 'json:"req_rx_pkt_seq_err,omitempty"'];
+    uint64 RDMA_REQ_RX_RNR_RETRY_ERR        = 9 [(go.field).tags = 'json:"req_rx_rnr_retry_err,omitempty"'];
+    uint64 RDMA_REQ_RX_RMT_ACC_ERR          = 10 [(go.field).tags = 'json:"req_rx_rmt_acc_err,omitempty"'];
+    uint64 RDMA_REQ_RX_RMT_REQ_ERR          = 11 [(go.field).tags = 'json:"req_rx_rmt_req_err,omitempty"'];
+    uint64 RDMA_REQ_RX_OPER_ERR             = 12 [(go.field).tags = 'json:"req_rx_oper_err,omitempty"'];
+    uint64 RDMA_REQ_RX_IMPL_NAK_SEQ_ERR     = 13 [(go.field).tags = 'json:"req_rx_impl_nak_seq_err,omitempty"'];
+    uint64 RDMA_REQ_RX_CQE_ERR              = 14 [(go.field).tags = 'json:"req_rx_cqe_err,omitempty"'];
+    uint64 RDMA_REQ_RX_CQE_FLUSH            = 15 [(go.field).tags = 'json:"req_rx_cqe_flush,omitempty"'];
+    uint64 RDMA_REQ_RX_DUP_RESP             = 16 [(go.field).tags = 'json:"req_rx_dup_response,omitempty"'];
+    uint64 RDMA_REQ_RX_INVALID_PKTS         = 17 [(go.field).tags = 'json:"req_rx_inval_pkts,omitempty"'];
+    uint64 RDMA_REQ_TX_LOC_ERR              = 18 [(go.field).tags = 'json:"req_tx_loc_acc_err,omitempty"'];
+    uint64 RDMA_REQ_TX_LOC_OPER_ERR         = 19 [(go.field).tags = 'json:"req_tx_loc_oper_err,omitempty"'];
+    uint64 RDMA_REQ_TX_MEM_MGMT_ERR         = 20 [(go.field).tags = 'json:"req_tx_mem_mgmt_err,omitempty"'];
+    uint64 RDMA_REQ_TX_RETRY_EXCD_ERR       = 21 [(go.field).tags = 'json:"req_tx_retry_excd_err,omitempty"'];
+    uint64 RDMA_REQ_TX_LOC_SGL_INV_ERR      = 22 [(go.field).tags = 'json:"req_tx_loc_sgl_inv_err,omitempty"'];
+
+    uint64 RDMA_RESP_RX_DUP_REQUEST         = 23 [(go.field).tags = 'json:"resp_rx_dup_request,omitempty"'];
+    uint64 RDMA_RESP_RX_OUTOF_BUF           = 24 [(go.field).tags = 'json:"resp_rx_outof_buf,omitempty"'];
+    uint64 RDMA_RESP_RX_OUTOUF_SEQ          = 25 [(go.field).tags = 'json:"resp_rx_outouf_seq,omitempty"'];
+    uint64 RDMA_RESP_RX_CQE_ERR             = 26 [(go.field).tags = 'json:"resp_rx_cqe_err,omitempty"'];
+    uint64 RDMA_RESP_RX_CQE_FLUSH           = 27 [(go.field).tags = 'json:"resp_rx_cqe_flush,omitempty"'];
+    uint64 RDMA_RESP_RX_LOC_LEN_ERR         = 28 [(go.field).tags = 'json:"resp_rx_loc_len_err,omitempty"'];
+    uint64 RDMA_RESP_RX_INVALID_REQUEST     = 29 [(go.field).tags = 'json:"resp_rx_inval_request,omitempty"'];
+    uint64 RDMA_RESP_RX_LOC_OPER_ERR        = 30 [(go.field).tags = 'json:"resp_rx_loc_oper_err,omitempty"'];
+    uint64 RDMA_RESP_RX_OUTOF_ATOMIC        = 31 [(go.field).tags = 'json:"resp_rx_outof_atomic,omitempty"'];
+
+    uint64 RDMA_RESP_TX_PKT_SEQ_ERR         = 32 [(go.field).tags = 'json:"resp_tx_pkt_seq_err,omitempty"'];
+    uint64 RDMA_RESP_TX_RMT_INVAL_REQ_ERR   = 33 [(go.field).tags = 'json:"resp_tx_rmt_inval_req_err,omitempty"'];
+    uint64 RDMA_RESP_TX_RMT_ACC_ERR         = 34 [(go.field).tags = 'json:"resp_tx_rmt_acc_err,omitempty"'];
+    uint64 RDMA_RESP_TX_RMT_OPER_ERR        = 35 [(go.field).tags = 'json:"resp_tx_rmt_oper_err,omitempty"'];
+    uint64 RDMA_RESP_TX_RNR_RETRY_ERR       = 36 [(go.field).tags = 'json:"resp_tx_rnr_retry_err,omitempty"'];
+    uint64 RDMA_RESP_TX_LOC_SGL_INV_ERR     = 37 [(go.field).tags = 'json:"resp_tx_loc_sgl_inv_err,omitempty"'];
+    uint64 RDMA_RESP_RX_S0_TABLE_ERR        = 38 [(go.field).tags = 'json:"resp_rx_s0_table_err,omitempty"'];
+}
