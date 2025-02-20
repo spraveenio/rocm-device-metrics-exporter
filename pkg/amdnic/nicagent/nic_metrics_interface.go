@@ -21,6 +21,8 @@ type NICInterface interface {
 	UpdateNICStats() error
 	// Initiate connection and return connection status
 	Init() error
+	// Return NIC Client name implementing this interface
+	GetClientName() string
 }
 
 // NIC represents the card data

@@ -21,4 +21,8 @@ const (
 	LabelPortName = "port_name"
 	// Port ID label for port metrics
 	LabelPortID = "port_id"
+	// RoCE Interface name label for RDMA  metrics
+	LabelRdmaIfName = "rdma_if_name"
+	// Netdevice name label for RDMA  metrics
+	LabelRdmaNetDev = "rdma_net_dev"
 )

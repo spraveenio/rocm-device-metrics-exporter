@@ -45,6 +45,10 @@ func (nc *NICCtlClient) Init() error {
 	return nil
 }
 
+func (rc *NICCtlClient) GetClientName() string {
+	return "NICCTL_Client"
+}
+
 func (nc *NICCtlClient) UpdateNICStats() error {
 	var wg sync.WaitGroup
 	fn_ptrs := []func() error{nc.UpdateCardStats, nc.UpdatePortStats, nc.UpdateLifStats}
