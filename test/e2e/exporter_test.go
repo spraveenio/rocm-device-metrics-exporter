@@ -385,6 +385,37 @@ func (s *E2ESuite) Test013MandatoryLabelsAsCustomLabels(c *C) {
 	assert.Nil(c, err)
 }
 
+func (s *E2ESuite) Test014ExistingLabelsAsCustomLabels(c *C) {
+	log.Print("Testing existing labels supplied as custom labels")
+	customLabels := map[string]string {
+		"card_model" : "custom_card_model",
+		"serial_number" : "custom_serial_number",
+		"gpu_id" : "custom_gpu_id",
+		"cluster_name" : "cValue1",
+		"card_vendor": "cValue2",
+		"driver_version": "cValue3",
+	}
+	// Only cluster_name is allowed to be customized from existing labels
+	customLabelKeys := []string{"cluster_name"}
+	err := s.SetCustomLabels(customLabels)
+	assert.Nil(c, err)
+	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
+	var response string
+	assert.Eventually(c, func() bool {
+		 response, _ = s.getExporterResponse()
+		 if response != "" {
+			 return true
+		 }
+		 return false
+	 }, 3*time.Second, 1*time.Second)
+	allgpus, err := testutils.ParsePrometheusMetrics(response)
+	assert.Nil(c, err)
+	// Not expecting the mandatory labels
+	expectedLabels := append(customLabelKeys, mandatoryLabels...)
+	err = verifyMetricsLablesFields(allgpus, expectedLabels, []string{})
+	assert.Nil(c, err)
+}
+
 func verifyMetricsLablesFields(allgpus map[string]*testutils.GPUMetric, labels []string, fields []string) error {
 	if len(allgpus) == 0 {
 		return fmt.Errorf("invalid input, expecting non empty payload")
