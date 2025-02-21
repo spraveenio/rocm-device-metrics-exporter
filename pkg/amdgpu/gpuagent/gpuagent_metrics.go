@@ -45,6 +45,10 @@ var (
 		exportermetrics.GPUMetricLabel_GPU_PARTITION_ID.String(),
 		exportermetrics.GPUMetricLabel_GPU_COMPUTE_PARTITION_TYPE.String(),
 	}
+	// List of suppported labels that can be customized
+	allowedCustomLabels = []string{
+		exportermetrics.GPUMetricLabel_CLUSTER_NAME.String(),
+	}
 	exportLables    map[string]bool
 	exportFieldMap  map[string]bool
 	fieldMetricsMap []prometheus.Collector
@@ -269,7 +273,7 @@ func (ga *GPUAgentClient) GetExportLabels() []string {
 
 		// Add only unique labels to export labels
 		if !exists {
-			labelList = append(labelList, strings.ToLower(key))
+			labelList = append(labelList, key)
 		}
 	}
 
@@ -302,7 +306,20 @@ func (ga *GPUAgentClient) initLabelConfigs(config *exportermetrics.GPUMetricConf
 
 func initCustomLabels(config *exportermetrics.GPUMetricConfig) {
 	customLabelMap = make(map[string]string)
+	disallowedLabels := []string{}
 	if config != nil && config.GetCustomLabels() != nil {
+		for _, name := range exportermetrics.GPUMetricLabel_name {
+			found := false
+			for _, cname := range allowedCustomLabels {
+				if name == cname {
+					found = true
+					break
+				}
+			}
+			if !found {
+				disallowedLabels = append(disallowedLabels, strings.ToLower(name))
+			}
+		}
 		cl := config.GetCustomLabels()
 		labelCount := 0
 
@@ -315,9 +332,9 @@ func initCustomLabels(config *exportermetrics.GPUMetricConfig) {
 
 			// Check if custom label is a mandatory label, ignore if true
 			found := false
-			for _, mlabel := range mandatoryLables {
-				if strings.ToLower(mlabel) == label {
-					logger.Log.Printf("Detected mandatory label %s in custom label, ignoring...", mlabel)
+			for _, dlabel := range disallowedLabels {
+				if dlabel == label {
+					logger.Log.Printf("Label %s cannot be customized, ignoring...", dlabel)
 					found = true
 					break
 				}
