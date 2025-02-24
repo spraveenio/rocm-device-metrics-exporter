@@ -47,7 +47,7 @@ builds:
     sub-area:
     feature:
     artifacts:
-        - /device-metrics-exporter/helm-charts/amdgpu-metrics-exporter-charts-v1.2.0.tgz
+        - /device-metrics-exporter/helm-charts/device-metrics-exporter-charts-v1.2.0.tgz
 
   api-checks:
     commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make checks"]

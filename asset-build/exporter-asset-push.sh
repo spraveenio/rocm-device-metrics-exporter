@@ -42,7 +42,7 @@ copy_artifacts () {
     # copy debian ubuntu 24.04 package
     cp /device-metrics-exporter/bin/amdgpu-exporter_1.2.0_ubuntu_24.04_amd64.deb  $BUNDLE_DIR/amdgpu-exporter-$RELEASE-1.2.0_ubuntu_24.04_amd64.deb
     # copy helm charts
-    cp /device-metrics-exporter/helm-charts/amdgpu-metrics-exporter-charts-*.tgz $BUNDLE_DIR/amdgpu-metrics-exporter-charts-$RELEASE-v1.2.0.tgz
+    cp /device-metrics-exporter/helm-charts/device-metrics-exporter-charts-*.tgz $BUNDLE_DIR/device-metrics-exporter-charts-$RELEASE-v1.2.0.tgz
     # copy techsupport scripts
     cp /device-metrics-exporter/tools/techsupport_dump.sh $BUNDLE_DIR/
     # list the artifacts copied out
