@@ -92,3 +92,83 @@ message PortStatsList {
     // A list of NICPortStats, each representing statistics for a particular NIC.
     repeated NICPortStats NIC = 1 [(go.field).tags = 'json:"nic,omitempty"'];
 }
+
+/*
+// Sample Lif Stats
+{
+    "nic": [
+        {
+            "id": "42424650-4c32-3434-3530-304430000000",
+            "lif": [
+                {
+                    "id": "44000070-0100-0000-4242-0490812a2c28",
+                    "statistics": [
+                        {
+                            "name": "Rx unicast bytes",
+                            "value": "18409"
+                        },
+                        {
+                            "name": "Rx unicast packets",
+                            "value": "193"
+                        },
+                        {
+                            "name": "Rx multicast bytes",
+                            "value": "1215846"
+                        },
+                        {
+                            "name": "Rx unicast drop bytes",
+                            "value": "0"
+                        },
+                        {
+                            "name": "Tx unicast bytes",
+                            "value": "0"
+                        },
+                        {
+                            "name": "Tx unicast packets",
+                            "value": "0"
+                        },
+                        {
+                            "name": "Tx multicast bytes",
+                            "value": "0"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+*/
+
+// Stats represents a single statistical metric, such as bytes transmitted, packets received, etc.
+message LStats {
+    // The name of the statistic (e.g., "Rx unicast bytes")
+    string Name  = 1 [(go.field).tags = 'json:"name,omitempty"'];
+
+    // The value of the statistic (e.g., "18409")
+    string Value = 2 [(go.field).tags = 'json:"value,omitempty"'];
+}
+
+// LifStats represents statistics for a particular logical interface (LIF) on a NIC (Network Interface Card).
+message LifStats {
+    // Unique identifier for the logical interface (LIF) on the NIC
+    string ID                  = 1 [(go.field).tags = 'json:"id,omitempty"'];
+
+    // A list of statistics for this particular LIF.
+    // Each statistic could represent something like "Rx unicast bytes" or "Tx multicast packets".
+    repeated LStats Statistics = 2 [(go.field).tags = 'json:"statistics,omitempty"'];
+}
+
+// NICLifStats represents statistics for a specific NIC (Network Interface Card) and its associated LIFs.
+message NICLifStats {
+    // Unique identifier for the NIC (Network Interface Card)
+    string ID             = 1 [(go.field).tags = 'json:"id,omitempty"'];
+
+    // A list of LifStats, where each item represents statistics for a specific LIF under this NIC.
+    repeated LifStats Lif = 2 [(go.field).tags = 'json:"lif,omitempty"'];
+}
+
+// LifStatsList represents a collection of NICLifStats, allowing to manage statistics for multiple NICs.
+message LifStatsList {
+    // A list of NICLifStats, where each item represents the statistics for a NIC and its associated LIFs.
+    repeated NICLifStats NIC = 1 [(go.field).tags = 'json:"nic,omitempty"'];
+}
