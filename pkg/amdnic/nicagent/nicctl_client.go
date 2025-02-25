@@ -24,6 +24,7 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/gen/nicmetrics"
 	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/nicagent/utils"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type NICCtlClient struct {
@@ -128,5 +129,52 @@ func (nc *NICCtlClient) UpdatePortStats() error {
 }
 
 func (nc *NICCtlClient) UpdateLifStats() error {
+	nc.Lock()
+	defer nc.Unlock()
+
+	// list of lif stats fields to be filtered from nicctl output and the respective prometheus metric functions to be called
+	lifStatsFilter := map[string]prometheus.GaugeVec{
+		"Rx unicast packets":        nc.na.m.nicLifStatsRxUnicastPackets,
+		"Rx unicast drop packets":   nc.na.m.nicLifStatsRxUnicastDropPackets,
+		"Rx multicast drop packets": nc.na.m.nicLifStatsRxMulticastDropPackets,
+		"Rx broadcast drop packets": nc.na.m.nicLifStatsRxBroadcastDropPackets,
+		"Rx DMA error":              nc.na.m.nicLifStatsRxDMAError,
+		"Tx unicast packets":        nc.na.m.nicLifStatsTxUnicastPackets,
+		"Tx unicast drop packets":   nc.na.m.nicLifStatsTxUnicastDropPackets,
+		"Tx multicast drop packets": nc.na.m.nicLifStatsTxMulticastDropPackets,
+		"Tx broadcast drop packets": nc.na.m.nicLifStatsTxBroadcastDropPackets,
+		"Tx DMA error":              nc.na.m.nicLifStatsTxDMAError,
+	}
+
+	lifStatsOut, err := exec.Command("/bin/bash", "-c", "nicctl show lif statistics --json").Output()
+	if err != nil {
+		logger.Log.Printf("failed to get lif statistics, err: %+v", err)
+		return err
+	}
+
+	var lifStats nicmetrics.LifStatsList
+	err = json.Unmarshal(lifStatsOut, &lifStats)
+	if err != nil {
+		logger.Log.Printf("error unmarshalling lif statistics data, err: %v", err)
+		return err
+	}
+
+	// filter/fetch only stats that nicagent is interested
+	for _, nic := range lifStats.NIC {
+		labels := nc.na.populateLabelsFromNIC(nic.ID)
+		for _, lif := range nic.Lif {
+			portUUID := nc.na.nics[nic.ID].LifToPort[lif.ID]
+			port := nc.na.nics[nic.ID].Ports[portUUID]
+			labels[LabelLifName] = port.Lifs[lif.ID].Name
+			labels[LabelPortName] = port.Name
+
+			for _, stats := range lif.Statistics {
+				if metricFn, found := lifStatsFilter[stats.Name]; found {
+					val := float64(utils.StringToUint64(stats.Value))
+					metricFn.With(labels).Set(val)
+				}
+			}
+		}
+	}
 	return nil
 }
