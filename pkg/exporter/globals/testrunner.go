@@ -78,10 +78,13 @@ var (
 	// reference: https://admin.pci-ids.ucw.cz/read/PC/1002
 	GPUDeviceIDToModelName = map[string]string{
 		"0x740f": "MI210",
+		"0x7410": "MI210", // MI210 VF
 		"0x74a0": "MI300A",
 		"0x74a1": "MI300X",
+		"0x74b5": "MI300X", // MI300X VF
 		"0x74a2": "MI308X",
 		"0x74a5": "MI325X",
+		"0x74b9": "MI325X", // MI325X VF
 		"0x74a9": "MI300X-HF",
 		"0x74bd": "MI300X-HF",
 	}
