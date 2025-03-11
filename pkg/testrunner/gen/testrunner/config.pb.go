@@ -134,9 +134,11 @@ func (TestTrigger) EnumDescriptor() ([]byte, []int) {
 type TestEventReason int32
 
 const (
-	TestEventReason_TestPassed   TestEventReason = 0
-	TestEventReason_TestFailed   TestEventReason = 1
-	TestEventReason_TestTimedOut TestEventReason = 2
+	TestEventReason_TestPassed       TestEventReason = 0
+	TestEventReason_TestFailed       TestEventReason = 1
+	TestEventReason_TestTimedOut     TestEventReason = 2
+	TestEventReason_LogsExportPassed TestEventReason = 3
+	TestEventReason_LogsExportFailed TestEventReason = 4
 )
 
 // Enum value maps for TestEventReason.
@@ -145,11 +147,15 @@ var (
 		0: "TestPassed",
 		1: "TestFailed",
 		2: "TestTimedOut",
+		3: "LogsExportPassed",
+		4: "LogsExportFailed",
 	}
 	TestEventReason_value = map[string]int32{
-		"TestPassed":   0,
-		"TestFailed":   1,
-		"TestTimedOut": 2,
+		"TestPassed":       0,
+		"TestFailed":       1,
+		"TestTimedOut":     2,
+		"LogsExportPassed": 3,
+		"LogsExportFailed": 4,
 	}
 )
 

@@ -684,17 +684,17 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 		logger.Log.Printf("Trigger: %v Test: %v GPU IDs: %v GPU Indexes: %v completed. Result: %v", trigger, parameters.TestCases[0].Recipe, validIDs, gpuIndexes, result)
 
 		// save log into gzip file
-		tr.saveAndExportHandlerLogs(handler, ids, parameters.TestCases[0].Recipe)
+		tr.saveAndExportHandlerLogs(handler, ids, parameters.TestCases[0].Recipe, gpuIndexes, validIDs)
 
 		switch tr.getOverallResult(result) {
 		case types.Success:
-			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String(), result, gpuIndexes, validIDs)
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String(), result, "", gpuIndexes, validIDs)
 		case types.Failure:
-			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result, gpuIndexes, validIDs)
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result, "", gpuIndexes, validIDs)
 			// exit on non-auto trigger's failure
 			tr.exitOnFailure()
 		case types.Timedout:
-			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String(), result, gpuIndexes, validIDs)
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String(), result, "", gpuIndexes, validIDs)
 			// exit on non-auto trigger's failure
 			tr.exitOnFailure()
 		}
@@ -724,7 +724,8 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 	SaveRunnerStatus(statusObj, tr.statusDBPath)
 }
 
-func (tr *TestRunner) saveAndExportHandlerLogs(handler types.TestHandlerInterface, ids []string, recipe string) {
+func (tr *TestRunner) saveAndExportHandlerLogs(handler types.TestHandlerInterface, ids []string, recipe string, gpuIndexes, validIDs []string) {
+	logger.Log.Printf("DEBUG: handler.Result() %v", handler.Result())
 	for _, res := range handler.Result() {
 		var filesToExport []string
 		resultsJson, err := ExtractLogFile(res.Stdout)
@@ -762,15 +763,30 @@ func (tr *TestRunner) saveAndExportHandlerLogs(handler types.TestHandlerInterfac
 			}
 			cloudFolderPath = filepath.Join(cloudFolderPath, timestamp)
 			exportConfigs := tr.getLogsExportConfig()
+			uploadFailed := make([]string, 0)
+			uploadPassed := make([]string, 0)
 			for _, exportConf := range exportConfigs {
 				logger.Log.Printf("exporting logs to provider=%s bucketName=%s under folder=%s", exportConf.Provider.String(), exportConf.BucketName, cloudFolderPath)
 				e1 := UploadFileToCloudBucket(exportConf.Provider.String(), exportConf.BucketName, cloudFolderPath, cloudFileName, localCombinedTar, exportConf.SecretName)
 				if e1 != nil {
 					logger.Log.Printf("export logs to provider=%s bucket=%s failed", exportConf.Provider.String(), exportConf.BucketName)
+					uploadFailed = append(uploadFailed, exportConf.Provider.String())
 				} else {
 					logger.Log.Printf("export logs to provider=%s bucket=%s succeeded", exportConf.Provider.String(), exportConf.BucketName)
+					uploadPassed = append(uploadPassed, exportConf.Provider.String())
 				}
 			}
+			if len(exportConfigs) > 0 {
+				parameters := tr.getTestParameters(true)
+				if len(uploadFailed) == 0 { // generate success event
+					msg := fmt.Sprintf("Logs export to %s succeeded", strings.Join(uploadPassed, ", "))
+					tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_LogsExportPassed.String(), nil, msg, gpuIndexes, validIDs)
+				} else { // generate failure event
+					msg := fmt.Sprintf("Logs export to %s failed", strings.Join(uploadFailed, ", "))
+					tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_LogsExportFailed.String(), nil, msg, gpuIndexes, validIDs)
+				}
+			}
+
 		}
 	}
 }
@@ -819,7 +835,7 @@ func (tr *TestRunner) manualTestGPU() {
 	if len(allGUIDs) == 0 {
 		logger.Log.Println("no GPU was detected by rocm-smi")
 		result := BuildNoGPUTestSummary()
-		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result, []string{}, []string{})
+		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result, "", []string{}, []string{})
 		// exit on non-auto trigger's failure
 		tr.exitOnFailure()
 	}
@@ -918,7 +934,7 @@ func (tr *TestRunner) getHostName() {
 	logger.Log.Printf("HostName: %v", tr.hostName)
 }
 
-func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string, summary []*types.IterationResult, gpuIndexes, kfdIDs []string) {
+func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string, summary []*types.IterationResult, message string, gpuIndexes, kfdIDs []string) {
 	if !tr.isK8s {
 		// return if it is not running in k8s cluster
 		return
@@ -929,19 +945,24 @@ func (tr *TestRunner) generateK8sEvent(testRecipe, evtType, reason string, summa
 			tr.k8sPodName, tr.k8sPodNamespace, testRecipe, evtType, reason, summary)
 		return
 	}
+	var msg string
+	if summary != nil {
+		// don't put stdout and stderr large string into the event message
+		// they will be saved into zipped log file
+		for _, res := range summary {
+			res.Stdout = ""
+			res.Stderr = ""
+		}
 
-	// don't put stdout and stderr large string into the event message
-	// they will be saved into zipped log file
-	for _, res := range summary {
-		res.Stdout = ""
-		res.Stderr = ""
-	}
-
-	// just save result into json message
-	msg, err := json.Marshal(summary)
-	if err != nil {
-		logger.Log.Panicf("failed to marshal test summary %+v err %+v", summary, err)
-		return
+		// just save result into json message
+		msgbytes, err := json.Marshal(summary)
+		if err != nil {
+			logger.Log.Panicf("failed to marshal test summary %+v err %+v", summary, err)
+			return
+		}
+		msg = string(msgbytes)
+	} else {
+		msg = message
 	}
 	evtNamePrefix := GetEventNamePrefix(tr.testCategory)
 	// if there is no event exist, create a new one
