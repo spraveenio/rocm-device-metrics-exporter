@@ -13,7 +13,8 @@ subtrees:
       - file: configuration/configuration-settings   
       - file: configuration/docker
       - file: configuration/configmap
-      - file: configuration/troubleshooting        
+      - file: configuration/troubleshooting 
+      - file: configuration/metricslist       
   - caption: Integrations
     entries:
     - file: integrations/prometheus-grafana

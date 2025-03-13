@@ -35,3 +35,5 @@ Device Metrics Exporter provides extensive GPU metrics including:
   - Bandwidth
   - Link speed
   - Error counts
+
+For a full list of available metrics see [this page](./configuration/metricslist.md).
