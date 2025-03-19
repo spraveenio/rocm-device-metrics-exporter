@@ -1,26 +1,10 @@
-.venv
-.vscode
 *.log
 .cache
-
-# build artifacts
-build
-bin
 *.tgz
 *.tar.gz
 *.tar
+bin
 pkg/bin
 pkg/slurm/sim/slurm-sim
-
-# documentation artifacts
-_build/
-_images/
-_static/
-_templates/
-_toc.yml
-docBin/
-_doxygen/
-_readthedocs/
-
-# avoid duplicating contributing.md due to conf.py
-docs/CHANGELOG.md
+.venv
+_build
