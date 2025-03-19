@@ -58,6 +58,8 @@ export ${TOP_DIR}
 export ${GOFLAGS}
 export ${GOINSECURE}
 export ${KUBECONFIG}
+export ${AZURE_DOCKER_CONTAINER_IMG}
+export ${BUILD_VER_ENV}
 
 ASSETS_PATH :=${TOP_DIR}/assets
 # 22.04 - jammy
@@ -68,6 +70,10 @@ ifeq (${UBUNTU_VERSION}, noble)
 UBUNTU_VERSION_NUMBER = 24.04
 endif
 
+DEBIAN_VERSION := "1.2.0"
+
+DEBIAN_CONTROL = ${TOP_DIR}/debian/DEBIAN/control
+BUILD_VER_ENV = ${DEBIAN_VERSION}~$(UBUNTU_VERSION_NUMBER)
 PATCH_LIBS := ${ASSETS_PATH}/patch/ubuntu/${UBUNTU_VERSION}
 GPUAGENT_LIBS := ${ASSETS_PATH}/amd_smi_lib/x86_64/${UBUNTU_VERSION}/lib
 THIRDPARTY_LIBS := ${ASSETS_PATH}/thirdparty/x86_64-linux-gnu/${UBUNTU_VERSION}/lib/
@@ -140,6 +146,7 @@ pkg-clean:
 
 pkg: pkg-clean
 	${MAKE} gen amdexporter-lite metricsclient
+	@echo "Building debian for $(BUILD_VER_ENV)"
 	#copy precompiled libs
 	mkdir -p ${PKG_LIB_PATH}
 	cp -rvf ${GPUAGENT_LIBS}/ ${PKG_LIB_PATH}
@@ -160,11 +167,15 @@ pkg: pkg-clean
 	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
 	cp -vf $(CURDIR)/bin/metricsclient ${PKG_PATH}/
 	cd ${TOP_DIR}
-	dpkg-deb --build debian ${TOP_DIR}/bin
+	sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
+	dpkg-deb -Zxz --build debian ${TOP_DIR}/bin
 	#remove copied files
 	rm -rf ${PKG_LIB_PATH}
 	rm -rf ${PKG_LUA_PATH}/plugin.proto
-	mv -vf $(CURDIR)/bin/amdgpu-exporter_1.2.0_amd64.deb $(CURDIR)/bin/amdgpu-exporter_1.2.0_ubuntu_${UBUNTU_VERSION_NUMBER}_amd64.deb
+	# revert the dynamic version set file
+	git checkout $(DEBIAN_CONTROL)
+	# rename for internal build
+	mv -vf ${TOP_DIR}/bin/amdgpu-exporter_*~${UBUNTU_VERSION_NUMBER}_amd64.deb ${TOP_DIR}/bin/amdgpu-exporter_${UBUNTU_VERSION_NUMBER}_amd64.deb
 
 .PHONY:clean
 clean: pkg-clean
@@ -174,6 +185,7 @@ clean: pkg-clean
 	rm -rf docker/*.tgz
 	rm -rf docker/*.tar
 	rm -rf docker/*.tar.gz
+	rm -rf ${PKG_PATH}
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 .PHONY: golangci-lint
