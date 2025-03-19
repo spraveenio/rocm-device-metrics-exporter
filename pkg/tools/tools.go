@@ -1,4 +1,3 @@
-
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
@@ -18,6 +17,6 @@
 package tools
 
 import (
-    _ "github.com/golang/protobuf/protoc-gen-go/descriptor"
-    _ "github.com/golang/protobuf/ptypes/empty"
+	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	_ "github.com/golang/protobuf/ptypes/empty"
 )

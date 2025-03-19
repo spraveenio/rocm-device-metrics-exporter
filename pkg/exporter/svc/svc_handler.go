@@ -22,10 +22,10 @@ import (
 	"os"
 	"path"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/config"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/config"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"google.golang.org/grpc"
 )
 

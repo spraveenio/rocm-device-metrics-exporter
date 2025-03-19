@@ -1,4 +1,4 @@
-module github.com/pensando/device-metrics-exporter
+module github.com/ROCm/device-metrics-exporter
 
 go 1.22.0
 

@@ -39,13 +39,13 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	k8sclient "github.com/pensando/device-metrics-exporter/pkg/client"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/utils"
-	testrunnerGen "github.com/pensando/device-metrics-exporter/pkg/testrunner/gen/testrunner"
-	types "github.com/pensando/device-metrics-exporter/pkg/testrunner/interface"
+	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
+	testrunnerGen "github.com/ROCm/device-metrics-exporter/pkg/testrunner/gen/testrunner"
+	types "github.com/ROCm/device-metrics-exporter/pkg/testrunner/interface"
 )
 
 var (

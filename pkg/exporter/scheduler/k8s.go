@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	kube "k8s.io/kubelet/pkg/apis/podresources/v1alpha1"

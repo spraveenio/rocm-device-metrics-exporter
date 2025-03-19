@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 )
 
 const (

@@ -28,8 +28,6 @@
 // 	protoc        v3.21.12
 // source: events.proto
 
-
-
 /*
 Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 

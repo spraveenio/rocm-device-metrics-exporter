@@ -22,8 +22,8 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 )
 
 // ConfigHandler to update/read config data layer

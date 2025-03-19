@@ -32,13 +32,13 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gpuagent"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/config"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/metricsutil"
-	metricsserver "github.com/pensando/device-metrics-exporter/pkg/exporter/svc"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/utils"
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gpuagent"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/config"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
+	metricsserver "github.com/ROCm/device-metrics-exporter/pkg/exporter/svc"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 )
 
 const (

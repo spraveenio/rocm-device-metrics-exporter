@@ -2,7 +2,7 @@
 version: 2.0
 builds:
   build-debian-package-ub22.04:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make pkg"]
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && make pkg"]
     owners: ["email:prshanmug@amd.com"]
     area:
     sub-area:
@@ -11,7 +11,7 @@ builds:
         - /device-metrics-exporter/bin/amdgpu-exporter_1.2.0_ubuntu_22.04_amd64.deb
 
   build-debian-package-ub24.04:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make UBUNTU_VERSION=noble pkg"]
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && make UBUNTU_VERSION=noble pkg"]
     owners: ["email:prshanmug@amd.com"]
     area:
     sub-area:
@@ -20,28 +20,28 @@ builds:
         - /device-metrics-exporter/bin/amdgpu-exporter_1.2.0_ubuntu_24.04_amd64.deb
 
   build-device-metrics-exporter-docker-ubi9.4:
-    commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make && \
-                            HOURLY_TAG_LABEL=$RELEASE IMAGE_TAG=latest make docker-cicd"]
+    commands: ["sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && make all && \
+                            HOURLY_TAG_LABEL=$RELEASE EXPORTER_IMAGE_TAG=latest make docker-cicd"]
     owners: ["email:prshanmug@amd.com"]
     artifacts:
-        - /device-metrics-exporter/docker/exporter-latest.tar.gz
+        - /device-metrics-exporter/docker/device-metrics-exporter-latest.tar.gz
         - /device-metrics-exporter/tools/techsupport_dump.sh
 
   build-device-metrics-exporter-docker-azure:
-    commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make && \
-                            DOCKER_CONTAINER_IMG=exporter-latest-azure HOURLY_TAG_LABEL=$RELEASE IMAGE_TAG=latest make docker-azure"]
+    commands: ["sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && make all && \
+                            EXPORTER_IMAGE_NAME=exporter HOURLY_TAG_LABEL=$RELEASE EXPORTER_IMAGE_TAG=latest make docker-azure"]
     owners: ["email:prshanmug@amd.com"]
     artifacts:
         - /device-metrics-exporter/docker/exporter-latest-azure.tar.gz
 
   e2e-build-mock-exporter:
-    commands: ["sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make e2e"]
+    commands: ["sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && EXPORTER_IMAGE_TAG=v1 make e2e"]
     owners: ["email:prshanmug@amd.com"]
     artifacts:
-        - /device-metrics-exporter/docker/exporter-mock-latest.tgz
+        - /device-metrics-exporter/docker/device-metrics-exporter-mock-v1.tar.gz
 
   build-helm-artifact:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make helm-build"]
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && make helm-build"]
     owners: ["email:prshanmug@amd.com"]
     area:
     sub-area:
@@ -50,21 +50,21 @@ builds:
         - /device-metrics-exporter/helm-charts/device-metrics-exporter-charts-v1.2.0.tgz
 
   api-checks:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make checks"]
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && make checks"]
     owners: ["email:prshanmug@amd.com"]
     area:
     sub-area:
     feature:
 
   build-test-runner-docker:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && HOURLY_TAG_LABEL=$RELEASE IMAGE_TAG=latest make docker-test-runner-cicd"]
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && HOURLY_TAG_LABEL=$RELEASE TESTRUNNER_IMAGE_TAG=latest make docker-test-runner-cicd"]
     owners: ["email:yan.sun3@amd.com"]
     artifacts:
         - /device-metrics-exporter/docker/testrunner/test-runner-latest.tar.gz
 
 targets:
   device-metrics-sanity:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && \
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && \
                                     make unit-test"]
     owners: ["email:prshanmug@amd.com"]
     area:
@@ -80,7 +80,7 @@ targets:
         - e2e-build-mock-exporter
 
   test-runner-sanity:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter"]
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter"]
     owners: ["email:yan.sun3@amd.com"]
     area:
     sub-area:
@@ -89,9 +89,9 @@ targets:
         - /device-metrics-exporter/test-runner.log
     build-dependencies:
         - build-test-runner-docker
-   
+
   copyright-checks:
-    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/pensando/device-metrics-exporter && make copyrights"]
+    commands: [ "/bin/sh", "-c", "cd /usr/src/github.com/ROCm/device-metrics-exporter && make copyrights"]
     owners: ["email:sajmera@amd.com"]
     area:
     sub-area:

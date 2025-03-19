@@ -22,14 +22,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/scheduler"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
-	k8sclient "github.com/pensando/device-metrics-exporter/pkg/client"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/metricsutil"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/utils"
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

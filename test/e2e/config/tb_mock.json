@@ -1,5 +1,5 @@
 {
     "ExporterName" : "test_exporter",
     "E2EMode": "EXPORTER_MOCK",
-    "ImageName" : "registry.test.pensando.io:5000/device-metrics-exporter/exporter-mock:v1"
+    "ImageName" : "docker.io/rocm/device-metrics-exporter-mock:v1"
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -x
 set -euo pipefail
-dir=/usr/src/github.com/pensando/device-metrics-exporter
+dir=/usr/src/github.com/ROCm/device-metrics-exporter
 netns=/var/run/netns
 dockerdir=/etc/docker
 

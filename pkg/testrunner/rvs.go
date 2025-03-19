@@ -26,9 +26,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
-	types "github.com/pensando/device-metrics-exporter/pkg/testrunner/interface"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	types "github.com/ROCm/device-metrics-exporter/pkg/testrunner/interface"
 )
 
 // TestResult is used to convert test json output to struct

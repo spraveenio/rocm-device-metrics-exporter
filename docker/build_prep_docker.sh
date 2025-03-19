@@ -20,7 +20,11 @@
 #
 
 # copy all artificates and set proper file permissions
-tar -xf $TOP_DIR/assets/gpuagent_static.bin.gz -C $TOP_DIR/docker/
+if [ "$MOCK" == "1" ]; then
+    tar -xf $TOP_DIR/assets/gpuagent_mock.bin.gz -C $TOP_DIR/docker/
+else
+    tar -xf $TOP_DIR/assets/gpuagent_static.bin.gz -C $TOP_DIR/docker/
+fi
 chmod +x $TOP_DIR/docker/gpuagent
 cp $TOP_DIR/assets/patch/$OS/libamd_smi.so.24.7.60300 $TOP_DIR/docker/
 ln -f $TOP_DIR/assets/gpuctl.gobin $TOP_DIR/docker/gpuctl

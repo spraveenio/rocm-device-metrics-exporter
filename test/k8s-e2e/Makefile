@@ -10,7 +10,7 @@ ifdef KUBECONFIG
 endif
 
 all:
-	go test -failfast -helmchart $(TOP_DIR)/helm-charts/ -test.timeout=30m -v $(TEST_ARGS); 
+	go test -failfast -helmchart $(TOP_DIR)/helm-charts/ -test.timeout=30m -registry $(DOCKER_REGISTRY)/$(EXPORTER_IMAGE_NAME) -imagetag $(EXPORTER_IMAGE_TAG) -v $(TEST_ARGS);
 
 lint:
 	@go fmt ./...

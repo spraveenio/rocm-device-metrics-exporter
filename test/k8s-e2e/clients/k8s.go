@@ -24,7 +24,7 @@ import (
 	"log"
 	"net/http"
 
-	testutils "github.com/pensando/device-metrics-exporter/test/utils"
+	testutils "github.com/ROCm/device-metrics-exporter/test/utils"
 	"github.com/prometheus/common/expfmt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -26,11 +26,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/fsnotify/fsnotify"
 	zmq "github.com/go-zeromq/zmq4"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 )
 
 var SlurmLabels = map[string]bool{

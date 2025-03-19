@@ -1,43 +1,13 @@
-from "registry.test.pensando.io:5000/ubuntu:22.04"
+from "registry.test.pensando.io:5000/device-metrics-exporter-build:v1.0"
 
 user = getenv("USER")
 group = getenv("GROUP_NAME")
 uid = getenv("USER_UID")
 gid = getenv("USER_GID")
 
-# remove old version of go
-run "rm -rf /usr/local/go"
-
-run "apt-get update && apt-get install -y wget protobuf-compiler \
-  curl locales ca-certificates build-essential git"
-run "install -m 0755 -d /etc/apt/keyrings"
 
 # add amd DNS nameserver
 run "echo 'nameserver 192.168.64.2' | tee -a /etc/resolv.conf > /dev/null"
-
-#download docker
-run "curl -k -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc"
-run "chmod a+r /etc/apt/keyrings/docker.asc"
-
-run "echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable' > /etc/apt/sources.list.d/docker.list"
-
-run "apt-get update && apt-get install -y \
-  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-  git && apt-get clean && rm -rf /var/lib/apt/lists/*"
-
-# download go1.20
-run "wget --no-check-certificate https://go.dev/dl/go1.21.6.linux-amd64.tar.gz"
-run "tar -C /usr/local/ -xzf go1.21.6.linux-amd64.tar.gz"
-
-# download and install kubectl 
-run "curl -k -LO https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl"
-run "chmod +x kubectl"
-run "mv kubectl /usr/local/bin"
-
-# download and install helm
-run "curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
-run "chmod 700 get_helm.sh"
-run "./get_helm.sh"
 
 run "curl -k -o /usr/bin/asset-pull http://pm.test.pensando.io/tools/asset-pull"
 run "chmod +x /usr/bin/asset-pull"
@@ -84,7 +54,7 @@ end
 env GOPATH: "/usr"
 env GOBIN: "/usr/local/go/bin"
 env GOFLAGS: "-mod=vendor"
-run "git config --global --add safe.directory ${GOPATH}/src/github.com/pensando/device-metrics-exporter"
+run "git config --global --add safe.directory ${GOPATH}/src/github.com/ROCm/device-metrics-exporter"
 
 # A scratch pad file for exporting some host/workspace particulars into container, to be used for
 # recording them into build packaging.

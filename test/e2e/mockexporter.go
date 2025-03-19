@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	testutils "github.com/pensando/device-metrics-exporter/test/utils"
+	testutils "github.com/ROCm/device-metrics-exporter/test/utils"
 )
 
 var (

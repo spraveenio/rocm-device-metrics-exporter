@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
