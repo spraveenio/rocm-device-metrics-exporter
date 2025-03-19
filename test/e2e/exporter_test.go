@@ -334,9 +334,9 @@ func (s *E2ESuite) Test011ContainerWithoutConfig(c *C) {
 
 func (s *E2ESuite) Test012CustomLabelUpdate(c *C) {
 	log.Print("Testing custom label update")
-	customLabels := map[string]string {
-		"cLabel1" : "cValue1",
-		"cLabel2" : "cValue2",
+	customLabels := map[string]string{
+		"cLabel1": "cValue1",
+		"cLabel2": "cValue2",
 	}
 	customLabelKeys := []string{"clabel1", "clabel2"}
 	err := s.SetCustomLabels(customLabels)
@@ -344,12 +344,12 @@ func (s *E2ESuite) Test012CustomLabelUpdate(c *C) {
 	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
 	var response string
 	assert.Eventually(c, func() bool {
-		 response, _ = s.getExporterResponse()
-		 if response != "" {
-			 return true
-		 }
-		 return false
-	 }, 3*time.Second, 1*time.Second)
+		response, _ = s.getExporterResponse()
+		if response != "" {
+			return true
+		}
+		return false
+	}, 3*time.Second, 1*time.Second)
 	allgpus, err := testutils.ParsePrometheusMetrics(response)
 	assert.Nil(c, err)
 	expectedLabels := append(customLabelKeys, mandatoryLabels...)
@@ -359,11 +359,11 @@ func (s *E2ESuite) Test012CustomLabelUpdate(c *C) {
 
 func (s *E2ESuite) Test013MandatoryLabelsAsCustomLabels(c *C) {
 	log.Print("Testing mandatory labels supplied as custom labels")
-	customLabels := map[string]string {
-		"card_model" : "custom_card_model",
-		"serial_number" : "custom_serial_number",
-		"gpu_id" : "custom_gpu_id",
-		"cLabel1" : "cValue1",
+	customLabels := map[string]string{
+		"card_model":    "custom_card_model",
+		"serial_number": "custom_serial_number",
+		"gpu_id":        "custom_gpu_id",
+		"cLabel1":       "cValue1",
 	}
 	customLabelKeys := []string{"clabel1"}
 	err := s.SetCustomLabels(customLabels)
@@ -371,12 +371,12 @@ func (s *E2ESuite) Test013MandatoryLabelsAsCustomLabels(c *C) {
 	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
 	var response string
 	assert.Eventually(c, func() bool {
-		 response, _ = s.getExporterResponse()
-		 if response != "" {
-			 return true
-		 }
-		 return false
-	 }, 3*time.Second, 1*time.Second)
+		response, _ = s.getExporterResponse()
+		if response != "" {
+			return true
+		}
+		return false
+	}, 3*time.Second, 1*time.Second)
 	allgpus, err := testutils.ParsePrometheusMetrics(response)
 	assert.Nil(c, err)
 	// Not expecting the mandatory labels
@@ -387,12 +387,12 @@ func (s *E2ESuite) Test013MandatoryLabelsAsCustomLabels(c *C) {
 
 func (s *E2ESuite) Test014ExistingLabelsAsCustomLabels(c *C) {
 	log.Print("Testing existing labels supplied as custom labels")
-	customLabels := map[string]string {
-		"card_model" : "custom_card_model",
-		"serial_number" : "custom_serial_number",
-		"gpu_id" : "custom_gpu_id",
-		"cluster_name" : "cValue1",
-		"card_vendor": "cValue2",
+	customLabels := map[string]string{
+		"card_model":     "custom_card_model",
+		"serial_number":  "custom_serial_number",
+		"gpu_id":         "custom_gpu_id",
+		"cluster_name":   "cValue1",
+		"card_vendor":    "cValue2",
 		"driver_version": "cValue3",
 	}
 	// Only cluster_name is allowed to be customized from existing labels
@@ -402,12 +402,12 @@ func (s *E2ESuite) Test014ExistingLabelsAsCustomLabels(c *C) {
 	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
 	var response string
 	assert.Eventually(c, func() bool {
-		 response, _ = s.getExporterResponse()
-		 if response != "" {
-			 return true
-		 }
-		 return false
-	 }, 3*time.Second, 1*time.Second)
+		response, _ = s.getExporterResponse()
+		if response != "" {
+			return true
+		}
+		return false
+	}, 3*time.Second, 1*time.Second)
 	allgpus, err := testutils.ParsePrometheusMetrics(response)
 	assert.Nil(c, err)
 	// Not expecting the mandatory labels

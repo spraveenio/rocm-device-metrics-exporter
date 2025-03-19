@@ -61,7 +61,6 @@ BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
 GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
 VERSION ?=$(RELEASE)
 KUBECONFIG ?= ~/.kube/config
-AZURE_DOCKER_CONTAINER_IMG ?= exporter-latest-azure
 
 export ${GOROOT}
 export ${GOPATH}
@@ -375,7 +374,7 @@ docker: gen amdexporter
 
 .PHONY: docker-test-runner
 docker-test-runner: gen-test-runner amdtestrunner
-	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker
+	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) INTERNAL_TESTRUNNER_BUILD=$(INTERNAL_TESTRUNNER_BUILD) docker
 
 .PHOHY: docker-test-runner-cicd
 docker-test-runner-cicd: gen-test-runner amdtestrunner

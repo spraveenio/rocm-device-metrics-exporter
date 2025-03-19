@@ -23,15 +23,15 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/parserutil"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 	"github.com/gofrs/uuid"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/metricssvc"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/parserutil"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/scheduler"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

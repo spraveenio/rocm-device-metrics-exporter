@@ -19,8 +19,8 @@ package metricsutil
 import (
 	"sync"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/config"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/config"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

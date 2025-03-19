@@ -20,9 +20,9 @@ import (
 	"context"
 	"runtime"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/gofrs/uuid"
-	"github.com/pensando/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
 	"golang.org/x/sync/errgroup"
 )
 

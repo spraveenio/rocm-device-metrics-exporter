@@ -20,9 +20,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 )
 
 // Config - holds dynamic value changes to the config file

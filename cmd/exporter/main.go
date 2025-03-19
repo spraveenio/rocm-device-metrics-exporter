@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pensando/device-metrics-exporter/pkg/exporter"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/globals"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/logger"
-	"github.com/pensando/device-metrics-exporter/pkg/exporter/utils"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 )
 
 var (
