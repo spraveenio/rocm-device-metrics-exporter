@@ -75,6 +75,8 @@ The following table contains a full list of GPU Metrics that are available using
 | GPU_XGMI_NBR_3_TX_THRPUT        | Represents the number of outbound beats (each representing 32 bytes) on link 3 |
 | GPU_XGMI_NBR_4_TX_THRPUT        | Represents the number of outbound beats (each representing 32 bytes) on link 4 |
 | GPU_XGMI_NBR_5_TX_THRPUT        | Represents the number of outbound beats (each representing 32 bytes) on link 5 |
+| GPU_XGMI_LINK_RX                | XGMI Link Data Read in KB**                                                    |
+| GPU_XGMI_LINK_TX                | XGMI Link Data Write in KB**                                                   |
 | GPU_USED_VRAM                   | Total VRAM memory used in MB                                            |
 | GPU_FREE_VRAM                   | Total VRAM memory free in MB                                            |
 | GPU_TOTAL_VISIBLE_VRAM          | Total available visible VRAM memory in MB                               |
@@ -112,4 +114,42 @@ gpu_clock{card_model="xxxx",clock_index="14",clock_type="GPU_CLOCK_TYPE_DATA",gp
 gpu_clock{card_model="xxxx",clock_index="2",clock_type="GPU_CLOCK_TYPE_SYSTEM",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",serial_number="xxxx"} 132
 gpu_clock{card_model="xxxx",clock_index="8",clock_type="GPU_CLOCK_TYPE_MEMORY",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",serial_number="xxxx"} 900
 gpu_clock{card_model="xxxx",clock_index="9",clock_type="GPU_CLOCK_TYPE_VIDEO",gpu_compute_partition_type="spx",gpu_id="5",gpu_partition_id="0",hostname="xxxx",serial_number="xxxx"} 29
+```
+
+## XGMI Link Read and Write measurements
+
+The Device Metrics Exporter `gpu_xgmi_link_rx` and `gpu_xgmi_link_tx` metrics consist of an array field used for exporting the transfer metrics for each xgmi link connected to a GPU. These metric have a `link_index` label added to the metric to differentiate the different links (usually 8 in an MI300X system):
+
+```json
+gpu_xgmi_link_rx{link_index="0"}
+gpu_xgmi_link_rx{link_index="1"}
+gpu_xgmi_link_rx{link_index="2"}
+gpu_xgmi_link_rx{link_index="3"}
+
+gpu_xgmi_link_tx{link_index="0"}
+gpu_xgmi_link_tx{link_index="1"}
+gpu_xgmi_link_tx{link_index="2"}
+gpu_xgmi_link_tx{link_index="3"}
+```
+
+An example of this is shown below:
+
+```json
+gpu_xgmi_link_rx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="0",serial_number="xxxx"} 0
+gpu_xgmi_link_rx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="1",serial_number="xxxx"} 2.776148269e+09
+gpu_xgmi_link_rx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="2",serial_number="xxxx"} 2.914491813e+09
+gpu_xgmi_link_rx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="3",serial_number="xxxx"} 2.853215723e+09
+gpu_xgmi_link_rx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="4",serial_number="xxxx"} 2.857943554e+09
+gpu_xgmi_link_rx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="5",serial_number="xxxx"} 2.859773597e+09
+gpu_xgmi_link_rx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="6",serial_number="xxxx"} 2.852296682e+09
+gpu_xgmi_link_rx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="7",serial_number="xxxx"} 2.757052542e+09
+
+gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="0",serial_number="xxxx"} 0
+gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="1",serial_number="xxxx"} 3.539423344e+09
+gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="2",serial_number="xxxx"} 3.708415141e+09
+gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="3",serial_number="xxxx"} 3.639806555e+09
+gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="4",serial_number="xxxx"} 3.675549728e+09
+gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="5",serial_number="xxxx"} 3.657430314e+09
+gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="6",serial_number="xxxx"} 3.646094607e+09
+gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="7",serial_number="xxxx"} 3.545990503e+0
 ```
