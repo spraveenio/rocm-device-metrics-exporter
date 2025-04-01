@@ -687,16 +687,15 @@ var file_config_proto_depIdxs = []int32{
 	13, // 2: testrunner.TestTriggerConfig.TestParameters:type_name -> testrunner.TestTriggerConfig.TestParametersEntry
 	8,  // 3: testrunner.TestParameters.TestCases:type_name -> testrunner.TestParameter
 	9,  // 4: testrunner.TestParameters.LogsExportConfig:type_name -> testrunner.TestLogsExportConfig
-	3,  // 5: testrunner.TestLogsExportConfig.Provider:type_name -> testrunner.TestLogsExportConfig.CloudProvider
-	14, // 6: testrunner.TestRunnerStatus.TestStatus:type_name -> testrunner.TestRunnerStatus.TestStatusEntry
-	5,  // 7: testrunner.TestRunnerConfig.TestConfigEntry.value:type_name -> testrunner.TestCategoryConfig
-	6,  // 8: testrunner.TestCategoryConfig.TestLocationTriggerEntry.value:type_name -> testrunner.TestTriggerConfig
-	7,  // 9: testrunner.TestTriggerConfig.TestParametersEntry.value:type_name -> testrunner.TestParameters
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	14, // 5: testrunner.TestRunnerStatus.TestStatus:type_name -> testrunner.TestRunnerStatus.TestStatusEntry
+	5,  // 6: testrunner.TestRunnerConfig.TestConfigEntry.value:type_name -> testrunner.TestCategoryConfig
+	6,  // 7: testrunner.TestCategoryConfig.TestLocationTriggerEntry.value:type_name -> testrunner.TestTriggerConfig
+	7,  // 8: testrunner.TestTriggerConfig.TestParametersEntry.value:type_name -> testrunner.TestParameters
+	9,  // [9:9] is the sub-list for method output_type
+	9,  // [9:9] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_config_proto_init() }
