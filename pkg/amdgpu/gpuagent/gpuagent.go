@@ -303,4 +303,6 @@ func (ga *GPUAgentClient) Close() {
 		ga.slurmScheduler.Close()
 		ga.slurmScheduler = nil
 	}
+	// cancel all context
+	ga.cancel()
 }
