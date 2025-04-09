@@ -18,7 +18,7 @@ To use a custom configuration when deploying the Metrics Exporter:
 3. Run `helm install`:
 
 ```bash
-helm install exporter https://github.com/ROCm/device-metrics-exporter/releases/download/v1.0.0/device-metrics-exporter-charts-v1.0.0.tgz -n metrics-exporter -f values.yaml --create-namespace
+helm install exporter https://github.com/ROCm/device-metrics-exporter/releases/download/v1.1.0/device-metrics-exporter-charts-v1.1.0.tgz -n metrics-exporter -f values.yaml --create-namespace
 ```
 
 Device Metrics Exporter polls for configuration changes every minute, so updates take effect without container restarts.
