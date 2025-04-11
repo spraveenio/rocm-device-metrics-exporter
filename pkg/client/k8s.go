@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 	"sync"
 
@@ -212,4 +213,21 @@ func (k *K8sClient) UpdateHealthLabel(nodeName string, newHealthMap map[string]s
 	}
 
 	return nil
+}
+
+func (k *K8sClient) GetAllPods(nodeName string) (*v1.PodList, error) {
+	k.reConnect()
+	k.Lock()
+	defer k.Unlock()
+	ctx, cancel := context.WithCancel(k.ctx)
+	defer cancel()
+
+	pods, err := k.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
+	})
+	if err != nil {
+		log.Printf("Error fetching pods for node %v: %v", nodeName, err)
+		return nil, err
+	}
+	return pods, nil
 }

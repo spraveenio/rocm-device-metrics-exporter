@@ -145,6 +145,10 @@
     },
     "CustomLabels" : {
       "CLUSTER_NAME" : "amdgpu-k8s-metrics-exporter"
+    },
+    "ExtraPodLabels" : {
+      "WORKLOAD_ID"   : "amd/workload-id",
+      "USERGROUP_ID"  : "amd/usergroup-id"
     }
   }
 }
