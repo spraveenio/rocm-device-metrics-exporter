@@ -3,7 +3,59 @@ entries:
   device-metrics-exporter-charts:
   - apiVersion: v2
     appVersion: v1.2.0
-    created: "2025-02-21T18:52:52.912908167Z"
+    created: "2025-04-11T16:20:25.593769898-07:00"
+    description: A Helm chart for AMD Device Metric Exporter
+    digest: 50892f4b14d43a6f803336dd0a9014784d66bf67b7a8959faefc8c3ca95bd9bd
+    keywords:
+    - kubernetes
+    - cluster
+    - hardware
+    - amd
+    - gpu
+    - monitoring
+    - prometheus
+    kubeVersion: '>= 1.29.0-0'
+    maintainers:
+    - email: prshanmug@amd.com
+      name: Praveen Kumar Shanmugam
+    - email: yan.sun3@amd.com
+      name: Yan Sun
+    - email: shrey.ajmera@amd.com
+      name: Shrey Ajmera
+    name: device-metrics-exporter-charts
+    type: application
+    urls:
+    - https://rocm.github.io/device-metrics-exporter/charts/device-metrics-exporter-charts-v1.2.1.tgz
+    version: v1.2.1
+  - apiVersion: v2
+    appVersion: v1.2.0
+    created: "2025-04-11T16:20:25.596119763-07:00"
+    description: A Helm chart for AMD Device Metric Exporter
+    digest: 8a5fef2d379ae7292547019c81a75852bb69d40e3c9d3dc479c34681b481fee1
+    keywords:
+    - kubernetes
+    - cluster
+    - hardware
+    - amd
+    - gpu
+    - monitoring
+    - prometheus
+    kubeVersion: '>= 1.29.0-0'
+    maintainers:
+    - email: prshanmug@amd.com
+      name: Praveen Kumar Shanmugam
+    - email: yan.sun3@amd.com
+      name: Yan Sun
+    - email: shrey.ajmera@amd.com
+      name: Shrey Ajmera
+    name: device-metrics-exporter-charts
+    type: application
+    urls:
+    - https://rocm.github.io/device-metrics-exporter/helm-charts/device-metrics-exporter-charts-v1.2.1.tgz
+    version: v1.2.1
+  - apiVersion: v2
+    appVersion: v1.2.0
+    created: "2025-04-11T16:20:25.592356744-07:00"
     description: A Helm chart for AMD Device Metric Exporter
     digest: deababca2e37d7a6be219a3a77f614e35628945e2c478e3b35cd84b81026e895
     keywords:
@@ -29,7 +81,7 @@ entries:
     version: v1.2.0
   - apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-02-21T18:52:52.912013426Z"
+    created: "2025-04-11T16:20:25.5916151-07:00"
     description: A Helm chart for AMD Device Metric Exporter
     digest: aba669201efadb314755d51533ba67b8c97252cb16470203064dbf82b20d2627
     keywords:
@@ -55,7 +107,7 @@ entries:
     version: v1.1.0
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-02-21T18:52:52.911295223Z"
+    created: "2025-04-11T16:20:25.591086358-07:00"
     description: A Helm chart for AMD Device Metric Exporter
     digest: 92248d77d603969493fc00b836ea2f008cc2a38c12188630b1ee5d80a5622fee
     keywords:
@@ -79,4 +131,4 @@ entries:
     urls:
     - https://rocm.github.io/device-metrics-exporter/charts/device-metrics-exporter-charts-v1.0.0.tgz
     version: v1.0.0
-generated: "2025-02-21T18:52:52.910703519Z"
+generated: "2025-04-11T16:20:25.590292562-07:00"
