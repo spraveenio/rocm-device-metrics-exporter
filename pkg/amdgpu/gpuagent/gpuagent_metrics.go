@@ -35,6 +35,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+type PodUniqueKey struct {
+	PodName   string
+	Namespace string
+}
+
 // local variables
 var (
 	mandatoryLables = []string{
@@ -50,11 +55,13 @@ var (
 	allowedCustomLabels = []string{
 		exportermetrics.GPUMetricLabel_CLUSTER_NAME.String(),
 	}
-	exportLables    map[string]bool
-	exportFieldMap  map[string]bool
-	fieldMetricsMap []prometheus.Collector
-	gpuSelectorMap  map[int]bool
-	customLabelMap  map[string]string
+	exportLables      map[string]bool
+	exportFieldMap    map[string]bool
+	fieldMetricsMap   []prometheus.Collector
+	gpuSelectorMap    map[int]bool
+	customLabelMap    map[string]string
+	extraPodLabelsMap map[string]string
+	k8PodLabelsMap    map[PodUniqueKey]map[string]string
 )
 
 type metrics struct {
@@ -281,6 +288,19 @@ func (ga *GPUAgentClient) GetExportLabels() []string {
 		labelList = append(labelList, strings.ToLower(key))
 	}
 
+	for key := range extraPodLabelsMap {
+		exists := false
+		for _, label := range labelList {
+			if key == label {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			labelList = append(labelList, key)
+		}
+	}
+
 	for key := range customLabelMap {
 		exists := false
 		for _, label := range labelList {
@@ -321,6 +341,28 @@ func (ga *GPUAgentClient) initLabelConfigs(config *exportermetrics.GPUMetricConf
 		}
 	}
 	logger.Log.Printf("export-labels updated to %v", exportLables)
+}
+
+func initPodExtraLabels(config *exportermetrics.GPUMetricConfig) {
+	// Map of pod labels
+	extraPodLabelsMap = make(map[string]string)
+	k8PodLabelsMap = make(map[PodUniqueKey]map[string]string)
+
+	if config != nil && config.GetExtraPodLabels() != nil {
+		extraLabels := config.GetExtraPodLabels()
+		labelCount := 0
+
+		for prometheusLabel, k8PodLabel := range extraLabels {
+			if labelCount >= globals.MaxSupportedPodLabels {
+				logger.Log.Printf("Max pod labels supported: %v, ignoring extra pod labels.", globals.MaxSupportedPodLabels)
+				break
+			}
+			label := strings.ToLower(prometheusLabel)
+			extraPodLabelsMap[label] = k8PodLabel
+			labelCount++
+		}
+	}
+	logger.Log.Printf("export-labels updated to %v", extraPodLabelsMap)
 }
 
 func initCustomLabels(config *exportermetrics.GPUMetricConfig) {
@@ -1036,6 +1078,7 @@ func (ga *GPUAgentClient) initFieldRegistration() error {
 func (ga *GPUAgentClient) InitConfigs() error {
 	filedConfigs := ga.mh.GetMetricsConfig()
 
+	initPodExtraLabels(filedConfigs)
 	initCustomLabels(filedConfigs)
 	ga.initLabelConfigs(filedConfigs)
 	initFieldConfig(filedConfigs)
@@ -1062,6 +1105,18 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	if err != nil {
 		logger.Log.Printf("Error listing workloads: %v", err)
 	}
+
+	if utils.IsKubernetes() && len(extraPodLabelsMap) > 0 {
+		hostname, err := ga.getHostName()
+		if err != nil {
+			logger.Log.Printf("Error fetching hostname to filter pod labels: %v", err)
+		}
+		k8PodLabelsMap, err = ga.FetchPodLabelsForNode(hostname)
+		if err != nil {
+			logger.Log.Printf("Error fetching all pods for the given hostname to filter pod labels: %v", err)
+		}
+	}
+
 	ga.m.gpuNodesTotal.Set(float64(len(resp.Response)))
 	// do this only once as the health monitoring thread will
 	// update periodically. this is required only for first state
@@ -1161,6 +1216,39 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(wls map[string]scheduler.Workloa
 			labels[key] = strings.ToLower(trimmedValue)
 		default:
 			logger.Log.Printf("Invalid label is ignored %v", key)
+		}
+	}
+
+	// Add extra pod labels only if config has mapped any
+	if len(extraPodLabelsMap) > 0 {
+		podName := podInfo.Pod
+		podNs := podInfo.Namespace
+
+		var podLabels map[string]string
+		if podName != "" && podNs != "" {
+			if labels, exists := k8PodLabelsMap[PodUniqueKey{PodName: podName, Namespace: podNs}]; exists {
+				// Cached pod labels
+				podLabels = labels
+			} else {
+				// Empty labels
+				podLabels = make(map[string]string)
+			}
+
+			for prometheusPodlabel, k8Podlabel := range extraPodLabelsMap {
+				label := strings.ToLower(prometheusPodlabel)
+				value := podLabels[k8Podlabel]
+				if value == "" {
+					labels[label] = ""
+				} else {
+					labels[label] = value
+				}
+			}
+		} else {
+			// Not pod info, so empty value
+			for prometheusPodlabel := range extraPodLabelsMap {
+				label := strings.ToLower(prometheusPodlabel)
+				labels[label] = ""
+			}
 		}
 	}
 
