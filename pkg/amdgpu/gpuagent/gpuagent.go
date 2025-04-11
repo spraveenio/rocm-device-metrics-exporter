@@ -19,6 +19,7 @@ package gpuagent
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -305,4 +306,26 @@ func (ga *GPUAgentClient) Close() {
 	}
 	// cancel all context
 	ga.cancel()
+}
+
+func (ga *GPUAgentClient) FetchPodLabelsForNode(nodeName string) (map[PodUniqueKey]map[string]string, error) {
+	// Initialize the resulting map
+	k8PodLabelsMap := make(map[PodUniqueKey]map[string]string)
+
+	pods, err := ga.k8sLabelClient.GetAllPods(nodeName)
+	if err != nil {
+		log.Printf("Error fetching pods for node %v: %v", nodeName, err)
+		return nil, err
+	}
+
+	// Process each pod and populate the map
+	for _, pod := range pods.Items {
+		podKey := PodUniqueKey{
+			PodName:   pod.Name,
+			Namespace: pod.Namespace,
+		}
+		k8PodLabelsMap[podKey] = pod.Labels
+	}
+
+	return k8PodLabelsMap, nil
 }
