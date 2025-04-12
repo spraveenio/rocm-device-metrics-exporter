@@ -54,7 +54,7 @@ _Usage of bin/amd-metrics-exporter_
       
     - To run the exporter from docker registery
     ```
-    docker run -itd --device=/dev/dri --device=/dev/kfd -p 5000:5000 --name exporter rocm/device-metrics-exporter:v1.0.0
+    docker run -itd --device=/dev/dri --device=/dev/kfd -p 5000:5000 --name exporter rocm/device-metrics-exporter:v1.2.1
     ```
     ```
     # mount /var/run/slurm/  to receive slurm notifications
@@ -88,7 +88,7 @@ _Usage of bin/amd-metrics-exporter_
 
   -  package installation
     ```
-    $ dpkg -i amdgpu-exporter_1.2.0_amd64.deb
+    $ dpkg -i amdgpu-exporter_1.2.1_amd64.deb
     ```
 
   - default config file path _/etc/metrics/config.json_
@@ -135,7 +135,7 @@ _Usage of bin/amd-metrics-exporter_
     - create your config in directory `config/config.json`
     - start docker container
      ```
-     docker run -itd --device=/dev/dri --device=/dev/kfd -v ./config:/etc/metrics -p 5000:5000 --name exporter rocm/device-metrics-exporter:v1.0.0
+     docker run -itd --device=/dev/dri --device=/dev/kfd -v ./config:/etc/metrics -p 5000:5000 --name exporter rocm/device-metrics-exporter:v1.2.1
      ```
 - The update to config file will take affect graciously without needing the
   container to be restarted. The new config will take effect in less than 1 minute interval.
@@ -280,7 +280,7 @@ All dashboard json are provided under directory `grafana`
         ```
     - AMD Metrics Exporter Installation and Setup 
         ```
-        dpkg -i amdgpu-exporter_1.2.0_amd64.deb
+        dpkg -i amdgpu-exporter_1.2.1_amd64.deb
 
         systemctl enable amd-metrics-exporter.service
         systemctl start amd-metrics-exporter.service
@@ -312,7 +312,7 @@ All dashboard json are provided under directory `grafana`
     ```
   - (Optional) if you want to customize the exported stats, please create a configmap by using ```example/configmap.yaml``` (please modify the namespace to align with helm install command), and put the configmap name into ```values.yaml```.
   - Run ```helm install``` command to deploy exporter in your Kubernetes cluster:
-    ```helm install exporter ./device-metrics-exporter-charts-v1.0.0.tgz -n mynamespace -f values.yaml```
+    ```helm install exporter ./device-metrics-exporter-charts-v1.2.1.tgz -n mynamespace -f values.yaml```
 - Update config:
   - Option 1: you can directly modify the Kubernetes resource to modify the config, including modifying configmap, service, rbac or daemonset resources.
   - Option 2: you can prepare the updated ```values.yaml``` and do a helm chart upgrade: ```helm upgrade exporter -n mynamespace -f updated_values.yaml```
