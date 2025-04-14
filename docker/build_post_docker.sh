@@ -20,4 +20,4 @@
 #
 
 ls -al
-rm -rf gpuagent gpuctl amd-metrics-exporter metricsclient libamd_smi.so*
+rm -rf gpuagent gpuctl amd-metrics-exporter metricsclient libamd_smi.so* LICENSE

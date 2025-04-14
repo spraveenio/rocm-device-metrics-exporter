@@ -30,3 +30,4 @@ cp $TOP_DIR/assets/patch/$OS/libamd_smi.so.24.7.60300 $TOP_DIR/docker/
 ln -f $TOP_DIR/assets/gpuctl.gobin $TOP_DIR/docker/gpuctl
 ln -f $TOP_DIR/bin/amd-metrics-exporter $TOP_DIR/docker/amd-metrics-exporter
 ln -f $TOP_DIR/bin/metricsclient $TOP_DIR/docker/metricsclient
+cp $TOP_DIR/LICENSE $TOP_DIR/docker/LICENSE

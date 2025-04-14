@@ -38,6 +38,7 @@ RUN dnf install rocm-validation-suite -y && \
     dnf clean all
 
 ADD amd-test-runner /amd-test-runner
+ADD LICENSE /licenses/LICENSE
 RUN chmod +x /amd-test-runner
 
 LABEL name="amd-device-test-runner" \ 
