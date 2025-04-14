@@ -34,4 +34,12 @@ ADD amd-test-runner /amd-test-runner
 ADD LICENSE /licenses/LICENSE
 RUN chmod +x /amd-test-runner
 
+LABEL name="amd-device-test-runner" \ 
+    maintainer="yan.sun3@amd.com,udaybhaskar.biluri@amd.com,shrey.ajmera@amd.com" \
+    vendor="Advanced Micro Devices, Inc." \
+    version="v1.3.0" \
+    release="v1.3.0" \
+    summary="AMD Device Test Runner performs troubleshooting and benchmarking tests on AMD GPUs across Kubernetes clusters." \
+    description="AMD Device Test Runner ensures that GPUs are functioning correctly and efficiently by running a series of diagnostic tests and performance benchmarks. It helps identify issues, optimize GPU performance, and validate the readiness of GPU resources."
+
 ENTRYPOINT ["/amd-test-runner"]
