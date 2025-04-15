@@ -22,8 +22,8 @@ import (
 	"sync"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/gen/nicmetrics"
-	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/nicagent/utils"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -58,7 +58,9 @@ func (nc *NICCtlClient) UpdateNICStats() error {
 		wg.Add(1)
 		go func(f func() error) {
 			defer wg.Done()
-			f()
+			if err := f(); err != nil {
+				logger.Log.Printf("failed to update NIC stats, err: %+v", err)
+			}
 		}(fn)
 	}
 	wg.Wait()

@@ -97,7 +97,9 @@ func (na *NICAgentClient) getMetricsAll() error {
 		wg.Add(1)
 		go func(client NICInterface) {
 			defer wg.Done()
-			client.UpdateNICStats()
+			if err := client.UpdateNICStats(); err != nil {
+				logger.Log.Printf("failed to update NIC stats, err: %v", err)
+			}
 		}(client)
 	}
 	wg.Wait()
