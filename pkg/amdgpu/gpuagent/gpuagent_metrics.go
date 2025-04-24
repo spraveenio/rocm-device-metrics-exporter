@@ -161,6 +161,13 @@ type metrics struct {
 
 	gpuXgmiLinkStatsRx prometheus.GaugeVec
 	gpuXgmiLinkStatsTx prometheus.GaugeVec
+
+	gpuCurrAccCtr prometheus.GaugeVec
+	gpuProcHRA    prometheus.GaugeVec
+	gpuPPTRA      prometheus.GaugeVec
+	gpuSTRA       prometheus.GaugeVec
+	gpuVRTRA      prometheus.GaugeVec
+	gpuHBMTRA     prometheus.GaugeVec
 }
 
 func (ga *GPUAgentClient) ResetMetrics() error {
@@ -256,6 +263,12 @@ func (ga *GPUAgentClient) ResetMetrics() error {
 	ga.m.gpuHealth.Reset()
 	ga.m.gpuXgmiLinkStatsRx.Reset()
 	ga.m.gpuXgmiLinkStatsTx.Reset()
+	ga.m.gpuCurrAccCtr.Reset()
+	ga.m.gpuProcHRA.Reset()
+	ga.m.gpuPPTRA.Reset()
+	ga.m.gpuSTRA.Reset()
+	ga.m.gpuVRTRA.Reset()
+	ga.m.gpuHBMTRA.Reset()
 	return nil
 }
 
@@ -495,6 +508,12 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		ga.m.gpuHealth,
 		ga.m.gpuXgmiLinkStatsRx,
 		ga.m.gpuXgmiLinkStatsTx,
+		ga.m.gpuCurrAccCtr,
+		ga.m.gpuProcHRA,
+		ga.m.gpuPPTRA,
+		ga.m.gpuSTRA,
+		ga.m.gpuVRTRA,
+		ga.m.gpuHBMTRA,
 	}
 
 }
@@ -963,6 +982,36 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Help: "XGMI Link Data Write in KB",
 		},
 			append([]string{"link_index"}, labels...)),
+		gpuCurrAccCtr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_violation_current_accumulated_counter",
+			Help: "current accumulated violation counter",
+		},
+			labels),
+		gpuProcHRA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_violation_proc_hot_residency_accumulated",
+			Help: "process hot residency accumulated violation counter",
+		},
+			labels),
+		gpuPPTRA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_violation_ppt_residency_accumulated",
+			Help: "package power tracking accumulated violation counter",
+		},
+			labels),
+		gpuSTRA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_violation_soc_thermal_residency_accumulated",
+			Help: "socket thermal accumulated violation counter",
+		},
+			labels),
+		gpuVRTRA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_violation_vr_thermal_tracking_accumulated",
+			Help: "voltage rail accumulated violation counter",
+		},
+			labels),
+		gpuHBMTRA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_violation_hbm_thermal_residency_accumulated",
+			Help: "HBM accumulated violation counter",
+		},
+			labels),
 	}
 	ga.initFieldMetricsMap()
 
@@ -1332,6 +1381,15 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(wls map[string]scheduler.Worklo
 			ga.m.gpuXgmiLinkStatsTx.With(labelsWithIndex).Set(normalizeUint64(linkStat.DataWrite))
 		}
 		delete(labelsWithIndex, "link_index")
+	}
+	violationStats := stats.ViolationStats
+	if violationStats != nil {
+		ga.m.gpuCurrAccCtr.With(labels).Set(normalizeUint64(violationStats.CurrentAccumulatedCounter))
+		ga.m.gpuProcHRA.With(labels).Set(normalizeUint64(violationStats.ProcessorHotResidencyAccumulated))
+		ga.m.gpuPPTRA.With(labels).Set(normalizeUint64(violationStats.PPTResidencyAccumulated))
+		ga.m.gpuSTRA.With(labels).Set(normalizeUint64(violationStats.SocketThermalResidencyAccumulated))
+		ga.m.gpuVRTRA.With(labels).Set(normalizeUint64(violationStats.VRThermalResidencyAccumulated))
+		ga.m.gpuHBMTRA.With(labels).Set(normalizeUint64(violationStats.VRThermalResidencyAccumulated))
 	}
 }
 
