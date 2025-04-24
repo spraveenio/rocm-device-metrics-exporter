@@ -138,7 +138,6 @@ docker-shell:
 		-e "GIT_VERSION=${GIT_VERSION}" \
 		-e "BUILD_DATE=${BUILD_DATE}" \
 		-v $(CURDIR):$(CONTAINER_WORKDIR) \
-		-v $(HOME)/.ssh:/home/$(shell whoami)/.ssh \
 		-w $(CONTAINER_WORKDIR) \
 		$(BUILD_CONTAINER) \
 		bash -c "cd $(CONTAINER_WORKDIR) && git config --global --add safe.directory $(CONTAINER_WORKDIR) && bash"
@@ -154,7 +153,6 @@ docker-compile:
 		-e "GIT_VERSION=${GIT_VERSION}" \
 		-e "BUILD_DATE=${BUILD_DATE}" \
 		-v $(CURDIR):$(CONTAINER_WORKDIR) \
-		-v $(HOME)/.ssh:/home/$(shell whoami)/.ssh \
 		-w $(CONTAINER_WORKDIR) \
 		$(BUILD_CONTAINER) \
 		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make all"
