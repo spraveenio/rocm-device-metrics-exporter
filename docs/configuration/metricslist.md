@@ -95,6 +95,12 @@ The following table contains a full list of GPU Metrics that are available using
 | GPU_ECC_UNCORRECT_IH            | Uncorrectable ECC error in IH                                              |
 | GPU_ECC_CORRECT_MPIO            | Correctable ECC error in MPIO                                              |
 | GPU_ECC_UNCORRECT_MPIO          | Uncorrectable ECC error in MPIO                                            |
+| GPU_CURRENT_ACCUMULATED_COUNTER                    | Current Accumulated Violation Counter                             |
+| GPU_VIOLATION_PROCESSOR_HOT_RESIDENCY_ACCUMULATED  | Process Hot Residency Accumulated Violation Counter               |
+| GPU_VIOLATION_PPT_RESIDENCY_ACCUMULATED            | Package Power Tracking Accumulated Violation Counter              |
+| GPU_VIOLATION_SOCKET_THERMAL_RESIDENCY_ACCUMULATED | Socket Thermal accumulated Violation Counter                      |
+| GPU_VIOLATION_VR_THERMAL_RESIDENCY_ACCUMULATED     | Voltage Rail accumulated Violation Counter                        |
+| GPU_VIOLATION_HBM_THERMAL_RESIDENCY_ACCUMULATED    | HBM Accumulated Violation Counter                                 |
 
 ## GPU_CLOCK measurements
 
