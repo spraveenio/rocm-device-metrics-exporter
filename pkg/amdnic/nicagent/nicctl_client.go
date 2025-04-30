@@ -46,8 +46,17 @@ func (nc *NICCtlClient) Init() error {
 	return nil
 }
 
+func (nc *NICCtlClient) IsActive() bool {
+	nc.Lock()
+	defer nc.Unlock()
+	if _, err := exec.LookPath(NICCtlBinary); err == nil {
+		return true
+	}
+	return false
+}
+
 func (rc *NICCtlClient) GetClientName() string {
-	return "NICCTL_Client"
+	return NICCtlClientName
 }
 
 func (nc *NICCtlClient) UpdateNICStats() error {

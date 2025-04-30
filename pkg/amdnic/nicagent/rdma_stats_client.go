@@ -82,9 +82,17 @@ func (rc *RDMAStatsClient) Init() error {
 	}
 	return nil
 }
+func (rc *RDMAStatsClient) IsActive() bool {
+	rc.Lock()
+	defer rc.Unlock()
+	if _, err := exec.LookPath(RDMABinary); err == nil {
+		return true
+	}
+	return false
+}
 
 func (rc *RDMAStatsClient) GetClientName() string {
-	return "RDMA_Stats_Client"
+	return RDMAClientName
 }
 
 func (rc *RDMAStatsClient) UpdateNICStats() error {

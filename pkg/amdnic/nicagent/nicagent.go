@@ -48,7 +48,7 @@ func (na *NICAgentClient) initClients() (err error) {
 }
 
 func NewAgent(mh *metricsutil.MetricsHandler) *NICAgentClient {
-	na := &NICAgentClient{mh: mh}
+	na := &NICAgentClient{mh: mh, nics: make(map[string]*NIC)}
 	na.nicClients = []NICInterface{}
 	return na
 }
@@ -90,15 +90,35 @@ func (na *NICAgentClient) initializeContext() {
 	na.ctx = ctx
 	na.cancel = cancel
 }
+func (na *NICAgentClient) initLocalCacheIfRequired() {
+	na.Lock()
+	defer na.Unlock()
+	if na.nicClients != nil {
+		for _, client := range na.nicClients {
+			if len(na.nics) == 0 && client.GetClientName() == NICCtlClientName && client.IsActive() {
+				// fetch all the static data that doesn't change (NIC, Port, Lif, etc.)
+				nics, err := na.getNICs()
+				if err != nil {
+					logger.Log.Printf("failed get NICs, Ports and Lifs, err: %v", err)
+				} else {
+					na.nics = nics
+				}
+			}
+		}
+	}
+}
 
 func (na *NICAgentClient) getMetricsAll() error {
 	var wg sync.WaitGroup
+	na.initLocalCacheIfRequired()
 	for _, client := range na.nicClients {
 		wg.Add(1)
 		go func(client NICInterface) {
 			defer wg.Done()
-			if err := client.UpdateNICStats(); err != nil {
-				logger.Log.Printf("failed to update NIC stats, err: %v", err)
+			if client.IsActive() {
+				if err := client.UpdateNICStats(); err != nil {
+					logger.Log.Printf("failed to update NIC stats, err: %v", err)
+				}
 			}
 		}(client)
 	}
