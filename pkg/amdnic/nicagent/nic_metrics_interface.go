@@ -23,6 +23,8 @@ type NICInterface interface {
 	Init() error
 	// Return NIC Client name implementing this interface
 	GetClientName() string
+	// Returns true if the respective client binary is found, false otherwise
+	IsActive() bool
 }
 
 // NIC represents the card data

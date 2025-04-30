@@ -25,4 +25,11 @@ const (
 	LabelRdmaIfName = "rdma_if_name"
 	// Netdevice name label for RDMA  metrics
 	LabelRdmaNetDev = "rdma_net_dev"
+	// Lif name label for Lif metrics
+	LabelLifName = "lif_name"
+
+	RDMAClientName   = "RDMA_Stats_Client"
+	NICCtlClientName = "NICCTL_Client"
+	NICCtlBinary     = "nicctl"
+	RDMABinary       = "rdma"
 )
