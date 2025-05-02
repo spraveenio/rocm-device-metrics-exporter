@@ -14,3 +14,7 @@ assets:
   - name    : amd_smi_lib
     version : 0e0623a
     branch  : amd-mainline
+
+  - name    : rocprofiler
+    version : 6.3.3
+    brnach  : na

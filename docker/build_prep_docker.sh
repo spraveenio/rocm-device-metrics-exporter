@@ -40,6 +40,19 @@ else
     echo "Copying prebuilt amdsmi to docker"
     cp -vf $TOP_DIR/assets/amd_smi_lib/x86_64/$OS/lib/libamd_smi.so.24.6 $TOP_DIR/docker/
 fi
+
+if [ -f $TOP_DIR/rocprofilerclient/build/librocpclient.so ]; then
+	echo "Copying newly built rocprofiler libs and binary"
+	cp -vf $TOP_DIR/rocprofilerclient/build/librocpclient.so $TOP_DIR/docker/
+	cp -vf $TOP_DIR/rocprofilerclient/build/rocpctl $TOP_DIR/docker/
+else
+	# copy prebuilt
+	echo "Copying prebuilt rocprofiler libs and binary"
+	cp -vf $TOP_DIR/assets/rocprofiler/librocpclient.so $TOP_DIR/docker/
+	cp -vf $TOP_DIR/assets/rocprofiler/rocpctl $TOP_DIR/docker/
+fi
+
+chmod +x $TOP_DIR/docker/rocpctl
 ln -f $TOP_DIR/assets/gpuctl.gobin $TOP_DIR/docker/gpuctl
 ln -f $TOP_DIR/bin/amd-metrics-exporter $TOP_DIR/docker/amd-metrics-exporter
 ln -f $TOP_DIR/bin/metricsclient $TOP_DIR/docker/metricsclient

@@ -15,7 +15,7 @@ fi
 rm -rf build 2>&1 || true
 mkdir build
 cd build
-cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ ..
+cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DENABLE_ESMI_LIB=OFF ..
 
 make -j $(nproc)
 make install
