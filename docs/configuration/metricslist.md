@@ -101,6 +101,56 @@ The following table contains a full list of GPU Metrics that are available using
 | GPU_VIOLATION_SOCKET_THERMAL_RESIDENCY_ACCUMULATED | Socket Thermal accumulated Violation Counter                      |
 | GPU_VIOLATION_VR_THERMAL_RESIDENCY_ACCUMULATED     | Voltage Rail accumulated Violation Counter                        |
 | GPU_VIOLATION_HBM_THERMAL_RESIDENCY_ACCUMULATED    | HBM Accumulated Violation Counter                                 |
+| GPU_PROF_GRBM_GUI_ACTIVE                         | Number of GPU active cycles                                                                      |
+| GPU_PROF_SQ_WAVES                                | Number of wavefronts dispatched to sequencers, including both new and restored wavefronts        |
+| GPU_PROF_GRBM_COUNT                              | Number of free-running GPU cycles                                                                |
+| GPU_PROF_CPC_CPC_STAT_BUSY                       | Number of cycles command processor-compute is busy                                               |
+| GPU_PROF_CPC_CPC_STAT_IDLE                       | Number of cycles command processor-compute is idle                                               |
+| GPU_PROF_CPC_CPC_STAT_STALL                      | Number of cycles command processor-compute is stalled                                            |
+| GPU_PROF_CPC_CPC_TCIU_BUSY                       | Number of cycles command processor-compute texture cache interface unit interface is busy        |
+| GPU_PROF_CPC_CPC_TCIU_IDLE                       | Number of cycles command processor-compute texture cache interface unit interface is idle        |
+| GPU_PROF_CPC_CPC_UTCL2IU_BUSY                    | Number of cycles command processor-compute unified translation cache (L2) interface is busy      |
+| GPU_PROF_CPC_CPC_UTCL2IU_IDLE                    | Number of cycles command processor-compute unified translation cache (L2) interface is idle      |
+| GPU_PROF_CPC_CPC_UTCL2IU_STALL                   | Number of cycles command processor-compute unified translation cache (L2) interface is stalled   |
+| GPU_PROF_CPC_ME1_BUSY_FOR_PACKET_DECODE          | Number of cycles command processor-compute micro engine is busy decoding packets                 |
+| GPU_PROF_CPC_ME1_DC0_SPI_BUSY                    | Number of cycles command processor-compute micro engine processor is busy                        |
+| GPU_PROF_CPC_UTCL1_STALL_ON_TRANSLATION          | Number of cycles one of the unified translation caches (L1) is stalled waiting on translation    |
+| GPU_PROF_CPC_ALWAYS_COUNT                        | CPC Always Count                                                                                 |
+| GPU_PROF_CPC_ADC_VALID_CHUNK_NOT_AVAIL           | CPC ADC valid chunk not available when dispatch walking is in progress at multi-xcc mode         |
+| GPU_PROF_CPC_ADC_DISPATCH_ALLOC_DONE             | CPC ADC dispatch allocation done                                                                 |
+| GPU_PROF_CPC_ADC_VALID_CHUNK_END                 | CPC ADC cralwer valid chunk end at multi-xcc mode                                                |
+| GPU_PROF_CPC_SYNC_FIFO_FULL_LEVEL                | CPC SYNC FIFO full last cycles                                                                   |
+| GPU_PROF_CPC_SYNC_FIFO_FULL                      | CPC SYNC FIFO full times                                                                         |
+| GPU_PROF_CPC_GD_BUSY                             | CPC ADC busy                                                                                     |
+| GPU_PROF_CPC_TG_SEND                             | CPC ADC thread group send                                                                        |
+| GPU_PROF_CPC_WALK_NEXT_CHUNK                     | CPC ADC walking next valid chunk at multi-xcc mode                                               |
+| GPU_PROF_CPC_STALLED_BY_SE0_SPI                  | CPC ADC csdata stalled by SE0SPI                                                                 |
+| GPU_PROF_CPC_STALLED_BY_SE1_SPI                  | CPC ADC csdata stalled by SE1SPI                                                                 |
+| GPU_PROF_CPC_STALLED_BY_SE2_SPI                  | CPC ADC csdata stalled by SE2SPI                                                                 |
+| GPU_PROF_CPC_STALLED_BY_SE3_SPI                  | CPC ADC csdata stalled by SE3SPI                                                                 |
+| GPU_PROF_CPC_LTE_ALL                             | CPC Sync counter LteAll, only Master XCD cares LteAll                                            |
+| GPU_PROF_CPC_SYNC_WRREQ_FIFO_BUSY                | CPC Sync Counter Request Fifo is not empty                                                       |
+| GPU_PROF_CPC_CANE_BUSY                           | CPC CANE bus busy, means there are inflight sync counter requests                                |
+| GPU_PROF_CPC_CANE_STALL                          | CPC Sync counter sending is stalled by CANE                                                      |
+| GPU_PROF_CPF_CMP_UTCL1_STALL_ON_TRANSLATION      | One of the Compute UTCL1s is stalled waiting on translation, XNACK or PENDING respons            |
+| GPU_PROF_CPF_CPF_STAT_BUSY                       | CPF Busy                                                                                         |
+| GPU_PROF_CPF_CPF_STAT_IDLE                       | CPF Idle                                                                                         |
+| GPU_PROF_CPF_CPF_STAT_STALL                      | CPF Stalled                                                                                      |
+| GPU_PROF_CPF_CPF_TCIU_BUSY                       | CPF TCIU interface Busy                                                                          |
+| GPU_PROF_CPF_CPF_TCIU_IDLE                       | CPF TCIU interface Idle                                                                          |
+| GPU_PROF_CPF_CPF_TCIU_STALL                      | CPF TCIU interface Stalled waiting on Free, Tags                                                 |
+| GPU_PROF_FETCH_SIZE                              | The total kilobytes fetched from the video memory. This is measured with all extra fetches and any cache or memory effects taken into account  |
+| GPU_PROF_WRITE_SIZE                              | The total kilobytes written to the video memory. This is measured with all extra fetches and any cache or memory effects taken into account  |
+| GPU_PROF_TOTAL_16_OPS                            | The number of 16 bits OPS executed                                                               |
+| GPU_PROF_TOTAL_32_OPS                            | The number of 32 bits OPS executed                                                               |
+| GPU_PROF_TOTAL_64_OPS                            | The number of 64 bits OPS executed                                                               |
+| GPU_PROF_GUI_UTIL_PERCENT                        | Percentage of the time that GUI is active                                                        |
+| GPU_PROF_OCCUPANCY_PERCENT                       | GPU Occupancy as Percentage of maximum                                                           |
+| GPU_PROF_TENSOR_ACTIVE_PERCENT                   | MFMA Utililization Unit percent                                                                  |
+| GPU_PROF_VALU_PIPE_ISSUE_UTIL                    | Percentage of the time that GUI is active                                                        |
+| GPU_PROF_SM_ACTIVE                               | The percentage of GPUTime vector ALU instructions are processed. Value range: 0% (bad) to 100% (optimal)  |
+| GPU_PROF_OCCUPANCY_ELAPSED                       | Number of GPU active cycles                                                                      |
+| GPU_PROF_OCCUPANCY_PER_ACTIVE_CU                 | Mean occupancy per active compute unit                                                           |
 
 ## GPU_CLOCK measurements
 
