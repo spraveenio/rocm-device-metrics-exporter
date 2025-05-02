@@ -84,8 +84,8 @@ func (mh *MetricsHandler) UpdateMetrics() error {
 			if err := client.ResetMetrics(); err != nil {
 				logger.Log.Printf("failed to resetb metrics: %v", err)
 			}
-			if err := client.UpdateStaticMetrics(); err != nil {
-				logger.Log.Printf("failed to update static metrics: %v", err)
+			if err := client.UpdateMetricsStats(); err != nil {
+				logger.Log.Printf("failed to update metrics: %v", err)
 			}
 		}(client)
 	}

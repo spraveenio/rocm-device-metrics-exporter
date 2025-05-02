@@ -120,7 +120,7 @@ func setupTest(t *testing.T) func(t *testing.T) {
 
 func getNewAgent(t *testing.T) *GPUAgentClient {
 	// setup zmq mock port
-	ga := NewAgent(mh, true)
+	ga := NewAgent(mh, true, false)
 	ga.initializeContext()
 	ga.gpuclient = gpuMockCl
 	ga.evtclient = eventMockCl

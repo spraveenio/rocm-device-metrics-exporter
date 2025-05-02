@@ -20,12 +20,14 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/rocprofiler"
 	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
@@ -47,12 +49,14 @@ type GPUAgentClient struct {
 	mh                     *metricsutil.MetricsHandler
 	gpuclient              amdgpu.GPUSvcClient
 	evtclient              amdgpu.EventSvcClient
+	rocpclient             *rocprofiler.ROCProfilerClient
 	m                      *metrics // client specific metrics
 	k8sLabelClient         *k8sclient.K8sClient
 	k8sScheduler           scheduler.SchedulerClient
 	slurmScheduler         scheduler.SchedulerClient
 	isKubernetes           bool
 	enableZmq              bool
+	enableProfileMetrics   bool
 	staticHostLabels       map[string]string
 	ctx                    context.Context
 	cancel                 context.CancelFunc
@@ -74,10 +78,15 @@ func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclie
 	return
 }
 
-func NewAgent(mh *metricsutil.MetricsHandler, enableZmq bool) *GPUAgentClient {
+func NewAgent(mh *metricsutil.MetricsHandler, enableZmq bool, enableProfiler bool) *GPUAgentClient {
 	ga := &GPUAgentClient{mh: mh, enableZmq: enableZmq, computeNodeHealthState: true}
 	ga.healthState = make(map[string]*metricssvc.GPUState)
 	ga.mockEccField = make(map[string]map[string]uint32)
+	if enableProfiler {
+		logger.Log.Printf("Profiler metrics client enabled")
+		ga.rocpclient = rocprofiler.NewRocProfilerClient("rocpclient")
+		ga.enableProfileMetrics = true
+	}
 	mh.RegisterMetricsClient(ga)
 	return ga
 }
@@ -188,6 +197,44 @@ func (ga *GPUAgentClient) sendNodeLabelUpdate() error {
 	return nil
 }
 
+func (ga *GPUAgentClient) isProfilerEnabled() bool {
+	if ga.rocpclient == nil || !ga.enableProfileMetrics {
+		// profiler is disabled either at boot time or through configmap
+		return false
+	}
+	return true
+}
+
+func strDoubleToFloat(strValue string) float64 {
+	floatValue, err := strconv.ParseFloat(strValue, 64)
+	if err != nil {
+		fmt.Println("Error parsing string:", err)
+		return 0.0
+	}
+	return floatValue
+}
+
+// make it easy to parse from json
+func (ga *GPUAgentClient) getProfilerMetrics() (map[string]map[string]float64, error) {
+	gpuMetrics := make(map[string]map[string]float64)
+	// stop exporting fields when disabled
+	if !ga.isProfilerEnabled() {
+		return gpuMetrics, nil
+	}
+	gpuProfiler, err := ga.rocpclient.GetMetrics()
+	if err != nil {
+		return gpuMetrics, err
+	}
+	for _, gpu := range gpuProfiler.GpuMetrics {
+		gpuMetric := make(map[string]float64)
+		for _, m := range gpu.Metrics {
+			gpuMetric[m.Field] = strDoubleToFloat(m.Value)
+		}
+		gpuMetrics[gpu.GpuId] = gpuMetric
+	}
+	return gpuMetrics, nil
+}
+
 func (ga *GPUAgentClient) getMetricsAll() error {
 	// send the req to gpuclient
 	resp, err := ga.getGPUs()
@@ -199,8 +246,20 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
 	wls, _ := ga.ListWorkloads()
+	pmetrics, err := ga.getProfilerMetrics()
+	if err != nil {
+		//continue as this may not be available at this time
+		pmetrics = nil
+	}
 	for _, gpu := range resp.Response {
-		ga.updateGPUInfoToMetrics(wls, gpu)
+		var gpuProfMetrics map[string]float64
+		// if available use the data
+		if pmetrics != nil {
+			gpuid := fmt.Sprintf("%v", getGPUInstanceID(gpu))
+			//nolint
+			gpuProfMetrics, _ = pmetrics[gpuid]
+		}
+		ga.updateGPUInfoToMetrics(wls, gpu, gpuProfMetrics)
 	}
 
 	return nil
@@ -261,6 +320,9 @@ func (ga *GPUAgentClient) ListWorkloads() (wls map[string]scheduler.Workload, er
 			return
 		}
 	}
+	if ga.slurmScheduler == nil {
+		return
+	}
 	swls, err := ga.slurmScheduler.ListWorkloads()
 	if err != nil {
 		return
@@ -277,6 +339,9 @@ func (ga *GPUAgentClient) checkExportLabels(exportLabels map[string]bool) bool {
 		if ga.k8sScheduler.CheckExportLabels(exportLabels) {
 			return true
 		}
+	}
+	if ga.slurmScheduler == nil {
+		return false
 	}
 	if ga.slurmScheduler.CheckExportLabels(exportLabels) {
 		return true

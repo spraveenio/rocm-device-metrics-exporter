@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gpuagent"
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/rocprofiler"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/config"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
@@ -46,9 +47,10 @@ const (
 )
 
 var (
-	mh        *metricsutil.MetricsHandler
-	gpuclient *gpuagent.GPUAgentClient
-	runConf   *config.ConfigHandler
+	mh         *metricsutil.MetricsHandler
+	gpuclient  *gpuagent.GPUAgentClient
+	rocpclient *rocprofiler.ROCProfilerClient
+	runConf    *config.ConfigHandler
 )
 
 // ExporterOption set desired option
@@ -234,7 +236,7 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()
 
-	gpuclient = gpuagent.NewAgent(mh, !e.zmqDisable)
+	gpuclient = gpuagent.NewAgent(mh, !e.zmqDisable, true)
 	if err := gpuclient.Init(); err != nil {
 		logger.Log.Printf("gpuclient init err :%+v", err)
 	}
