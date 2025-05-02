@@ -26,11 +26,13 @@ GPUAGENT_BUILDER_IMAGE ?= gpuagent-builder:v1
 AMDSMI_BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:9.4
 AMDSMI_BASE_UBUNTU22 ?= ubuntu:22.04
 AMDSMI_BASE_UBUNTU24 ?= ubuntu:24.04
-AMDSMi_BASE_AZURE ?= mcr.microsoft.com/azurelinux/base/core:3.0
+AMDSMI_BASE_AZURE ?= mcr.microsoft.com/azurelinux/base/core:3.0
+ROCPROFILER_BASE_UBUNTU22 ?= ubuntu:22.04
 AMDSMI_BUILDER_IMAGE ?= amdsmi-builder:rhel9
 AMDSMI_BUILDER_UB22_IMAGE ?= amdsmi-builder:ub22
 AMDSMI_BUILDER_UB24_IMAGE ?= amdsmi-builder:ub24
 AMDSMI_BUILDER_AZURE_IMAGE ?= amdsmi-builder:azure
+ROCPROFILER_BUILDER_IMAGE ?= rocprofiler-builder:ub22
 
 # export environment variables used across project
 export DOCKER_REGISTRY
@@ -48,19 +50,20 @@ export TEST_RUNNER_RHEL_BASE_IMAGE
 export RHEL_BASE_MIN_IMAGE
 export AZURE_BASE_IMAGE
 
-# amdsmi builder base images and tags
+# asset builder base images and tags
 export AMDSMI_BASE_IMAGE
 export AMDSMI_BASE_UBUNTU22
 export AMDSMI_BASE_UBUNTU24
 export AMDSMI_BASE_AZURE
 export GPUAGENT_BUILDER_IMAGE
+export ROCPROFILER_BASE_UBUNTU22
 
-# gpuagent builder base images and tags
 export AMDSMI_BUILDER_IMAGE
 export AMDSMI_BUILDER_UB22_IMAGE
 export AMDSMI_BUILDER_UB24_IMAGE
 export AMDSMI_BUILDER_AZURE_IMAGE
 export GPUAGENT_BASE_IMAGE
+export ROCPROFILER_BUILDER_IMAGE
 
 TO_GEN := pkg/amdgpu/proto pkg/exporter/proto
 TO_MOCK := pkg/amdgpu/mock
@@ -344,9 +347,25 @@ slurm-sim:
 build-dev-container:
 	${MAKE} -C tools/base-image all INSECURE_REGISTRY=$(INSECURE_REGISTRY)
 
+.PHONY: amdsmi-build-all-builders
+amdsmi-build-all-builders:
+	${MAKE} amdsmi-build-azure
+	${MAKE} amdsmi-build-ub24
+	${MAKE} amdsmi-build-ub22
+	${MAKE} amdsmi-build-rhel
+
+.PHONY: amdsmi-compile-all
+amdsmi-compile-all:
+	${MAKE} amdsmi-compile-azure
+	${MAKE} amdsmi-compile-ub24
+	${MAKE} amdsmi-compile-ub22
+	${MAKE} amdsmi-compile-rhel
+
+# build all components
 .PHONY: build-all
 build-all: 
-	${MAKE} amdsmi-compile-rhel amdsmi-compile-ub22 amdsmi-compile-ub24 amdsmi-compile-azure
+	${MAKE} amdsmi-compile-all
+	${MAKE} rocprofiler-compile
 	${MAKE} gpuagent-compile
 	@echo "Docker image build is available under docker/ directory"
 	${MAKE} docker
