@@ -130,6 +130,65 @@ enum GPUMetricField {
     GPU_VIOLATION_VR_THERMAL_RESIDENCY_ACCUMULATED      = 96;
     GPU_VIOLATION_HBM_THERMAL_RESIDENCY_ACCUMULATED     = 97;
 
+    // Profiler Metrics (reserving 801 to 1200)
+    GPU_PROF_GRBM_GUI_ACTIVE                                 = 801;
+    GPU_PROF_SQ_WAVES                                        = 802;
+    GPU_PROF_GRBM_COUNT                                      = 803;
+    GPU_PROF_CPC_CPC_STAT_BUSY                               = 804;
+    GPU_PROF_CPC_CPC_STAT_IDLE                               = 805;
+    GPU_PROF_CPC_CPC_STAT_STALL                              = 806;
+    GPU_PROF_CPC_CPC_TCIU_BUSY                               = 807;
+    GPU_PROF_CPC_CPC_TCIU_IDLE                               = 808;
+    GPU_PROF_CPC_CPC_UTCL2IU_BUSY                            = 809;
+    GPU_PROF_CPC_CPC_UTCL2IU_IDLE                            = 810;
+    GPU_PROF_CPC_CPC_UTCL2IU_STALL                           = 811;
+    GPU_PROF_CPC_ME1_BUSY_FOR_PACKET_DECODE                  = 812;
+    GPU_PROF_CPC_ME1_DC0_SPI_BUSY                            = 813;
+    GPU_PROF_CPC_UTCL1_STALL_ON_TRANSLATION                  = 814;
+    GPU_PROF_CPC_ALWAYS_COUNT                                = 815;
+    GPU_PROF_CPC_ADC_VALID_CHUNK_NOT_AVAIL                   = 816;
+    GPU_PROF_CPC_ADC_DISPATCH_ALLOC_DONE                     = 817;
+    GPU_PROF_CPC_ADC_VALID_CHUNK_END                         = 818;
+    GPU_PROF_CPC_SYNC_FIFO_FULL_LEVEL                        = 819;
+    GPU_PROF_CPC_SYNC_FIFO_FULL                              = 820;
+    GPU_PROF_CPC_GD_BUSY                                     = 821;
+    GPU_PROF_CPC_TG_SEND                                     = 822;
+    GPU_PROF_CPC_WALK_NEXT_CHUNK                             = 823;
+    GPU_PROF_CPC_STALLED_BY_SE0_SPI                          = 824;
+    GPU_PROF_CPC_STALLED_BY_SE1_SPI                          = 825;
+    GPU_PROF_CPC_STALLED_BY_SE2_SPI                          = 826;
+    GPU_PROF_CPC_STALLED_BY_SE3_SPI                          = 827;
+    GPU_PROF_CPC_LTE_ALL                                     = 828;
+    GPU_PROF_CPC_SYNC_WRREQ_FIFO_BUSY                        = 829;
+    GPU_PROF_CPC_CANE_BUSY                                   = 830;
+    GPU_PROF_CPC_CANE_STALL                                  = 831;
+    GPU_PROF_CPF_CMP_UTCL1_STALL_ON_TRANSLATION              = 832;
+    GPU_PROF_CPF_CPF_STAT_BUSY                               = 833;
+    GPU_PROF_CPF_CPF_STAT_IDLE                               = 834;
+    GPU_PROF_CPF_CPF_STAT_STALL                              = 835;
+    GPU_PROF_CPF_CPF_TCIU_BUSY                               = 836;
+    GPU_PROF_CPF_CPF_TCIU_IDLE                               = 837;
+    GPU_PROF_CPF_CPF_TCIU_STALL                              = 838;
+
+    // Profiler Derived Metrics
+    GPU_PROF_FETCH_SIZE                                      = 1000;
+    GPU_PROF_WRITE_SIZE                                      = 1001;
+    GPU_PROF_TOTAL_16_OPS                                    = 1002;
+    GPU_PROF_TOTAL_32_OPS                                    = 1003;
+    GPU_PROF_TOTAL_64_OPS                                    = 1004;
+    GPU_PROF_GUI_UTIL_PERCENT                                = 1005;
+    // OccupancyPercent
+    GPU_PROF_OCCUPANCY_PERCENT                               = 1006;
+    // MfmaUtil
+    GPU_PROF_TENSOR_ACTIVE_PERCENT                           = 1007;
+    // ValuPipeIssueUtil
+    GPU_PROF_VALU_PIPE_ISSUE_UTIL                            = 1008;
+    // VALUBusy
+    GPU_PROF_SM_ACTIVE                                       = 1009;
+    // GRBM_GUI_ACTIVE
+    GPU_PROF_OCCUPANCY_ELAPSED                               = 1010;
+    // MeanOccupancyPerActiveCU
+    GPU_PROF_OCCUPANCY_PER_ACTIVE_CU                         = 1011;
 }
 
 message GPUHealthThresholds {
@@ -201,6 +260,16 @@ message GPUMetricConfig {
 
     // Map of extra pod labels to be exported (prometheus metric name as Key, pod label as value)
     map<string, string> ExtraPodLabels = 6;
+
+    // Map of Profiler Metrics enabled or disabled per node
+    // either specify node name to toggle per node, or specify all to toggle
+    // all nodes, all keyword takes precedense
+    // default/empty - is enabled
+    // true - enabled
+    // false - disabled
+    // if disabled all profiler related fields will not be exported to avoid reporting
+    // wrong values as 0
+    map<string, bool>  ProfilerMetrics = 7;
 }
 
 message MetricConfig {

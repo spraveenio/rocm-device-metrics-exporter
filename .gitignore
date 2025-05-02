@@ -12,3 +12,4 @@ helm-charts/config.json
 sw/nic/build/
 build
 dev.env
+rocprofilerclient/build/

@@ -35,6 +35,17 @@ make default
 The default target creates a docker build container that packages the developer tools required to build all other targets in the Makefile and builds the `all` target in this build container.
 
 ## Building Components
+Each components have prebuilt in assets-build directory. If any changes or
+done to respective components, then the component needs to be rebuilt
+accordingly. Exporter container built after any component built will pack the newly built components.
+
+
+|Component        |  Directory              |   Build Container(one time)      | Compilation Target            |
+|-----------------|-------------------------|----------------------------------|-------------------------------|
+|amd-smi          | $(TOP_DIR)/libamdsmi    | `make amdsmi-build-all-builders` | `make amdsmi-compile-all`     | 
+|gpuagent         | $(TOP_DIR)/gpuagent     | `make gpuagent-build`            | `make gpuagent-compile-full`  |
+|rocprofilerclient| $(TOP_DIR)/rocprofilerclient | `make rocprofiler-build`    | `make rocprofiler-compile`    |
+
 
 ### Build and Launch Docker Build Container Shell
 
@@ -135,6 +146,20 @@ make amdsmi-build
 #### Compile AMDSMI
 ```bash
 make amdsmi-compile
+```
+
+## Build Rocprofiler Library
+This is exporter library built out of ROCm rocprofiler-sdk to access profiler
+metrics.
+
+#### Build Container(one time)
+```bash
+make rocprofiler-build
+```
+
+#### Compile application rocprofiler library
+```bash
+make rocprofiler-compile
 ```
 
 ## Architecture
