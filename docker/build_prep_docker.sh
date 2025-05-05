@@ -32,13 +32,13 @@ else
     fi
 fi
 chmod +x $TOP_DIR/docker/gpuagent
-if [ -d $TOP_DIR/build/assets/$OS/exporterout ]; then
+if [ -d $TOP_DIR/build/assets/$OS/lib ]; then
     # copy built artifacts for the OS else revert to prebuilt files
     echo "Copying newly built amdsmi to docker"
-    cp -vf $TOP_DIR/build/assets/$OS/exporterout/libamd_smi.so.* $TOP_DIR/docker/
+    cp -vf $TOP_DIR/build/assets/$OS/lib/libamd_smi.so.* $TOP_DIR/docker/
 else
     echo "Copying prebuilt amdsmi to docker"
-    cp -vf $TOP_DIR/assets/amd_smi_lib/x86_64/$OS/lib/libamd_smi.so.24.6 $TOP_DIR/docker/
+    cp -vf $TOP_DIR/assets/amd_smi_lib/x86_64/$OS/lib/libamd_smi.so.25.3 $TOP_DIR/docker/
 fi
 
 if [ -f $TOP_DIR/rocprofilerclient/build/librocpclient.so ]; then

@@ -1651,8 +1651,8 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(wls map[string]scheduler.Worklo
 	// gpu usage
 	gpuUsage := stats.Usage
 	if gpuUsage != nil {
-		ga.m.gpuGFXActivity.With(labels).Set(float64(gpuUsage.GFXActivity))
-		ga.m.gpuUMCActivity.With(labels).Set(float64(gpuUsage.UMCActivity))
+		ga.m.gpuGFXActivity.With(labels).Set(normalizeUint64(gpuUsage.GFXActivity))
+		ga.m.gpuUMCActivity.With(labels).Set(normalizeUint64(gpuUsage.UMCActivity))
 		ga.m.gpuMMAActivity.With(labels).Set(normalizeUint64(gpuUsage.MMActivity))
 		for j, act := range gpuUsage.VCNActivity {
 			labelsWithIndex["vcn_index"] = fmt.Sprintf("%v", j)
