@@ -5,8 +5,8 @@ FROM ${BASE_IMAGE}
 LABEL maintainer="AMD Inc"
 LABEL OS="mcr.microsoft.com/azurelinux/base/core:3.0"
 
-ARG ROCM_VERSION=6.3.3
-ARG AMDGPU_VERSION=6.3.3
+ARG ROCM_VERSION=6.4
+ARG AMDGPU_VERSION=6.4
 ARG AMDGPU_REPO_URL=https://repo.radeon.com
 
 RUN tdnf clean all && tdnf install -y ca-certificates && \
@@ -35,9 +35,9 @@ RUN mkdir -p /home/amd/tools/
 
 # override built libraries
 ADD ./librocpclient.so /opt/rocm/lib/librocpclient.so
-ADD ./librocpclient.so /opt/rocm-$ROCM_VERSION/lib/librocpclient.so
-ADD ./libamd_smi.so.24.6 /opt/rocm/lib/libamd_smi.so.24.7.60303
-ADD ./libamd_smi.so.24.6 /opt/rocm-$ROCM_VERSION/lib/libamd_smi.so.24.7.60303
+ADD ./librocpclient.so /opt/rocm-6.4.0/lib/librocpclient.so
+ADD ./libamd_smi.so.25.3 /opt/rocm/lib/libamd_smi.so.25.3.60400
+ADD ./libamd_smi.so.25.3 /opt/rocm-6.4.0/lib/libamd_smi.so.25.3.60400
 
 ADD ./rocpctl /home/amd/bin/rocpctl
 ADD ./gpuagent /home/amd/bin/gpuagent
