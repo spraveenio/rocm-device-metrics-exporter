@@ -1,5 +1,5 @@
 # supported ROCM version
-6.3.3
+6.4.0
 
 # build instruction from roprofiler-builder shell
 
@@ -74,7 +74,7 @@ Successfully Built rocprofiler library
 
 # scratch notes - internal use
 ```bash
-cmake -B build ./ -DCMAKE_PREFIX_PATH=/opt/rocm -DCMAKE_HIP_COMPILER=/opt/rocm-6.3.3/lib/llvm/bin/clang++
+cmake -B build ./ -DCMAKE_PREFIX_PATH=/opt/rocm -DCMAKE_HIP_COMPILER=/opt/rocm-6.4.0/lib/llvm/bin/clang++
 
 cmake --build build --target all
 ```
