@@ -48,5 +48,7 @@ chmod 700 get_helm.sh
 # Install Helm Charts
 helm repo add exporter https://rocm.github.io/device-metrics-exporter
 helm repo update
-helm install exporter exporter/device-metrics-exporter-charts --namespace kube-amd-gpu --create-namespace --version=v1.2.1 -f values.yaml
+helm install exporter \
+  https://github.com/ROCm/device-metrics-exporter/releases/download/v|version|/device-metrics-exporter-charts-v|version|.tgz \
+  -n mynamespace -f values.yaml --create-namespace
 ```

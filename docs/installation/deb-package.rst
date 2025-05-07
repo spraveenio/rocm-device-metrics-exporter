@@ -18,7 +18,7 @@ Each Debian package release of the Standalone Metrics Exporter is dependent on a
    * - Metrics Exporter Debian Version
      - ROCm Version
      - AMDGPU Driver Version
-   * - amdgpu-exporter-1.2.0
+   * - amdgpu-exporter-|debian_version|
      - ROCm 6.3.x
      - 6.10.5
 
@@ -92,13 +92,13 @@ Step 3: Install the APT Prerequisites for Metrics Exporter
 
    .. code-block:: bash
 
-      deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.2.0 jammy main
+      deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/|debian_version| jammy main
 
    **For Ubuntu 24.04**, add the following line:
 
    .. code-block:: bash
 
-      deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.2.0 noble main
+      deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/|debian_version| noble main
 
 3. Update the package list again:
 
