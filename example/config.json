@@ -1,5 +1,8 @@
 {
   "ServerPort": 5000,
+  "CommonConfig": {
+	  "MetricsFieldPrefix": "amd_"
+  },
   "GPUConfig": {
     "Fields": [
       "GPU_NODES_TOTAL",

@@ -119,6 +119,15 @@ func (s *E2ESuite) SetFields(fields []string) error {
 	return s.WriteConfig(config)
 }
 
+func (s *E2ESuite) SetPrefix(prefix string) error {
+	config := s.ReadConfig()
+	if config.GetCommonConfig() == nil {
+		config.CommonConfig = &exportermetrics.CommonConfig{}
+	}
+	config.CommonConfig.MetricsFieldPrefix = prefix
+	return s.WriteConfig(config)
+}
+
 func (s *E2ESuite) SetCustomLabels(customLabels map[string]string) error {
 	config := s.ReadConfig()
 	if config.GetGPUConfig() == nil {

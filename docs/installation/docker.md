@@ -20,15 +20,7 @@ docker run -d \
   --device=/dev/kfd \
   -p 5000:5000 \
   --name device-metrics-exporter \
-<<<<<<< HEAD
-  rocm/device-metrics-exporter:v1.2.1
-=======
-<<<<<<< HEAD
-  rocm/device-metrics-exporter:v1.2.0
-=======
   rocm/device-metrics-exporter:v|version|
->>>>>>> f07723c... set version update support to repo (#433)
->>>>>>> 3fa5877... set version update support to repo (#433) (#435)
 ```
 
 - Confirm metrics are accessible:
