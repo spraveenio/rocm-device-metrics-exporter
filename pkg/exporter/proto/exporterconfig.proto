@@ -263,7 +263,6 @@ message GPUMetricConfig {
 
     // Map of Profiler Metrics enabled or disabled per node
     // either specify node name to toggle per node, or specify all to toggle
-    // all nodes, all keyword takes precedense
     // default/empty - is enabled
     // true - enabled
     // false - disabled
@@ -272,11 +271,18 @@ message GPUMetricConfig {
     map<string, bool>  ProfilerMetrics = 7;
 }
 
+message CommonConfig {
+	// string to add as perfix to all exported fields
+	string MetricsFieldPrefix = 1;
+}
+
 message MetricConfig {
     // server config port
     uint32 ServerPort         = 1;
 
     // GPU Metric config for export
     GPUMetricConfig GPUConfig = 2;
-
+	
+	// Exporter Common Configuration
+	CommonConfig CommonConfig = 3;
 }

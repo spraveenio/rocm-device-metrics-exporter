@@ -1386,13 +1386,17 @@ func (ga *GPUAgentClient) initFieldRegistration() error {
 		if !ok {
 			// handle one special non vector field
 			if field == exportermetrics.GPUMetricField_GPU_NODES_TOTAL.String() {
-				ga.mh.GetRegistry().MustRegister(ga.m.gpuNodesTotal)
+				if err := ga.mh.RegisterMetric(ga.m.gpuNodesTotal); err != nil {
+					logger.Log.Printf("Field %v registration failed with err : %v", field, err)
+				}
 				continue
 			}
 			logger.Log.Printf("invalid field found ignore %v", field)
 			continue
 		}
-		ga.mh.GetRegistry().MustRegister(prommetric.Metric)
+		if err := ga.mh.RegisterMetric(prommetric.Metric); err != nil {
+			logger.Log.Printf("Field %v registration failed with err : %v", field, err)
+		}
 	}
 
 	return nil

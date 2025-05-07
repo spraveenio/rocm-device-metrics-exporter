@@ -374,6 +374,62 @@ func (s *E2ESuite) Test014ExistingLabelsAsCustomLabels(c *C) {
 	assert.Nil(c, err)
 }
 
+func (s *E2ESuite) Test015FieldPrefixUpdate(c *C) {
+	log.Print("test prefix update")
+	// indexed metrics are not parsed yet on testing, revisit
+	fields := []string{
+		"gpu_power_usage",
+		"gpu_total_vram",
+		"gpu_ecc_uncorrect_gfx",
+		"gpu_umc_activity",
+		"gpu_mma_activity",
+	}
+	err := s.SetFields(fields)
+	assert.Nil(c, err)
+	err = s.SetPrefix("amd_")
+	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
+	config := s.ReadConfig()
+	log.Printf("Prefix Config file : %+v", config)
+	var response string
+	assert.Eventually(c, func() bool {
+		response, _ = s.getExporterResponse()
+		return response != ""
+	}, 3*time.Second, 1*time.Second)
+	allgpus, err := testutils.ParsePrometheusMetrics(response)
+	assert.Nil(c, err)
+	previousFields = []string{
+		"gpu_power_usage",
+		"gpu_total_vram",
+		"gpu_ecc_uncorrect_gfx",
+		"gpu_umc_activity",
+		"gpu_mma_activity",
+	}
+	newFields := []string{
+		"amd_gpu_power_usage",
+		"amd_gpu_total_vram",
+		"amd_gpu_ecc_uncorrect_gfx",
+		"amd_gpu_umc_activity",
+		"amd_gpu_mma_activity",
+	}
+	err = verifyMetricsLablesFields(allgpus, previousLabels, newFields)
+	assert.Nil(c, err)
+	// remove the prefix and verify
+	err = s.SetPrefix("")
+	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
+	config = s.ReadConfig()
+	log.Printf("SetUpTest Config file : %+v", config)
+	log.Printf("Prefix Config file : %+v", config)
+
+	assert.Eventually(c, func() bool {
+		response, _ = s.getExporterResponse()
+		return response != ""
+	}, 3*time.Second, 1*time.Second)
+	allgpus, err = testutils.ParsePrometheusMetrics(response)
+	assert.Nil(c, err)
+	err = verifyMetricsLablesFields(allgpus, previousLabels, previousFields)
+	assert.Nil(c, err)
+}
+
 func verifyMetricsLablesFields(allgpus map[string]*testutils.GPUMetric, labels []string, fields []string) error {
 	if len(allgpus) == 0 {
 		return fmt.Errorf("invalid input, expecting non empty payload")

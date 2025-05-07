@@ -49,6 +49,15 @@ func (mh *MetricsHandler) GetRegistry() *prometheus.Registry {
 	return mh.reg
 }
 
+func (mh *MetricsHandler) wrapRegister(r prometheus.Registerer) prometheus.Registerer {
+	return prometheus.WrapRegistererWithPrefix(
+		mh.GetPrefix(), r)
+}
+
+func (mh *MetricsHandler) RegisterMetric(metric prometheus.Collector) error {
+	return mh.wrapRegister(mh.reg).Register(metric)
+}
+
 func (mh *MetricsHandler) RegisterMetricsClient(client MetricsInterface) {
 	mh.clients = append(mh.clients, client)
 }
@@ -103,4 +112,12 @@ func (mh *MetricsHandler) GetMetricsConfig() *exportermetrics.GPUMetricConfig {
 
 func (mh *MetricsHandler) GetAgentAddr() string {
 	return mh.runConf.GetAgentAddr()
+}
+
+func (mh *MetricsHandler) GetPrefix() string {
+	config := mh.runConf.GetConfig()
+	if config != nil && config.GetCommonConfig() != nil {
+		return config.GetCommonConfig().GetMetricsFieldPrefix()
+	}
+	return ""
 }
