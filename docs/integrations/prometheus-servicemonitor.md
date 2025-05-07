@@ -15,7 +15,7 @@ To deploy the Device Metrics Exporter with a ServiceMonitor resource, use the fo
 
 ```bash
 helm install metrics-exporter \
-  https://github.com/ROCm/device-metrics-exporter/releases/download/v1.2.1/device-metrics-exporter-charts-v1.2.1.tgz \
+  https://github.com/ROCm/device-metrics-exporter/releases/download/v|version|/device-metrics-exporter-charts-v|version|.tgz \
   --set serviceMonitor.enabled=true \
   --set serviceMonitor.interval=15s \
   -n mynamespace --create-namespace
@@ -25,7 +25,7 @@ This will automatically create a ServiceMonitor resource that Prometheus Operato
 
 ```bash
 helm install metrics-exporter \
-  https://github.com/ROCm/device-metrics-exporter/releases/download/v1.2.1/device-metrics-exporter-charts-v1.2.1.tgz \
+  https://github.com/ROCm/device-metrics-exporter/releases/download/v|version|/device-metrics-exporter-charts-v|version|.tgz \
   -n mynamespace -f values.yaml --create-namespace
 ```
 
