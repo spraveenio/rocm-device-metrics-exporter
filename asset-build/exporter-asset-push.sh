@@ -31,8 +31,10 @@ setup_dir () {
 }
 
 copy_artifacts () {
-    # remove 'v' from release label for upstream version changes
-    DEBIAN_VERSION := $(RELEASE:1)
+    DEBIAN_VERSION="${RELEASE:9}"
+    if [ "$tag" != "latest" ]; then
+      DEBIAN_VERSION="${RELEASE:1}"
+    fi
     # copy docker image ubi9.4
     cp /device-metrics-exporter/docker/device-metrics-exporter-latest.tar.gz $BUNDLE_DIR/device-metrics-exporter-latest-$RELEASE.tar.gz
     # copy docker image azure coreos 3
@@ -43,7 +45,7 @@ copy_artifacts () {
     cp /device-metrics-exporter/bin/amdgpu-exporter_22.04_amd64.deb  $BUNDLE_DIR/amdgpu-exporter_${DEBIAN_VERSION}~22.04_amd64.deb
     cp /device-metrics-exporter/bin/amdgpu-exporter_24.04_amd64.deb  $BUNDLE_DIR/amdgpu-exporter_${DEBIAN_VERSION}~24.04_amd64.deb
     # copy helm charts
-    cp /device-metrics-exporter/helm-charts/device-metrics-exporter-charts-v1.2.1.tgz $BUNDLE_DIR/device-metrics-exporter-charts-$RELEASE.tgz
+    cp /device-metrics-exporter/helm-charts/device-metrics-exporter-charts.tgz $BUNDLE_DIR/device-metrics-exporter-charts-$RELEASE.tgz
     # copy techsupport scripts
     cp /device-metrics-exporter/tools/techsupport_dump.sh $BUNDLE_DIR/
     # list the artifacts copied out
