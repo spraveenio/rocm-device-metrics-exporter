@@ -51,17 +51,6 @@ GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
 VERSION ?=$(RELEASE)
 KUBECONFIG ?= ~/.kube/config
 
-TOP_DIR := $(PWD)
-GEN_DIR := $(TOP_DIR)/pkg/amdgpu/
-MOCK_DIR := ${TOP_DIR}/pkg/amdgpu/mock_gen
-HELM_CHARTS_DIR := $(TOP_DIR)/helm-charts
-GOINSECURE='github.com, google.golang.org, golang.org'
-GOFLAGS ='-buildvcs=false'
-BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
-GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
-VERSION ?=$(RELEASE)
-KUBECONFIG ?= ~/.kube/config
-
 export ${GOROOT}
 export ${GOPATH}
 export ${OUT_DIR}
@@ -80,11 +69,7 @@ ifeq (${UBUNTU_VERSION}, noble)
 UBUNTU_VERSION_NUMBER = 24.04
 endif
 
-ifeq ($(RELEASE),)
 DEBIAN_VERSION := "1.2.0"
-else
-DEBIAN_VERSION := $(shell echo "$(RELEASE)" | sed 's/^.//')
-endif
 
 DEBIAN_CONTROL = ${TOP_DIR}/debian/DEBIAN/control
 BUILD_VER_ENV = ${DEBIAN_VERSION}~$(UBUNTU_VERSION_NUMBER)
@@ -118,7 +103,6 @@ docker-shell:
 		-e "GIT_VERSION=${GIT_VERSION}" \
 		-e "BUILD_DATE=${BUILD_DATE}" \
 		-v $(CURDIR):$(CONTAINER_WORKDIR) \
-		-v $(HOME)/.ssh:/home/$(shell whoami)/.ssh \
 		-w $(CONTAINER_WORKDIR) \
 		$(BUILD_CONTAINER) \
 		bash -c "cd $(CONTAINER_WORKDIR) && git config --global --add safe.directory $(CONTAINER_WORKDIR) && bash"
@@ -134,14 +118,9 @@ docker-compile:
 		-e "GIT_VERSION=${GIT_VERSION}" \
 		-e "BUILD_DATE=${BUILD_DATE}" \
 		-v $(CURDIR):$(CONTAINER_WORKDIR) \
-		-v $(HOME)/.ssh:/home/$(shell whoami)/.ssh \
 		-w $(CONTAINER_WORKDIR) \
 		$(BUILD_CONTAINER) \
 		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make all"
-
-.PHONY: docker
-docker:
-	${MAKE} -C docker TOP_DIR=$(CURDIR)
 
 .PHONY: all
 all:
@@ -165,44 +144,6 @@ pkg-clean:
 pkg: pkg-clean
 	${MAKE} gen amdexporter-lite metricsclient
 	@echo "Building debian for $(BUILD_VER_ENV)"
-	#copy precompiled libs
-	mkdir -p ${PKG_LIB_PATH}
-	cp -rvf ${GPUAGENT_LIBS}/ ${PKG_LIB_PATH}
-	cp -rvf ${THIRDPARTY_LIBS}/ ${PKG_LIB_PATH}
-	#override patch files
-	cp -vf ${PATCH_LIBS}/libamd_smi.so.24.7.60300 ${PKG_LIB_PATH}/lib/libamd_smi.so.24.7.60301
-	#copy and strip files
-	mkdir -p ${PKG_PATH}
-	tar -xf ${ASSETS_PATH}/gpuagent_static.bin.gz -C ${PKG_PATH}/
-	chmod +x ${PKG_PATH}/gpuagent
-	ls -alsh ${PKG_PATH}/gpuagent
-	#strip prebuilt binaries
-	strip ${PKG_PATH}/gpuagent
-	ls -alsh ${PKG_PATH}/gpuagent
-	cd ${PKG_PATH} && strip ${PKG_PATH}/gpuagent
-	cp -vf ${LUA_PROTO} ${PKG_LUA_PATH}/plugin.proto
-	cp -vf ${ASSETS_PATH}/gpuctl.gobin ${PKG_PATH}/gpuctl
-	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
-	cp -vf $(CURDIR)/bin/metricsclient ${PKG_PATH}/
-	cd ${TOP_DIR}
-	sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
-	dpkg-deb -Zxz --build debian ${TOP_DIR}/bin
-	#remove copied files
-	rm -rf ${PKG_LIB_PATH}
-	rm -rf ${PKG_LUA_PATH}/plugin.proto
-	# revert the dynamic version set file
-	git checkout $(DEBIAN_CONTROL)
-	# rename for internal build
-	mv -vf ${TOP_DIR}/bin/amdgpu-exporter_*~${UBUNTU_VERSION_NUMBER}_amd64.deb ${TOP_DIR}/bin/amdgpu-exporter_${UBUNTU_VERSION_NUMBER}_amd64.deb
-
-.PHONY: pkg pkg-clean
-
-pkg-clean:
-	rm -rf ${TOP_DIR}/bin/*.deb
-
-
-pkg: pkg-clean
-	${MAKE} gen amdexporter-lite
 	#copy precompiled libs
 	mkdir -p ${PKG_LIB_PATH}
 	cp -rvf ${GPUAGENT_LIBS}/ ${PKG_LIB_PATH}
@@ -284,48 +225,6 @@ gopkglist:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1
 	go install golang.org/x/tools/cmd/goimports@latest
 
-GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
-.PHONY: golangci-lint
-golangci-lint: ## Download golangci-lint locally if necessary.
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1)
-
-# go-get-tool will 'go install' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
-}
-endef
-
-GOFILES_NO_VENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
-.PHONY: lint
-lint: golangci-lint ## Run golangci-lint against code.
-	@if [ `gofmt -l $(GOFILES_NO_VENDOR) | wc -l` -ne 0 ]; then \
-		echo There are some malformed files, please make sure to run \'make fmt\'; \
-		gofmt -l $(GOFILES_NO_VENDOR); \
-		exit 1; \
-	fi
-	$(GOLANGCI_LINT) run -v --timeout 5m0s
-
-.PHONY: fmt
-fmt: ## Run go fmt against code.
-	go fmt ./...
-
-.PHONY: vet
-vet: ## Run go vet against code.
-	go vet ./...
-
-
-.PHONY: gopkglist
-gopkglist:
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
-	go install github.com/golang/mock/mockgen@v1.6.0
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1
-	go install golang.org/x/tools/cmd/goimports@latest
-
 amdexporter-lite:
 	@echo "building lite version of metrics exporter"
 	go build -C cmd/exporter -ldflags "-s -w -X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG} " -o $(CURDIR)/bin/amd-metrics-exporter
@@ -353,43 +252,10 @@ docker-cicd: gen amdexporter
 	${MAKE} -C docker docker-cicd TOP_DIR=$(CURDIR)
 	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
 
-amdtestrunner:
-	@echo "building amd test runner"
-	CGO_ENABLED=0 go build  -C cmd/testrunner -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE}" -o $(CURDIR)/bin/amd-test-runner
-
-metricutil:
-	@echo "building metrics util"
-	CGO_ENABLED=0 go build -C tools/metricutil -o $(CURDIR)/bin/metricutil
-
-metricsclient:
-	@echo "building metrics client"
-	CGO_ENABLED=0 go build -C tools/metricsclient -o $(CURDIR)/bin/metricsclient
-
-.PHONY: docker-cicd
-docker-cicd: gen amdexporter
-	echo "Building cicd docker for publish"
-	${MAKE} -C docker docker-cicd TOP_DIR=$(CURDIR)
-	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
-
 .PHONY: docker
 docker: gen amdexporter
 	${MAKE} -C docker TOP_DIR=$(CURDIR)
 	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
-
-.PHONY: docker-test-runner
-docker-test-runner: gen-test-runner amdtestrunner
-	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) INTERNAL_TESTRUNNER_BUILD=$(INTERNAL_TESTRUNNER_BUILD) docker
-
-.PHOHY: docker-test-runner-cicd
-docker-test-runner-cicd: gen-test-runner amdtestrunner
-	echo "Building test runner cicd docker for publish"
-	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker-cicd
-	${MAKE} -C docker/testrunner TOP_DIR=$(CURDIR) docker-save
-
-.PHONY: docker-azure
-docker-azure: gen amdexporter
-	${MAKE} -C docker azure TOP_DIR=$(CURDIR)
-	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR) DOCKER_CONTAINER_IMG=${AZURE_DOCKER_CONTAINER_IMG}
 
 .PHONY: docker-mock
 docker-mock: gen amdexporter
@@ -410,9 +276,6 @@ docker-test-runner-cicd: gen-test-runner amdtestrunner
 docker-azure: gen amdexporter
 	${MAKE} -C docker azure TOP_DIR=$(CURDIR)
 	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR) DOCKER_CONTAINER_IMAGE=${EXPORTER_IMAGE_NAME}-${EXPORTER_IMAGE_TAG}-azure
-
-.PHONY:checks
-checks: gen vet
 
 .PHONY:checks
 checks: gen vet
@@ -439,27 +302,6 @@ base-image:
 
 copyrights:
 	GOFLAGS=-mod=mod go run tools/build/copyright/main.go && ${MAKE} fmt && ./tools/build/check-local-files.sh
-
-.PHONY: e2e-test
-e2e-test:
-	$(MAKE) -C test/e2e
-
-.PHONY: e2e
-e2e:
-	$(MAKE) docker-mock
-	$(MAKE) e2e-test
-
-.PHOHY: k8s-e2e
-k8s-e2e:
-	TOP_DIR=$(CURDIR) $(MAKE) -C test/k8s-e2e
-
-.PHONY: helm-lint
-helm-lint:
-	cd $(HELM_CHARTS_DIR); helm lint
-
-.PHONY: helm-build
-helm-build: helm-lint
-	helm package helm-charts/ --destination ./helm-charts
 
 .PHONY: e2e-test
 e2e-test:
