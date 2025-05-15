@@ -17,6 +17,7 @@
 package metricsutil
 
 import (
+	"regexp"
 	"sync"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/config"
@@ -116,8 +117,19 @@ func (mh *MetricsHandler) GetAgentAddr() string {
 
 func (mh *MetricsHandler) GetPrefix() string {
 	config := mh.runConf.GetConfig()
-	if config != nil && config.GetCommonConfig() != nil {
-		return config.GetCommonConfig().GetMetricsFieldPrefix()
+	if config == nil || config.GetCommonConfig() == nil {
+		return ""
 	}
+	// validate prometheus accepted pattern
+	prometheusFieldPattern := `^[a-zA-Z_][a-zA-Z0-9_]*$`
+	configPrefix := config.GetCommonConfig().GetMetricsFieldPrefix()
+	re := regexp.MustCompile(prometheusFieldPattern)
+	if re.MatchString(configPrefix) {
+		return configPrefix
+	}
+	// invalid prefix
+	logger.Log.Printf("invalid prefix configured %v", configPrefix)
+	logger.Log.Printf("accepted pattern should match %v", prometheusFieldPattern)
+	logger.Log.Printf("defaulting to no prefix behavior")
 	return ""
 }
