@@ -209,20 +209,3 @@ gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",g
 gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="6",serial_number="xxxx"} 3.646094607e+09
 gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="7",serial_number="xxxx"} 3.545990503e+0
 ```
-
-## Performance Metrics
-
-The Device Metrics Exporter now supports a whole list of Performance metrics
-to better facilitate the developers to understand more about the application
-performance on the GPUs
-
-The `ProfilerMetrics` should be turned off in case of application level
-profiling is run as the current hardware limits a single profiler instance to
-be run at any given time.
-
-By default the performance metrics are disabled and they can be  enabled through the
-ConfigMap `ProfilerMetrics` to enable or disable per host (higer precedence) or `all` key to specify for cluster wide toggle.
-
-The list comprises of all well known metrics supported by MI 200 & 300 platforms. 
-Some fields which are not supported by platforms though enabled would not be exported. 
-The full list of supported Fields and Registers are available at [Performance Counters](https://rocm.docs.amd.com/en/latest/conceptual/gpu-arch/mi300-mi200-performance-counters.html). 
