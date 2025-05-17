@@ -43,6 +43,7 @@ func (tu *TestUtils) LocalCommandOutput(command string) string {
 
 type MetricData struct {
 	Labels map[string]string
+	Value  string
 }
 
 func (m *MetricData) String() string {
@@ -111,9 +112,8 @@ func ParsePrometheusMetrics(payload string) (map[string]*GPUMetric, error) {
 		metric := metrics[gpu_id]
 		metric.Fields[metricName] = MetricData{
 			Labels: labels,
+			Value:  matches[3],
 		}
-		// ignoring value for mocked env
-		//value := matches[3]
 	}
 
 	//log.Printf("metrics : %+v", metrics)

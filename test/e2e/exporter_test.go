@@ -430,6 +430,67 @@ func (s *E2ESuite) Test015FieldPrefixUpdate(c *C) {
 	assert.Nil(c, err)
 }
 
+func (s *E2ESuite) Test016HealthSvcReconnect(c *C) {
+	log.Print("Health Service Reconnect")
+	fields := []string{
+		"gpu_health",
+	}
+	err := s.SetFields(fields)
+	assert.Nil(c, err)
+	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
+	config := s.ReadConfig()
+	log.Printf("Prefix Config file : %+v", config)
+	var response string
+
+	// expect healthy for all gpu
+	assert.Eventually(c, func() bool {
+		response, _ = s.getExporterResponse()
+		return response != ""
+	}, 3*time.Second, 1*time.Second)
+	allgpus, err := testutils.ParsePrometheusMetrics(response)
+	assert.Nil(c, err)
+	err = verifyHealth(allgpus, "1")
+	assert.Nil(c, err)
+
+	// kill gpuagent and expect unhealthy
+	_ = s.ExporterLocalCommandOutput("pkill gpuagent")
+	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
+	assert.Eventually(c, func() bool {
+		response, _ = s.getExporterResponse()
+		if response == "" {
+			return false
+		}
+		log.Printf("gpu response : %+v", response)
+		allgpus, _ = testutils.ParsePrometheusMetrics(response)
+		// gpu_health field will not be prsent on gpuagent kill case
+		err = verifyHealth(allgpus, "0")
+		if err == nil {
+			return false
+		}
+		return true
+	}, 30*time.Second, 5*time.Second)
+
+	// respawn gpuagent and expect healthy state again
+	_ = s.ExporterLocalCommandOutput("gpuagent &")
+	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
+	assert.Eventually(c, func() bool {
+		response, _ = s.getExporterResponse()
+		if response == "" {
+			return false
+		}
+		log.Printf("gpu response : %+v", response)
+		allgpus, err = testutils.ParsePrometheusMetrics(response)
+		if err != nil {
+			return false
+		}
+		err = verifyHealth(allgpus, "1")
+		if err != nil {
+			return false
+		}
+		return true
+	}, 30*time.Second, 1*time.Second)
+}
+
 func verifyMetricsLablesFields(allgpus map[string]*testutils.GPUMetric, labels []string, fields []string) error {
 	if len(allgpus) == 0 {
 		return fmt.Errorf("invalid input, expecting non empty payload")
@@ -454,6 +515,26 @@ func verifyMetricsLablesFields(allgpus map[string]*testutils.GPUMetric, labels [
 			}
 		}
 	}
+	return nil
+}
+
+func verifyHealth(allgpus map[string]*testutils.GPUMetric, state string) error {
+	if len(allgpus) == 0 {
+		return fmt.Errorf("invalid input, expecting non empty payload")
+	}
+	healthField := "gpu_health"
+	for id, gpu := range allgpus {
+		healthState, ok := gpu.Fields[healthField]
+		if !ok {
+			log.Printf("gpu_health not found, gpuagent may be killed")
+			return fmt.Errorf("health not found")
+		}
+		if healthState.Value != state {
+			return fmt.Errorf("gpu[%v] expected health[%v] but got[%v]", id, state, healthState.Value)
+		}
+	}
+
+	log.Printf("all gpu in expected health state [%v]", state)
 	return nil
 }
 

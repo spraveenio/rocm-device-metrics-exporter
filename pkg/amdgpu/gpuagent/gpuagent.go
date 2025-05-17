@@ -154,12 +154,9 @@ func (ga *GPUAgentClient) StartMonitor() {
 	pollTimer := time.NewTicker(refreshInterval)
 	defer pollTimer.Stop()
 
+	// nolint
 	for {
 		select {
-		case <-ga.ctx.Done():
-			logger.Log.Printf("gpuagent client connection closing")
-			ga.Close()
-			return
 		case <-pollTimer.C:
 			if !ga.isActive() {
 				if err := ga.reconnect(); err != nil {
