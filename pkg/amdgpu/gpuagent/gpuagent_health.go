@@ -125,9 +125,6 @@ func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[str
 // device plugin - populate the old pcie bus entries with updated workload
 // list
 func (ga *GPUAgentClient) setUnhealthyGPU(wls map[string]scheduler.Workload) error {
-	if !ga.isKubernetes {
-		return nil
-	}
 	// valid only for k8s case
 	ga.Lock()
 	defer ga.Unlock()
