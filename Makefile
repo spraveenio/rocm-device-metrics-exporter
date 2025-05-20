@@ -115,12 +115,15 @@ endif
 PACKAGE_VERSION := "1.2.1"
 DEBIAN_VERSION := "1.2.1"
 REL_IMAGE_TAG := $(subst $\",,v$(PACKAGE_VERSION))
+HELM_VERSION := $(REL_IMAGE_TAG)
 
 
 .PHONY: update-version
 update-version:
 	sed -i -e 's|version = .*|version = ${PACKAGE_VERSION}|' docs/conf.py
 	sed -i -e 's|tag:.*|tag: ${REL_IMAGE_TAG}|' helm-charts/values.yaml
+	sed -i -e 's|version:.*|version: ${HELM_VERSION}|' helm-charts/Chart.yaml
+	sed -i -e 's|appVersion:.*|appVersion: ${HELM_VERSION}|' helm-charts/Chart.yaml
 	sed -i -e 's|debian_version = .*|debian_version = ${DEBIAN_VERSION}|' docs/conf.py
 
 
