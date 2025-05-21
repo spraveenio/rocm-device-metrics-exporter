@@ -73,7 +73,7 @@ func (pr *podResourcesClient) ListWorkloads() (map[string]Workload, error) {
 	for _, pod := range resp.PodResources {
 		for _, container := range pod.Containers {
 			for _, devs := range container.GetDevices() {
-				if devs.ResourceName == globals.AMDGPUResourceLabel {
+				if strings.HasPrefix(devs.ResourceName, globals.AMDGPUResourcePrefix) {
 					for _, devId := range devs.DeviceIds {
 						podInfo[strings.ToLower(devId)] = Workload{
 							Type: Kubernetes,

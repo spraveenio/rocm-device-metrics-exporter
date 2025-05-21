@@ -35,8 +35,8 @@ const (
 	//PodResourceSocket - k8s pod grpc socket
 	PodResourceSocket = "/var/lib/kubelet/pod-resources/kubelet.sock"
 
-	// AMDGPUResourceLabel - k8s AMD gpu resource label
-	AMDGPUResourceLabel = "amd.com/gpu"
+	// AMDGPUResourcePrefix - k8s AMD gpu resource prefix
+	AMDGPUResourcePrefix = "amd.com/"
 
 	// max number of custom labels that will be exported in the logs
 	MaxSupportedCustomLabels = 10

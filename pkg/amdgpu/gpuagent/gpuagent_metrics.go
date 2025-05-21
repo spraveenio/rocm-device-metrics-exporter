@@ -1467,14 +1467,19 @@ func (ga *GPUAgentClient) getWorkloadInfo(wls map[string]scheduler.Workload, gpu
 		// return empty if labels are not set to be exportered
 		return nil
 	}
+	gpu_id := fmt.Sprintf("%v", getGPUInstanceID(gpu))
+	deviceName, _ := ga.fsysDeviceHandler.GetDeviceNameFromID(gpu_id)
 	// populate with workload info
 	if gpu.Status.PCIeStatus != nil {
 		if workload, ok := wls[strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)]; ok {
 			return &workload
 		}
 	}
+	if workload, ok := wls[deviceName]; ok {
+		return &workload
+	}
 	// ignore errors as we always expect slurm deployment as default
-	if workload, ok := wls[fmt.Sprintf("%v", getGPUInstanceID(gpu))]; ok {
+	if workload, ok := wls[gpu_id]; ok {
 		return &workload
 	}
 	return nil
