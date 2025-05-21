@@ -26,6 +26,7 @@ import (
 
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/fsysdevice"
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/rocprofiler"
 	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
@@ -63,6 +64,7 @@ type GPUAgentClient struct {
 	healthState            map[string]*metricssvc.GPUState
 	mockEccField           map[string]map[string]uint32 // gpuid->fields->count
 	computeNodeHealthState bool
+	fsysDeviceHandler      *fsysdevice.FsysDevice
 }
 
 func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclient amdgpu.GPUSvcClient, evtclient amdgpu.EventSvcClient, err error) {
@@ -87,6 +89,7 @@ func NewAgent(mh *metricsutil.MetricsHandler, enableZmq bool, enableProfiler boo
 		ga.rocpclient = rocprofiler.NewRocProfilerClient("rocpclient")
 		ga.enableProfileMetrics = true
 	}
+	ga.fsysDeviceHandler = fsysdevice.GetFsysDeviceHandler()
 	mh.RegisterMetricsClient(ga)
 	return ga
 }

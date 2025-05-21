@@ -24,8 +24,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/fsysdevice"
 	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
@@ -160,6 +162,19 @@ func setError(socketPath, filepath string) error {
 	return nil
 }
 
+func getDeviceMap() {
+	devices, err := fsysdevice.FindAMDGPUDevices()
+	if err != nil {
+		fmt.Printf("device get error : %+v", err)
+		return
+	}
+	fmt.Printf("Logical Device Map \n")
+	for k, v := range devices {
+		fmt.Printf("GPU ID[%v] -> Device Name [%v]\n", k, v)
+	}
+	return
+}
+
 func getPodResources() {
 	if _, err := os.Stat(globals.PodResourceSocket); err != nil {
 		fmt.Printf("no kubelet, %v", err)
@@ -186,7 +201,7 @@ func getPodResources() {
 	for _, pod := range resp.PodResources {
 		for _, container := range pod.Containers {
 			for _, devs := range container.GetDevices() {
-				if devs.ResourceName == globals.AMDGPUResourceLabel {
+				if strings.HasPrefix(devs.ResourceName, globals.AMDGPUResourcePrefix) {
 					for _, devId := range devs.DeviceIds {
 						fmt.Printf("dev:ns/pod/container [{%v}%v/%v/%v]\n",
 							devId, pod.Name, pod.Namespace, container.Name)
@@ -212,6 +227,7 @@ func main() {
 		setId        = flag.String("id", "1", "gpu id")
 		getNodeLabel = flag.Bool("label", false, "get k8s node label")
 		podRes       = flag.Bool("pod", false, "get node resource info")
+		devMap       = flag.Bool("gpu", false, "show logical gpu device map")
 		eccFile      = flag.String("ecc-file-path", "", "json ecc err file")
 	)
 	flag.Parse()
@@ -230,6 +246,11 @@ func main() {
 
 	if *podRes {
 		getPodResources()
+		return
+	}
+
+	if *devMap {
+		getDeviceMap()
 		return
 	}
 
