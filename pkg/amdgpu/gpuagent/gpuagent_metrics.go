@@ -1782,11 +1782,9 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(wls map[string]scheduler.Worklo
 	ga.m.xgmiNbrTxTput5.With(labels).Set(normalizeUint64(stats.XGMINeighbor5TxThroughput))
 
 	vramUsage := stats.VRAMUsage
+	vramStatus := status.GetVRAMStatus()
+	var totalVRAM, usedVRAM, freeVRAM float64
 	if vramUsage != nil {
-		ga.m.gpuTotalVram.With(labels).Set(normalizeUint64(vramUsage.TotalVRAM))
-		ga.m.gpuUsedVram.With(labels).Set(normalizeUint64(vramUsage.UsedVRAM))
-		ga.m.gpuFreeVram.With(labels).Set(normalizeUint64(vramUsage.FreeVRAM))
-
 		ga.m.gpuTotalVisibleVram.With(labels).Set(normalizeUint64(vramUsage.TotalVisibleVRAM))
 		ga.m.gpuUsedVisibleVram.With(labels).Set(normalizeUint64(vramUsage.UsedVisibleVRAM))
 		ga.m.gpuFreeVisibleVram.With(labels).Set(normalizeUint64(vramUsage.FreeVisibleVRAM))
@@ -1794,6 +1792,23 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(wls map[string]scheduler.Worklo
 		ga.m.gpuTotalGTT.With(labels).Set(normalizeUint64(vramUsage.TotalGTT))
 		ga.m.gpuUsedGTT.With(labels).Set(normalizeUint64(vramUsage.UsedGTT))
 		ga.m.gpuFreeGTT.With(labels).Set(normalizeUint64(vramUsage.FreeGTT))
+	}
+	if vramStatus != nil && vramUsage != nil {
+		// use if its valid
+		if totalVRAM = normalizeUint64(vramStatus.Size); totalVRAM != 0 {
+			usedVRAM = normalizeUint64(vramUsage.UsedVRAM)
+			freeVRAM = totalVRAM - usedVRAM
+		} else if vramUsage != nil {
+			if totalVRAM = normalizeUint64(vramUsage.TotalVRAM); totalVRAM != 0 {
+				usedVRAM = normalizeUint64(vramUsage.UsedVRAM)
+				freeVRAM = totalVRAM - usedVRAM
+			}
+		}
+	}
+	if totalVRAM != 0 {
+		ga.m.gpuTotalVram.With(labels).Set(totalVRAM)
+		ga.m.gpuUsedVram.With(labels).Set(usedVRAM)
+		ga.m.gpuFreeVram.With(labels).Set(freeVRAM)
 	}
 	xgmiStats := stats.XGMILinkStats
 	if xgmiStats != nil {
