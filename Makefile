@@ -87,7 +87,7 @@ KUBECONFIG ?= ~/.kube/config
 
 # library branch to build amdsmi libraries for gpuagent
 AMDSMI_BRANCH ?= amd-mainline
-AMDSMI_COMMIT ?= 0e0623a
+AMDSMI_COMMIT ?= rocm-6.4.1
 
 export ${GOROOT}
 export ${GOPATH}
