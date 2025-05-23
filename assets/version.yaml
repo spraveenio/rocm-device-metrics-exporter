@@ -12,8 +12,8 @@ assets:
     branch  : master
 
   - name    : amd_smi_lib
-    version : aca1101
-    branch  : release/rocm-rel-6.4
+    version : rocm-6.4.1
+    branch  : amd-mainline
 
   - name    : rocprofiler
     version : 6.4.0
