@@ -47,4 +47,8 @@ func TestGpuAgent(t *testing.T) {
 	err = ga.processHealthValidation()
 	assert.Assert(t, err == nil, "expecting success health validation")
 
+	wls, err := ga.ListWorkloads()
+	assert.Assert(t, err == nil, "expecting success health validation")
+	assert.Assert(t, len(wls) == 0, "expecting success empty list of workload on slurm")
+
 }
