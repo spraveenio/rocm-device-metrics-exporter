@@ -314,16 +314,22 @@ func (ga *GPUAgentClient) getEvents(severity amdgpu.EventSeverity) (*amdgpu.Even
 // ListWorkloads - get all workloads from every client , lock must be taken by
 // the caller
 func (ga *GPUAgentClient) ListWorkloads() (wls map[string]scheduler.Workload, err error) {
-	if ga.isKubernetes {
-		wls, err = ga.k8sScheduler.ListWorkloads()
+	wls = make(map[string]scheduler.Workload)
+	if ga.isKubernetes && ga.k8sScheduler != nil {
+		var k8sWls map[string]scheduler.Workload
+		k8sWls, err = ga.k8sScheduler.ListWorkloads()
 		if err != nil {
 			return
 		}
+		for k, wl := range k8sWls {
+			wls[k] = wl
+		}
 	}
 	if ga.slurmScheduler == nil {
-		return
+		return wls, nil
 	}
-	swls, err := ga.slurmScheduler.ListWorkloads()
+	var swls map[string]scheduler.Workload
+	swls, err = ga.slurmScheduler.ListWorkloads()
 	if err != nil {
 		return
 	}
