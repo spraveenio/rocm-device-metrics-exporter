@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -489,6 +490,35 @@ func (s *E2ESuite) Test016HealthSvcReconnect(c *C) {
 		}
 		return true
 	}, 30*time.Second, 1*time.Second)
+}
+func (s *E2ESuite) Test017SlurmWorkloadSim(c *C) {
+	labels := []string{"job_id", "job_partition", "job_user"}
+	err := s.SetLabels(labels)
+	assert.Nil(c, err)
+	time.Sleep(5 * time.Second) // 5 second timer for config update to take effect
+	job_mock := map[string]string{
+		"CUDA_VISIBLE_DEVICES": "0,1,2,3,4,5,6,7",
+		"SLURM_CLUSTER_NAME":   "aac11",
+		"SLURM_JOB_GPUS":       "0,1,2,3,4,5,6,7",
+		"SLURM_JOB_ID":         "742",
+		"SLURM_JOB_PARTITION":  "256C8G1H_MI325X_Ubuntu22",
+		"SLURM_JOB_USER":       "yaoming_mu_7kq",
+		"SLURM_SCRIPT_CONTEXT": "prolog_slurmd",
+	}
+	// Convert map to JSON
+	jsonBytes, err := json.MarshalIndent(job_mock, "", "  ")
+	assert.Nil(c, err)
+
+	// Write JSON to file
+	err = os.WriteFile("slurm_job.json", jsonBytes, 0644)
+	assert.Nil(c, err)
+	_, _ = s.exporter.CopyFileTo("slurm_job.json", "/var/run/exporter/3")
+	time.Sleep(5 * time.Second) // 5 second timer for job to be picked up
+	assert.Eventually(c, func() bool {
+		response, _ := s.getExporterResponse()
+		log.Printf("exporter out with job: %+v", response)
+		return response != ""
+	}, 10*time.Second, 1*time.Second)
 }
 
 func verifyMetricsLablesFields(allgpus map[string]*testutils.GPUMetric, labels []string, fields []string) error {

@@ -24,6 +24,7 @@ type Exporter interface {
 	RunCmd(cmd string) (string, error)
 	Stop() error
 	Cleanup() error
+	CopyFileTo(string, string) (string, error)
 }
 
 //func NewExporter(name, url string) Exporter
