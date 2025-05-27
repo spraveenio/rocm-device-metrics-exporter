@@ -105,6 +105,16 @@ func (m *MockExporter) RunCmd(cmd string) (string, error) {
 	return resp, nil
 }
 
+func (m *MockExporter) CopyFileTo(src, dst string) (string, error) {
+	fullCmd := fmt.Sprintf("docker cp %v %v:%v", src, m.Name, dst)
+	log.Print(fullCmd)
+	resp := m.tu.LocalCommandOutput(fullCmd)
+	if resp == "" {
+		return resp, fmt.Errorf("empty response")
+	}
+	return resp, nil
+}
+
 func (m *MockExporter) Stop() error {
 	cmd := fmt.Sprintf("docker stop %v", m.Name)
 	log.Print(cmd)
