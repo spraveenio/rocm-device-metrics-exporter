@@ -27,7 +27,6 @@ func TestGpuAgent(t *testing.T) {
 	defer teardownSuite(t)
 
 	ga := getNewAgent(t)
-	defer ga.Close()
 	t.Logf("gpuagent : %+v", ga)
 
 	req, _, err := ga.getGPUs()
@@ -49,7 +48,8 @@ func TestGpuAgent(t *testing.T) {
 
 	wls, err := ga.ListWorkloads()
 	assert.Assert(t, err == nil, "expecting success workload list")
-	assert.Assert(t, len(wls) == 0, "expecting success empty list of workload on slurm")
+	assert.Assert(t, len(wls) == 0, "expecting success 2 workloads on slurm")
+	ga.Close()
 
 	// set k8s nil check test
 	ga.isKubernetes = true
@@ -57,4 +57,67 @@ func TestGpuAgent(t *testing.T) {
 	assert.Assert(t, err == nil, "expecting success workload list")
 	assert.Assert(t, len(wls) == 0, "expecting success empty list of workload on k8s and slurm")
 
+}
+
+func TestGpuAgentSlurm(t *testing.T) {
+	teardownSuite := setupTest(t)
+	defer teardownSuite(t)
+
+	ga := getNewAgent(t)
+	t.Logf("gpuagent : %+v", ga)
+
+	req, err := ga.getGPUs()
+	assert.Assert(t, err == nil, "expecting nil response")
+
+	t.Logf("req :%+v", req)
+
+	err = ga.InitConfigs()
+	assert.Assert(t, err == nil, "expecting success config init")
+
+	err = ga.UpdateStaticMetrics()
+	assert.Assert(t, err == nil, "expecting success config init")
+
+	err = ga.UpdateMetricsStats()
+	assert.Assert(t, err == nil, "expecting success config init")
+
+	err = ga.processHealthValidation()
+	assert.Assert(t, err == nil, "expecting success health validation")
+
+	ga.slurmScheduler = newSlurmMockClient()
+	wls, err := ga.ListWorkloads()
+	assert.Assert(t, err == nil, "expecting success workload list")
+	assert.Assert(t, len(wls) == 2, "expecting success 2 workloads on slurm")
+	ga.Close()
+
+}
+func TestGpuAgentK8s(t *testing.T) {
+	teardownSuite := setupTest(t)
+	defer teardownSuite(t)
+
+	ga := getNewAgent(t)
+	t.Logf("gpuagent : %+v", ga)
+
+	req, err := ga.getGPUs()
+	assert.Assert(t, err == nil, "expecting nil response")
+
+	t.Logf("req :%+v", req)
+
+	err = ga.InitConfigs()
+	assert.Assert(t, err == nil, "expecting success config init")
+
+	err = ga.UpdateStaticMetrics()
+	assert.Assert(t, err == nil, "expecting success config init")
+
+	err = ga.UpdateMetricsStats()
+	assert.Assert(t, err == nil, "expecting success config init")
+
+	err = ga.processHealthValidation()
+	assert.Assert(t, err == nil, "expecting success health validation")
+
+	ga.isKubernetes = true
+	ga.k8sScheduler = newK8sSchedulerMock()
+	wls, err := ga.ListWorkloads()
+	assert.Assert(t, err == nil, "expecting success workload list")
+	assert.Assert(t, len(wls) == 2, "expecting success 2 workloads on slurm")
+	ga.Close()
 }
