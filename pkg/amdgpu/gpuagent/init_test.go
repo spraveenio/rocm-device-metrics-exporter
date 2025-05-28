@@ -37,11 +37,13 @@ import (
 )
 
 var (
-	mockCtl     *gomock.Controller
-	gpuMockCl   *mock_gen.MockGPUSvcClient
-	eventMockCl *mock_gen.MockEventSvcClient
-	mh          *metricsutil.MetricsHandler
-	mConfig     *config.ConfigHandler
+	mockCtl          *gomock.Controller
+	gpuMockCl        *mock_gen.MockGPUSvcClient
+	eventMockCl      *mock_gen.MockEventSvcClient
+	slurmSchedMockCl *mock_gen.MockSchedulerClient
+	k8sSchedMockCl   *mock_gen.MockSchedulerClient
+	mh               *metricsutil.MetricsHandler
+	mConfig          *config.ConfigHandler
 )
 
 func setupTest(t *testing.T) func(t *testing.T) {
@@ -60,6 +62,9 @@ func setupTest(t *testing.T) func(t *testing.T) {
 
 	gpuMockCl = mock_gen.NewMockGPUSvcClient(mockCtl)
 	eventMockCl = mock_gen.NewMockEventSvcClient(mockCtl)
+	slurmSchedMockCl = mock_gen.NewMockSchedulerClient(mockCtl)
+	k8sSchedMockCl = mock_gen.NewMockSchedulerClient(mockCtl)
+	k8sSchedMockCl = mock_gen.NewMockSchedulerClient(mockCtl)
 
 	gpumock_resp := &amdgpu.GPUGetResponse{
 		ApiStatus: amdgpu.ApiStatus_API_STATUS_OK,
@@ -70,6 +75,9 @@ func setupTest(t *testing.T) func(t *testing.T) {
 				},
 				Status: &amdgpu.GPUStatus{
 					SerialNum: "mock-serial",
+					PCIeStatus: &amdgpu.GPUPCIeStatus{
+						PCIeBusId: "pcie0",
+					},
 				},
 				Stats: &amdgpu.GPUStats{
 					PackagePower: 41,
@@ -81,6 +89,9 @@ func setupTest(t *testing.T) func(t *testing.T) {
 				},
 				Status: &amdgpu.GPUStatus{
 					SerialNum: "mock-serial-2",
+					PCIeStatus: &amdgpu.GPUPCIeStatus{
+						PCIeBusId: "pcie1",
+					},
 				},
 				Stats: &amdgpu.GPUStats{
 					PackagePower: 41,
@@ -118,15 +129,66 @@ func setupTest(t *testing.T) func(t *testing.T) {
 	}
 }
 
+func newSlurmMockClient() scheduler.SchedulerClient {
+	workload := map[string]scheduler.Workload{
+		"0": scheduler.Workload{
+			Type: scheduler.Slurm,
+			Info: scheduler.JobInfo{
+				Id:        "SLURM_JOB_ID0",
+				User:      "SLURM_JOB_USER0",
+				Partition: "SLURM_JOB_PARTITION0",
+				Cluster:   "SLURM_CLUSTER_NAME0",
+			},
+		},
+		"1": scheduler.Workload{
+			Type: scheduler.Slurm,
+			Info: scheduler.JobInfo{
+				Id:        "SLURM_JOB_ID1",
+				User:      "SLURM_JOB_USER1",
+				Partition: "SLURM_JOB_PARTITION1",
+				Cluster:   "SLURM_CLUSTER_NAME",
+			},
+		},
+	}
+	slurmSchedMockCl.EXPECT().ListWorkloads().Return(workload, nil).AnyTimes()
+	slurmSchedMockCl.EXPECT().CheckExportLabels(gomock.Any()).Return(true).AnyTimes()
+	slurmSchedMockCl.EXPECT().Type().Return(scheduler.Slurm).AnyTimes()
+	slurmSchedMockCl.EXPECT().Close().Return(nil).Times(1)
+	return slurmSchedMockCl
+}
+
+func newK8sSchedulerMock() scheduler.SchedulerClient {
+	workload := map[string]scheduler.Workload{
+		"pcie0": scheduler.Workload{
+			Type: scheduler.Kubernetes,
+			Info: scheduler.PodResourceInfo{
+				Pod:       "pod0",
+				Namespace: "Namespace0",
+				Container: "ContainerName0",
+			},
+		},
+		"pcie1": scheduler.Workload{
+			Type: scheduler.Kubernetes,
+			Info: scheduler.PodResourceInfo{
+				Pod:       "pod1",
+				Namespace: "Namespace1",
+				Container: "ContainerName1",
+			},
+		},
+	}
+	k8sSchedMockCl.EXPECT().ListWorkloads().Return(workload, nil).AnyTimes()
+	k8sSchedMockCl.EXPECT().CheckExportLabels(gomock.Any()).Return(true).AnyTimes()
+	k8sSchedMockCl.EXPECT().Type().Return(scheduler.Slurm).AnyTimes()
+	k8sSchedMockCl.EXPECT().Close().Return(nil).Times(1)
+	return k8sSchedMockCl
+}
+
 func getNewAgent(t *testing.T) *GPUAgentClient {
 	// setup zmq mock port
 	ga := NewAgent(mh, nil, true)
 	ga.initializeContext()
 	ga.gpuclient = gpuMockCl
 	ga.evtclient = eventMockCl
-	schedulerCl, err := scheduler.NewSlurmClient(ga.ctx, ga.enableZmq)
-	assert.Assert(t, err == nil, "error creating new agent : %v", err)
-	ga.slurmScheduler = schedulerCl
 	ga.isKubernetes = false
 	return ga
 }

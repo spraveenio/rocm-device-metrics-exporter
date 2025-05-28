@@ -332,7 +332,7 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 		}
 	}
 
-	foreverWatcher(e.ctx)
+	foreverWatcher(e)
 }
 
 // Close - closes the exporter and all its resources
