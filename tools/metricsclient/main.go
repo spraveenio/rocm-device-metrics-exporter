@@ -172,7 +172,6 @@ func getDeviceMap() {
 	for k, v := range devices {
 		fmt.Printf("GPU ID[%v] -> Device Name [%v]\n", k, v)
 	}
-	return
 }
 
 func getPodResources() {
