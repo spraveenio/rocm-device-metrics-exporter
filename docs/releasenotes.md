@@ -1,5 +1,25 @@
 # Release Notes
 
+## v1.3.0
+
+### Release Highlights
+
+- **K8s Extra Pod Labels**
+  - Adds more granular Pod level details as labels meta data through configmap
+    `ExtraPodLabels`
+- **Support for Singularity Installation**
+  - Exporter can now be deployed on HPC systems through singularity.
+- **Performance Metrics**
+  - Adds more profiler related metrics on supported platforms, with toggle
+    functionality through configmap `ProfilerMetrics`
+- **Custom Prefix for Exporter**
+  - Adds more flexibility to add custome prefix to better identify AMD GPU on
+    multi cluster deployment, through configmap `CommonConfig`
+
+### Platform Support
+ROCm 6.4.x MI3xx
+
+
 ## v1.2.1
 
 ### Release Highlights
