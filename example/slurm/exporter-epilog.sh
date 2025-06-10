@@ -1,0 +1,1 @@
+../../debian/usr/local/etc/metrics/slurm/slurm-epilog.sh
