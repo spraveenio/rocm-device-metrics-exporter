@@ -11,6 +11,7 @@ docker run -d \
   --device=/dev/dri \
   --device=/dev/kfd \
   -p 5000:5000 \
+  -v /sys:/sys \
   -v ./config:/etc/metrics \
   --name device-metrics-exporter \
   rocm/device-metrics-exporter:v|version|

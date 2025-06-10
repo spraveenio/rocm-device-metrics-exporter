@@ -18,6 +18,7 @@ The Device Metrics Exporter container is hosted on Docker Hub at [rocm/device-me
 docker run -d \
   --device=/dev/dri \
   --device=/dev/kfd \
+  -v /sys:/sys \
   -p 5000:5000 \
   --name device-metrics-exporter \
   rocm/device-metrics-exporter:v1.3.0
