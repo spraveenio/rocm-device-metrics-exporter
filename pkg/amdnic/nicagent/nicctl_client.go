@@ -88,7 +88,7 @@ func (nc *NICCtlClient) UpdatePortStats() error {
 	nc.Lock()
 	defer nc.Unlock()
 
-	portStatsOut, err := exec.Command("/bin/bash", "-c", "nicctl show port statistics -j").Output()
+	portStatsOut, err := ExecWithContext("nicctl show port statistics -j")
 	if err != nil {
 		logger.Log.Printf("failed to get port statistics, err: %+v", err)
 		return err
@@ -157,7 +157,7 @@ func (nc *NICCtlClient) UpdateLifStats() error {
 		"Tx DMA error":              nc.na.m.nicLifStatsTxDMAError,
 	}
 
-	lifStatsOut, err := exec.Command("/bin/bash", "-c", "nicctl show lif statistics --json").Output()
+	lifStatsOut, err := ExecWithContext("nicctl show lif statistics --json")
 	if err != nil {
 		logger.Log.Printf("failed to get lif statistics, err: %+v", err)
 		return err

@@ -16,6 +16,7 @@
 
 package metricsserver
 
+// HealthInterface defines the interface for health metrics of AMD GPUs.
 type HealthInterface interface {
 	// Get health update of clients
 	GetGPUHealthStates() (map[string]interface{}, error)
@@ -24,6 +25,7 @@ type HealthInterface interface {
 	SetError(gpuid string, fields []string, values []uint32) error
 }
 
+// HealthSvcServer defines the interface for the health service server.
 type HealthSvcServer interface {
 	// client Registration to the metrics svc server
 	RegisterHealthClient(HealthInterface) error

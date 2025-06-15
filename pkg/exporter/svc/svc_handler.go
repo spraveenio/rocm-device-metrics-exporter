@@ -20,32 +20,71 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
 	"path"
+	"sync"
+	"syscall"
 
+	"google.golang.org/grpc"
+
+	gpumetricsserver "github.com/ROCm/device-metrics-exporter/pkg/amdgpu/metricsserver"
+	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/gen/nicmetricssvc"
+	nicmetricsserver "github.com/ROCm/device-metrics-exporter/pkg/amdnic/metricsserver"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
-	"google.golang.org/grpc"
 )
 
+// SvcHandler is a struct that manages the gRPC server and metrics services.
 type SvcHandler struct {
-	grpc      *grpc.Server
-	healthSvc *MetricsSvcImpl
-	mh        *metricsutil.MetricsHandler
+	grpc           *grpc.Server
+	mh             *metricsutil.MetricsHandler
+	gpuHealthSvc   *gpumetricsserver.MetricsSvcImpl
+	nicHealthSvc   *nicmetricsserver.MetricsSvcImpl
+	enableNICAgent bool
+	enableDebugAPI bool
+	serverWg       sync.WaitGroup
+	errChan        chan error
 }
 
-func InitSvcs(enableDebugAPI bool, mh *metricsutil.MetricsHandler) *SvcHandler {
-	s := &SvcHandler{
-		grpc:      grpc.NewServer(),
-		healthSvc: newMetricsServer(enableDebugAPI),
-		mh:        mh,
+// SvcHandlerOption set desired option
+type SvcHandlerOption func(s *SvcHandler)
+
+// WithNICAgentEnable is an option to enable or disable the NIC agent.
+func WithNICAgentEnable(enableNICAgent bool) SvcHandlerOption {
+	return func(s *SvcHandler) {
+		s.enableNICAgent = enableNICAgent
 	}
-	return s
 }
 
-func (s *SvcHandler) RegisterHealthClient(client HealthInterface) error {
-	return s.healthSvc.RegisterHealthClient(client)
+// WithDebugAPIOption is an option to enable or disable the debug API.
+func WithDebugAPIOption(enableDebugAPI bool) SvcHandlerOption {
+	return func(s *SvcHandler) {
+		s.enableDebugAPI = enableDebugAPI
+	}
+}
+
+// InitSvcs initializes the service handler with gRPC server and metrics services.
+func InitSvcs(opts ...SvcHandlerOption) *SvcHandler {
+	svcHandler := &SvcHandler{
+		grpc:    grpc.NewServer(),
+		errChan: make(chan error, 2), // Buffered channel for 2 potential error from 2 listeners
+	}
+	for _, o := range opts {
+		o(svcHandler)
+	}
+	return svcHandler
+}
+
+// RegisterGPUHealthClient registers a GPU health client with the GPU metrics service.
+func (s *SvcHandler) RegisterGPUHealthClient(client gpumetricsserver.HealthInterface) error {
+	return s.gpuHealthSvc.RegisterHealthClient(client)
+}
+
+// RegisterNICHealthClient registers a NIC health client with the NIC metrics service.
+func (s *SvcHandler) RegisterNICHealthClient(client nicmetricsserver.HealthInterface) error {
+	return s.nicHealthSvc.RegisterHealthClient(client)
 }
 
 func (s *SvcHandler) Stop() {
@@ -56,33 +95,65 @@ func (s *SvcHandler) Stop() {
 	}
 }
 
+// Run starts the gRPC server and listens for incoming connections on the specified sockets.
 func (s *SvcHandler) Run() error {
-	if s.mh != nil {
-		if enabled := s.mh.GetHealthServiceState(); !enabled {
-			logger.Log.Printf("health service is disabled")
-			return nil
+	// register all the services with the gRPC server
+	metricssvc.RegisterMetricsServiceServer(s.grpc, s.gpuHealthSvc)
+	if s.enableNICAgent {
+		nicmetricssvc.RegisterMetricsServiceServer(s.grpc, s.nicHealthSvc)
+	}
+
+	// start listening on the socket for GPU metrics
+	gpuLis, err := s.listenOnSocket(globals.MetricsSocketPath)
+	if err != nil {
+		return fmt.Errorf("failed to listen on socket %s: %v", globals.MetricsSocketPath, err)
+	}
+	s.serverWg.Add(1)
+	go s.startAndServeGRPC(gpuLis)
+
+	// start listening on the socket for NIC metrics if enabled
+	if s.enableNICAgent {
+		nicLis, err := s.listenOnSocket(globals.NICMetricsSocketPath)
+		if err != nil {
+			return fmt.Errorf("failed to listen on socket %s: %v", globals.NICMetricsSocketPath, err)
 		}
+		s.serverWg.Add(1)
+		go s.startAndServeGRPC(nicLis)
 	}
 
-	if s.grpc == nil {
-		logger.Log.Printf("creating new gRPC server")
-		s.grpc = grpc.NewServer()
+	// Wait for any server to report an error, or for a shutdown signal
+	select {
+	case err := <-s.errChan:
+		// An error occurred in one of the serving goroutines
+		logger.Log.Printf("gRPC server encountered an error: %v. Initiating graceful shutdown...", err)
+		s.grpc.GracefulStop() // Gracefully stop all serving goroutines
+		s.serverWg.Wait()     // Wait for all goroutines to finish
+		return err
+	case <-s.setupSignalHandler():
+		// Received a termination signal (e.g., Ctrl+C, SIGTERM)
+		logger.Log.Println("received termination signal. Initiating graceful shutdown...")
+		s.grpc.GracefulStop() // Gracefully stop all serving goroutines
+		s.serverWg.Wait()     // Wait for all goroutines to finish
+		logger.Log.Println("all gRPC servers stopped gracefully.")
+		return nil
 	}
+}
 
-	socketPath := globals.MetricsSocketPath
+// listenOnSocket creates a Unix socket listener at the specified path.
+func (s *SvcHandler) listenOnSocket(socketPath string) (net.Listener, error) {
 	// Remove any existing socket file
 	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to remove socket file: %v", err)
+		return nil, fmt.Errorf("failed to remove socket file: %v", err)
 	}
 
 	if err := os.MkdirAll(path.Dir(socketPath), 0755); err != nil {
-		return fmt.Errorf("failed to create socket file: %v", err)
+		return nil, fmt.Errorf("failed to create socket file: %v", err)
 	}
 
 	logger.Log.Printf("starting listening on socket : %v", socketPath)
 	lis, err := net.Listen("unix", socketPath)
 	if err != nil {
-		return fmt.Errorf("failed to listen on port: %v", err)
+		return nil, fmt.Errorf("failed to listen on port: %v", err)
 	}
 	// world readable socket
 	if err = os.Chmod(socketPath, 0777); err != nil {
@@ -90,11 +161,29 @@ func (s *SvcHandler) Run() error {
 	}
 	logger.Log.Printf("listening on socket %v", socketPath)
 
-	// server registration for grpc services
-	metricssvc.RegisterMetricsServiceServer(s.grpc, s.healthSvc)
+	return lis, nil
+}
 
+// setupSignalHandler sets up a listener for OS signals to trigger graceful shutdown.
+func (s *SvcHandler) setupSignalHandler() chan os.Signal {
+	sigChan := make(chan os.Signal, 1)
+	// Listen for interrupt (Ctrl+C) and termination signals
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	return sigChan
+}
+
+// startAndServeGRPC starts a gRPC server on a given listener.
+func (s *SvcHandler) startAndServeGRPC(lis net.Listener) {
+	defer s.serverWg.Done()
 	if err := s.grpc.Serve(lis); err != nil {
-		return fmt.Errorf("failed to serve: %v", err)
+		// Send error to the channel, but only if the channel is not full
+		select {
+		case s.errChan <- fmt.Errorf("failed to serve on: %v, err: %v", lis.Addr().String(), err):
+			// Error sent
+		default:
+			// Channel full/blocked, log directly
+			logger.Log.Printf("error channel full, directly logging: failed to serve on: %v, err: %v", lis.Addr().String(), err)
+		}
 	}
-	return nil
+	logger.Log.Printf("gRPC server on %s stopped.", lis.Addr().String())
 }
