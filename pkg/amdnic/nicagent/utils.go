@@ -14,19 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package utils
+package nicagent
 
 import (
-	"strconv"
-
-	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"context"
+	"os/exec"
+	"time"
 )
 
-func StringToUint64(str string) uint64 {
-	val, err := strconv.ParseUint(str, 10, 64)
-	if err != nil {
-		logger.Log.Printf("error converting string to uint64, err: %v", err)
-		return 0
-	}
-	return val
+// ExecWithContext executes a command with a context timeout
+func ExecWithContext(cmd string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	command := exec.CommandContext(ctx, "/bin/bash", "-c", cmd)
+	return command.Output()
 }

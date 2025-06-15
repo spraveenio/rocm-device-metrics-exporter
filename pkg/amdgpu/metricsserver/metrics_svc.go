@@ -22,7 +22,6 @@ import (
 	"sync"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
-	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -33,10 +32,10 @@ type MetricsSvcImpl struct {
 	clients []HealthInterface
 }
 
+// GetGPUState retrieves the GPU states for the specified IDs from all registered clients
 func (m *MetricsSvcImpl) GetGPUState(ctx context.Context, req *metricssvc.GPUGetRequest) (*metricssvc.GPUStateResponse, error) {
 	m.Lock()
 	defer m.Unlock()
-	//logger.Log.Printf("Got GetReq : %+v", req)
 	resp := &metricssvc.GPUStateResponse{
 		GPUState: []*metricssvc.GPUState{},
 	}
@@ -55,14 +54,13 @@ func (m *MetricsSvcImpl) GetGPUState(ctx context.Context, req *metricssvc.GPUGet
 	return resp, nil
 }
 
+// List returns the GPU states for all registered clients
 func (m *MetricsSvcImpl) List(ctx context.Context, e *emptypb.Empty) (*metricssvc.GPUStateResponse, error) {
 	m.Lock()
 	defer m.Unlock()
-	//logger.Log.Printf("Got ListReq")
 	resp := &metricssvc.GPUStateResponse{
 		GPUState: []*metricssvc.GPUState{},
 	}
-
 	for _, client := range m.clients {
 		gpuStateMap, err := client.GetGPUHealthStates()
 		if err != nil {
@@ -76,6 +74,7 @@ func (m *MetricsSvcImpl) List(ctx context.Context, e *emptypb.Empty) (*metricssv
 	return resp, nil
 }
 
+// SetError is a debug API to set GPU error state
 func (m *MetricsSvcImpl) SetError(ctx context.Context, req *metricssvc.GPUErrorRequest) (*metricssvc.GPUErrorResponse, error) {
 
 	if !m.enableDebugAPI {
@@ -84,7 +83,6 @@ func (m *MetricsSvcImpl) SetError(ctx context.Context, req *metricssvc.GPUErrorR
 
 	m.Lock()
 	defer m.Unlock()
-	logger.Log.Printf("Got SetError : %+v", req)
 	if len(req.Fields) != len(req.Counts) {
 		return nil, fmt.Errorf("invalid request, fields must be set")
 	}
@@ -101,7 +99,8 @@ func (m *MetricsSvcImpl) SetError(ctx context.Context, req *metricssvc.GPUErrorR
 // nolint:unused // mustEmbedUnimplementedMetricsServiceServer is kept for future use
 func (m *MetricsSvcImpl) mustEmbedUnimplementedMetricsServiceServer() {}
 
-func newMetricsServer(enableDebugAPI bool) *MetricsSvcImpl {
+// NewMetricsServer creates a new instance of MetricsSvcImpl
+func NewMetricsServer(enableDebugAPI bool) *MetricsSvcImpl {
 	msrv := &MetricsSvcImpl{
 		enableDebugAPI: enableDebugAPI,
 		clients:        []HealthInterface{},
@@ -109,6 +108,7 @@ func newMetricsServer(enableDebugAPI bool) *MetricsSvcImpl {
 	return msrv
 }
 
+// RegisterHealthClient registers a new HealthInterface client to the Metrics Service
 func (m *MetricsSvcImpl) RegisterHealthClient(client HealthInterface) error {
 	m.clients = append(m.clients, client)
 	return nil
