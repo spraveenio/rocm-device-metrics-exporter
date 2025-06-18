@@ -61,15 +61,15 @@ type ExporterOption func(e *Exporter)
 
 // Exporter Handler
 type Exporter struct {
-	agentGrpcPort int
-	configFile    string
-	zmqDisable    bool
-	bindAddr      string
-	k8sApiClient  *k8sclient.K8sClient
-	svcHandler    *metricsserver.SvcHandler
+	agentGrpcPort  int
+	configFile     string
+	bindAddr       string
+	zmqDisable     bool
 	enableNICAgent bool
-	ctx           context.Context
-	cancel        context.CancelFunc
+	enableGPUAgent bool
+	k8sApiClient   *k8sclient.K8sClient
+	ctx            context.Context
+	cancel         context.CancelFunc
 }
 
 // get the info from gpu agent and update the current metrics registery
@@ -300,14 +300,22 @@ func ExporterWithNICAgentEnable(enableNICAgent bool) ExporterOption {
 	}
 }
 
+func ExporterWithGPUAgentEnable(enableGPUAgent bool) ExporterOption {
+	return func(e *Exporter) {
+		logger.Log.Printf("GPU Agent enable %v", enableGPUAgent)
+		e.enableGPUAgent = enableGPUAgent
+	}
+}
+
 // StartMain - doesn't return it exits only on failure
 func (e *Exporter) StartMain(enableDebugAPI bool) {
-
+	defer e.Close()
 	logger.Init(utils.IsKubernetes())
 
 	svcHandler := metricsserver.InitSvcs(
 		metricsserver.WithDebugAPIOption(enableDebugAPI),
 		metricsserver.WithNICAgentEnable(e.enableNICAgent),
+		metricsserver.WithGPUAgentEnable(e.enableGPUAgent),
 	)
 	go func() {
 		logger.Log.Printf("metrics service starting")
@@ -323,18 +331,16 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()
 
-	gpuclient = gpuagent.NewAgent(mh, e.GetK8sApiClient(), !e.zmqDisable)
-	if err := gpuclient.Init(); err != nil {
-		logger.Log.Printf("gpuclient init err :%+v", err)
+	if e.enableGPUAgent {
+		gpuclient = gpuagent.NewAgent(mh, e.GetK8sApiClient(), !e.zmqDisable)
+		if err := gpuclient.Init(); err != nil {
+			logger.Log.Printf("gpuclient init err :%+v", err)
+		}
+		e.startWatchers()
+		if err := svcHandler.RegisterGPUHealthClient(gpuclient); err != nil {
+			logger.Log.Printf("health client registration err: %+v", err)
+		}
 	}
-	defer gpuclient.Close()
-
-	e.startWatchers()
-
-	if err := svcHandler.RegisterGPUHealthClient(gpuclient); err != nil {
-		logger.Log.Printf("health client registration err: %+v", err)
-	}
-
 
 	if e.enableNICAgent {
 		nicAgent = nicagent.NewAgent(mh)
@@ -348,19 +354,8 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 		logger.Log.Printf("NIC health states: %+v, err: %v", nicHealth, err)
 	}
 
+	// start file watcher for config changes
 	foreverWatcher(e)
-}
-
-// Close - closes the exporter and all its resources
-func (e *Exporter) Close() error {
-	e.cancel()
-	if gpuclient != nil {
-		gpuclient.Close()
-	}
-	if e.k8sApiClient != nil {
-		e.k8sApiClient.Stop()
-	}
-	return nil
 }
 
 // SetComputeNodeHealth sets the compute node health
@@ -391,4 +386,24 @@ func (e *Exporter) GetGPUWorkloads() (map[string][]string, error) {
 		}
 	}
 	return workloads, nil
+}
+
+// Close - closes the exporter and all its resources
+func (e *Exporter) Close() error {
+	e.cancel()
+	if gpuclient != nil {
+		gpuclient.Close()
+		gpuclient = nil
+	}
+
+	if nicAgent != nil {
+		nicAgent.Close()
+		nicAgent = nil
+	}
+
+	if e.k8sApiClient != nil {
+		e.k8sApiClient.Stop()
+		e.k8sApiClient = nil
+	}
+	return nil
 }

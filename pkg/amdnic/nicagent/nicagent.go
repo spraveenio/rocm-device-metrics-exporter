@@ -125,3 +125,12 @@ func (na *NICAgentClient) getMetricsAll() error {
 	wg.Wait()
 	return nil
 }
+
+func (na *NICAgentClient) Close() {
+	na.Lock()
+	defer na.Unlock()
+	if na.cancel != nil {
+		na.cancel()
+	}
+	na.nicClients = []NICInterface{}
+}
