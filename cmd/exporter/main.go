@@ -41,6 +41,7 @@ var (
 	agentGrpcPort  = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
 	versionOpt     = flag.Bool("version", false, "show version")
 	enableNICAgent = flag.Bool("enable-nic-agent", false, "Enable NIC Agent")
+	enableGPUAgent = flag.Bool("enable-gpu-agent", true, "Enable GPU Agent (default: true, enabled by default)")
 )
 
 func main() {
@@ -97,6 +98,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if !*enableNICAgent && !*enableGPUAgent {
+		fmt.Printf("NIC Agent and GPU Agent are both disabled, exiting")
+		os.Exit(1)
+	}
+
 	logger.Init(utils.IsKubernetes())
 
 	logger.Log.Printf("Version : %v", Version)
@@ -104,8 +110,10 @@ func main() {
 	logger.Log.Printf("GitCommit: %v", GitCommit)
 	logger.Log.Printf("Deployment: %v", deploymentType)
 
-	exporterHandler := exporter.NewExporter(*agentGrpcPort, *metricsConfig,
-	    exporter.ExporterWithNICAgentEnable(*enableNICAgent),
+	exporterHandler := exporter.NewExporter(
+		*agentGrpcPort, *metricsConfig,
+		exporter.ExporterWithNICAgentEnable(*enableNICAgent),
+		exporter.ExporterWithGPUAgentEnable(*enableGPUAgent),
 		exporter.WithBindAddr(*bindAddr),
 	)
 

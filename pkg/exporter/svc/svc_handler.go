@@ -44,6 +44,7 @@ type SvcHandler struct {
 	nicHealthSvc   *nicmetricsserver.MetricsSvcImpl
 	enableNICAgent bool
 	enableDebugAPI bool
+	enableGPUAgent bool
 	serverWg       sync.WaitGroup
 	errChan        chan error
 }
@@ -62,6 +63,13 @@ func WithNICAgentEnable(enableNICAgent bool) SvcHandlerOption {
 func WithDebugAPIOption(enableDebugAPI bool) SvcHandlerOption {
 	return func(s *SvcHandler) {
 		s.enableDebugAPI = enableDebugAPI
+	}
+}
+
+// WithGPUAgentEnable is an option to enable or disable the GPU agent.
+func WithGPUAgentEnable(enableGPUAgent bool) SvcHandlerOption {
+	return func(s *SvcHandler) {
+		s.enableGPUAgent = enableGPUAgent
 	}
 }
 
@@ -98,18 +106,22 @@ func (s *SvcHandler) Stop() {
 // Run starts the gRPC server and listens for incoming connections on the specified sockets.
 func (s *SvcHandler) Run() error {
 	// register all the services with the gRPC server
-	metricssvc.RegisterMetricsServiceServer(s.grpc, s.gpuHealthSvc)
+	if s.enableGPUAgent {
+		metricssvc.RegisterMetricsServiceServer(s.grpc, s.gpuHealthSvc)
+	}
 	if s.enableNICAgent {
 		nicmetricssvc.RegisterMetricsServiceServer(s.grpc, s.nicHealthSvc)
 	}
 
-	// start listening on the socket for GPU metrics
-	gpuLis, err := s.listenOnSocket(globals.MetricsSocketPath)
-	if err != nil {
-		return fmt.Errorf("failed to listen on socket %s: %v", globals.MetricsSocketPath, err)
+	if s.enableGPUAgent {
+		// start listening on the socket for GPU metrics
+		gpuLis, err := s.listenOnSocket(globals.MetricsSocketPath)
+		if err != nil {
+			return fmt.Errorf("failed to listen on socket %s: %v", globals.MetricsSocketPath, err)
+		}
+		s.serverWg.Add(1)
+		go s.startAndServeGRPC(gpuLis)
 	}
-	s.serverWg.Add(1)
-	go s.startAndServeGRPC(gpuLis)
 
 	// start listening on the socket for NIC metrics if enabled
 	if s.enableNICAgent {
