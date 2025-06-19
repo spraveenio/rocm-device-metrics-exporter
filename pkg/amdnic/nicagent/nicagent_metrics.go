@@ -368,7 +368,7 @@ func (na *NICAgentClient) initPrometheusMetrics() {
 	labels := na.GetExportLabels()
 	na.m = &metrics{
 		nicNodesTotal: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_NODES_TOTAL.String()),
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_TOTAL.String()),
 			Help: "Number of NICs in the node",
 		}),
 

@@ -300,7 +300,7 @@ message CommonConfig {
 }
 
 enum NICMetricField {
-    NIC_NODES_TOTAL             = 0;
+    NIC_TOTAL                   = 0;
     NIC_MAX_SPEED               = 1;
 
     // Port Stats Field defines the various statistics fields for port-level metrics. 
@@ -397,8 +397,8 @@ message MetricConfig {
     // GPU Metric config for export
     GPUMetricConfig GPUConfig = 2;
 	
-	// Exporter Common Configuration
-	CommonConfig CommonConfig = 3;
+    // Exporter Common Configuration
+    CommonConfig CommonConfig = 3;
 
     // NIC Metric config for export
     NICMetricConfig NICConfig = 4;
