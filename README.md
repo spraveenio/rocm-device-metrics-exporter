@@ -30,11 +30,19 @@ docker run -d \
 - Configurable service ports
 - Container-based deployment
 
+
 ## Requirements
 
 - Ubuntu 22.04, 24.04
-- ROCm 6.2.x, 6.3.x, 6.4.x
 - Docker (or compatible container runtime)
+
+| Rocm Version | Driver Version | Exporter Image Version | Platform     |
+|--------------|----------------|------------------------|--------------|
+| 6.2.x        | 6.8.5          | v1.0.0                 | MI2xx, MI3xx |
+| 6.3.x        | 6.10.5         | v1.1.0, v1.2.0         | MI2xx, MI3xx |
+| 6.4.x        | 6.12.12        | v1.3.0                 | MI3xx        |
+| 6.4.x        | 6.12.12        | v1.3.0.1               | MI2xx, MI3xx |
+
 
 ## Documentation
 
