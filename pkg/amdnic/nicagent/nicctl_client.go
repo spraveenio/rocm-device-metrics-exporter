@@ -24,7 +24,6 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/gen/nicmetrics"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type NICCtlClient struct {
@@ -106,8 +105,8 @@ func (nc *NICCtlClient) UpdatePortStats() error {
 	for _, nic := range portStats.NIC {
 		labels := nc.na.populateLabelsFromNIC(nic.ID)
 		for _, port := range nic.Port {
-			portName := nc.na.nics[nic.ID].Ports[port.ID].Name
-			portID := nc.na.nics[nic.ID].Ports[port.ID].Index
+			portName := nc.na.nics[nic.ID].GetPortName()
+			portID := nc.na.nics[nic.ID].GetPortIndex()
 			labels[LabelPortName] = portName
 			labels[LabelPortID] = portID
 
@@ -143,20 +142,6 @@ func (nc *NICCtlClient) UpdateLifStats() error {
 	nc.Lock()
 	defer nc.Unlock()
 
-	// list of lif stats fields to be filtered from nicctl output and the respective prometheus metric functions to be called
-	lifStatsFilter := map[string]prometheus.GaugeVec{
-		"Rx unicast packets":        nc.na.m.nicLifStatsRxUnicastPackets,
-		"Rx unicast drop packets":   nc.na.m.nicLifStatsRxUnicastDropPackets,
-		"Rx multicast drop packets": nc.na.m.nicLifStatsRxMulticastDropPackets,
-		"Rx broadcast drop packets": nc.na.m.nicLifStatsRxBroadcastDropPackets,
-		"Rx DMA errors":             nc.na.m.nicLifStatsRxDMAErrors,
-		"Tx unicast packets":        nc.na.m.nicLifStatsTxUnicastPackets,
-		"Tx unicast drop packets":   nc.na.m.nicLifStatsTxUnicastDropPackets,
-		"Tx multicast drop packets": nc.na.m.nicLifStatsTxMulticastDropPackets,
-		"Tx broadcast drop packets": nc.na.m.nicLifStatsTxBroadcastDropPackets,
-		"Tx DMA errors":             nc.na.m.nicLifStatsTxDMAErrors,
-	}
-
 	lifStatsOut, err := ExecWithContext("nicctl show lif statistics --json")
 	if err != nil {
 		logger.Log.Printf("failed to get lif statistics, err: %+v", err)
@@ -174,17 +159,22 @@ func (nc *NICCtlClient) UpdateLifStats() error {
 	for _, nic := range lifStats.NIC {
 		labels := nc.na.populateLabelsFromNIC(nic.ID)
 		for _, lif := range nic.Lif {
-			portUUID := nc.na.nics[nic.ID].LifToPort[lif.ID]
-			port := nc.na.nics[nic.ID].Ports[portUUID]
-			labels[LabelLifName] = port.Lifs[lif.ID].Name
-			labels[LabelPortName] = port.Name
+			labels[LabelLifName] = nc.na.nics[nic.ID].GetLifName(lif.Spec.ID)
+			labels[LabelPortName] = nc.na.nics[nic.ID].GetPortName()
 
-			for _, stats := range lif.Statistics {
-				if metricFn, found := lifStatsFilter[stats.Name]; found {
-					val := float64(utils.StringToUint64(stats.Value))
-					metricFn.With(labels).Set(val)
-				}
-			}
+			// rx counters
+			nc.na.m.nicLifStatsRxUnicastPackets.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.RX_UNICAST_PACKETS)))
+			nc.na.m.nicLifStatsRxUnicastDropPackets.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.RX_UNICAST_DROP_PACKETS)))
+			nc.na.m.nicLifStatsRxMulticastDropPackets.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.RX_MULTICAST_DROP_PACKETS)))
+			nc.na.m.nicLifStatsRxBroadcastDropPackets.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.RX_BROADCAST_DROP_PACKETS)))
+			nc.na.m.nicLifStatsRxDMAErrors.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.RX_DMA_ERRORS)))
+
+			// tx counters
+			nc.na.m.nicLifStatsTxUnicastPackets.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.TX_UNICAST_PACKETS)))
+			nc.na.m.nicLifStatsTxUnicastDropPackets.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.TX_UNICAST_DROP_PACKETS)))
+			nc.na.m.nicLifStatsTxMulticastDropPackets.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.TX_MULTICAST_DROP_PACKETS)))
+			nc.na.m.nicLifStatsTxBroadcastDropPackets.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.TX_BROADCAST_DROP_PACKETS)))
+			nc.na.m.nicLifStatsTxDMAErrors.With(labels).Set(float64(utils.StringToUint64(lif.Statistics.TX_DMA_ERRORS)))
 		}
 	}
 	return nil

@@ -898,25 +898,17 @@ func (na *NICAgentClient) getNICs() (map[string]*NIC, error) {
 		}
 
 		for _, nic := range resp.NIC {
-			cachedNICObj := nics[nic.ID]
-			for _, port := range cachedNICObj.Ports {
-				lifIndex := 0
-				nics[nic.ID].Ports[port.UUID].Lifs = map[string]*Lif{}
-				nics[nic.ID].LifToPort = map[string]string{}
-				for _, lif := range nic.Lif {
-					if port.MACAddress == lif.Spec.MACAddress {
-						nics[nic.ID].Ports[port.UUID].Lifs[lif.Spec.ID] = &Lif{
-							Index: fmt.Sprintf("%v", lifIndex),
-							UUID:  lif.Spec.ID,
-							Name:  lif.Status.Name,
-						}
-						nics[nic.ID].LifToPort[lif.Spec.ID] = port.UUID
-						lifIndex++
-					}
+			lifIndex := 0
+			nics[nic.ID].Lifs = map[string]*Lif{}
+			for _, lif := range nic.Lif {
+				nics[nic.ID].Lifs[lif.Spec.ID] = &Lif{
+					Index: fmt.Sprintf("%v", lifIndex),
+					UUID:  lif.Spec.ID,
+					Name:  lif.Status.Name,
 				}
+				lifIndex++
 			}
 		}
-
 	}
 	return nics, nil
 }

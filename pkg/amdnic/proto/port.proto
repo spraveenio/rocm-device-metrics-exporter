@@ -98,64 +98,77 @@ message PortStatsList {
 {
     "nic": [
         {
-            "id": "42424650-4c32-3434-3530-304430000000",
+            "id": "42424650-4c32-3531-3830-303533000000",
             "lif": [
                 {
-                    "id": "44000070-0100-0000-4242-0490812a2c28",
-                    "statistics": [
-                        {
-                            "name": "Rx unicast bytes",
-                            "value": "18409"
-                        },
-                        {
-                            "name": "Rx unicast packets",
-                            "value": "193"
-                        },
-                        {
-                            "name": "Rx multicast bytes",
-                            "value": "1215846"
-                        },
-                        {
-                            "name": "Rx unicast drop bytes",
-                            "value": "0"
-                        },
-                        {
-                            "name": "Tx unicast bytes",
-                            "value": "0"
-                        },
-                        {
-                            "name": "Tx unicast packets",
-                            "value": "0"
-                        },
-                        {
-                            "name": "Tx multicast bytes",
-                            "value": "0"
-                        }
-                    ]
+                    "spec": {
+                        "id": "43000070-0100-0000-4242-04908134f590"
+                    },
+                    "statistics": {
+                        "rx_unicast_bytes": "0",
+                        "rx_unicast_packets": "0",
+                        "rx_multicast_bytes": "0",
+                        "rx_multicast_packets": "0",
+                        "rx_broadcast_bytes": "0",
+                        "rx_broadcast_packets": "0",
+                        "rx_unicast_drop_bytes": "0",
+                        "rx_unicast_drop_packets": "0",
+                        "rx_multicast_drop_bytes": "0",
+                        "rx_multicast_drop_packets": "0",
+                        "rx_broadcast_drop_bytes": "0",
+                        "rx_broadcast_drop_packets": "0",
+                        "rx_dma_errors": "0",
+                        "tx_unicast_bytes": "0",
+                        "tx_unicast_packets": "0",
+                    }
+                },
+                {
+                    "spec": {
+                        "id": "44000070-0100-0000-4242-04908134f590"
+                    },
+                    "statistics": {
+                        "rx_unicast_bytes": "0",
+                        "rx_unicast_packets": "0",
+                        "rx_multicast_bytes": "0",
+                        "rx_multicast_packets": "0",
+                        "rx_broadcast_bytes": "0",
+                        "rx_broadcast_packets": "0",
+                        "rx_unicast_drop_bytes": "0",
+                        "rx_unicast_drop_packets": "0",
+                        "rx_multicast_drop_bytes": "0",
                 }
-            ]
-        }
-    ]
-}
+            }
+        ]
+    }
+]} 
 */
 
-// Stats represents a single statistical metric, such as bytes transmitted, packets received, etc.
-message LStats {
-    // The name of the statistic (e.g., "Rx unicast bytes")
-    string Name  = 1 [(go.field).tags = 'json:"name,omitempty"'];
+message LifStatsFields {
+    string RX_UNICAST_PACKETS        = 1  [(go.field).tags = 'json:"rx_unicast_packets,omitempty"'];
+    string RX_UNICAST_DROP_PACKETS   = 2  [(go.field).tags = 'json:"rx_unicast_drop_bytes,omitempty"'];
+    string RX_MULTICAST_DROP_PACKETS = 3  [(go.field).tags = 'json:"rx_multicast_drop_packets,omitempty"'];
+    string RX_BROADCAST_DROP_PACKETS = 4  [(go.field).tags = 'json:"rx_broadcast_drop_packets,omitempty"'];
+    string RX_DMA_ERRORS             = 5  [(go.field).tags = 'json:"rx_dma_errors,omitempty"'];
+    string TX_UNICAST_PACKETS        = 6  [(go.field).tags = 'json:"tx_unicast_packets,omitempty"'];
+    string TX_UNICAST_DROP_PACKETS   = 7  [(go.field).tags = 'json:"tx_unicast_drop_packets,omitempty"'];
+    string TX_MULTICAST_DROP_PACKETS = 8  [(go.field).tags = 'json:"tx_multicast_drop_packets,omitempty"'];
+    string TX_BROADCAST_DROP_PACKETS = 9  [(go.field).tags = 'json:"tx_broadcast_drop_packets,omitempty"'];
+    string TX_DMA_ERRORS             = 10 [(go.field).tags = 'json:"tx_dma_errors,omitempty"'];
+}
 
-    // The value of the statistic (e.g., "18409")
-    string Value = 2 [(go.field).tags = 'json:"value,omitempty"'];
+message LifStatsSpec {
+    // Unique identifier for the logical interface (LIF) on the NIC
+    string ID                  = 1 [(go.field).tags = 'json:"id,omitempty"'];
 }
 
 // LifStats represents statistics for a particular logical interface (LIF) on a NIC (Network Interface Card).
 message LifStats {
-    // Unique identifier for the logical interface (LIF) on the NIC
-    string ID                  = 1 [(go.field).tags = 'json:"id,omitempty"'];
+    // Spec has the ID of the LIF.
+    LifStatsSpec Spec         = 1 [(go.field).tags = 'json:"spec,omitempty"'];
 
     // A list of statistics for this particular LIF.
     // Each statistic could represent something like "Rx unicast bytes" or "Tx multicast packets".
-    repeated LStats Statistics = 2 [(go.field).tags = 'json:"statistics,omitempty"'];
+    LifStatsFields Statistics = 2 [(go.field).tags = 'json:"statistics,omitempty"'];
 }
 
 // NICLifStats represents statistics for a specific NIC (Network Interface Card) and its associated LIFs.
