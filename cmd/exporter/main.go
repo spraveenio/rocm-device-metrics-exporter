@@ -37,11 +37,11 @@ var (
 )
 
 var (
-	metricsConfig  = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
-	agentGrpcPort  = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
-	versionOpt     = flag.Bool("version", false, "show version")
-	enableNICAgent = flag.Bool("enable-nic-agent", false, "Enable NIC Agent")
-	enableGPUAgent = flag.Bool("enable-gpu-agent", true, "Enable GPU Agent (default: true, enabled by default)")
+	metricsConfig       = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
+	agentGrpcPort       = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
+	versionOpt          = flag.Bool("version", false, "show version")
+	enableNICMonitoring = flag.Bool("monitor-nic", false, "Enable NIC Monitoring")
+	enableGPUMonitoring = flag.Bool("monitor-gpu", true, "Enable GPU Monitoring (default: true, enabled by default)")
 )
 
 func main() {
@@ -98,7 +98,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if !*enableNICAgent && !*enableGPUAgent {
+	if !*enableNICMonitoring && !*enableGPUMonitoring {
 		fmt.Printf("NIC Agent and GPU Agent are both disabled, exiting")
 		os.Exit(1)
 	}
@@ -112,9 +112,8 @@ func main() {
 
 	exporterHandler := exporter.NewExporter(
 		*agentGrpcPort, *metricsConfig,
-		exporter.ExporterWithNICAgentEnable(*enableNICAgent),
-		exporter.ExporterWithGPUAgentEnable(*enableGPUAgent),
-		exporter.WithBindAddr(*bindAddr),
+		exporter.WithNICMonitoring(*enableNICMonitoring),
+		exporter.WithGPUMonitoring(*enableGPUMonitoring),
 	)
 
 	enableDebugAPI := true // default
