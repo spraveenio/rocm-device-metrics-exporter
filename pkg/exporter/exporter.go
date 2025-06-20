@@ -61,15 +61,14 @@ type ExporterOption func(e *Exporter)
 
 // Exporter Handler
 type Exporter struct {
-	agentGrpcPort  int
-	configFile     string
-	bindAddr       string
-	zmqDisable     bool
-	enableNICAgent bool
-	enableGPUAgent bool
-	k8sApiClient   *k8sclient.K8sClient
-	ctx            context.Context
-	cancel         context.CancelFunc
+	agentGrpcPort       int
+	configFile          string
+	zmqDisable          bool
+	enableNICMonitoring bool
+	enableGPUMonitoring bool
+	k8sApiClient        *k8sclient.K8sClient
+	ctx                 context.Context
+	cancel              context.CancelFunc
 }
 
 // get the info from gpu agent and update the current metrics registery
@@ -293,17 +292,17 @@ func (e *Exporter) startWatchers() {
 	go gpuclient.StartMonitor()
 }
 
-func ExporterWithNICAgentEnable(enableNICAgent bool) ExporterOption {
+func WithNICMonitoring(enableNICAgent bool) ExporterOption {
 	return func(e *Exporter) {
-		logger.Log.Printf("NIC Agent enable %v", enableNICAgent)
-		e.enableNICAgent = enableNICAgent
+		logger.Log.Printf("NIC monitoring enable %v", enableNICAgent)
+		e.enableNICMonitoring = enableNICAgent
 	}
 }
 
-func ExporterWithGPUAgentEnable(enableGPUAgent bool) ExporterOption {
+func WithGPUMonitoring(enableGPUAgent bool) ExporterOption {
 	return func(e *Exporter) {
-		logger.Log.Printf("GPU Agent enable %v", enableGPUAgent)
-		e.enableGPUAgent = enableGPUAgent
+		logger.Log.Printf("GPU monitoring enable %v", enableGPUAgent)
+		e.enableGPUMonitoring = enableGPUAgent
 	}
 }
 
@@ -314,8 +313,8 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 
 	svcHandler := metricsserver.InitSvcs(
 		metricsserver.WithDebugAPIOption(enableDebugAPI),
-		metricsserver.WithNICAgentEnable(e.enableNICAgent),
-		metricsserver.WithGPUAgentEnable(e.enableGPUAgent),
+		metricsserver.WithNICMonitoring(e.enableNICMonitoring),
+		metricsserver.WithGPUMonitoring(e.enableGPUMonitoring),
 	)
 	go func() {
 		logger.Log.Printf("metrics service starting")
@@ -331,7 +330,7 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()
 
-	if e.enableGPUAgent {
+	if e.enableGPUMonitoring {
 		gpuclient = gpuagent.NewAgent(mh, e.GetK8sApiClient(), !e.zmqDisable)
 		if err := gpuclient.Init(); err != nil {
 			logger.Log.Printf("gpuclient init err :%+v", err)
@@ -342,7 +341,7 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 		}
 	}
 
-	if e.enableNICAgent {
+	if e.enableNICMonitoring {
 		nicAgent = nicagent.NewAgent(mh)
 		if err := nicAgent.Init(); err != nil {
 			logger.Log.Printf("nic client init err :%+v", err)

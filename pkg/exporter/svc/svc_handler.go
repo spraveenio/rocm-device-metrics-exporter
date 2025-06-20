@@ -38,24 +38,23 @@ import (
 
 // SvcHandler is a struct that manages the gRPC server and metrics services.
 type SvcHandler struct {
-	grpc           *grpc.Server
-	mh             *metricsutil.MetricsHandler
-	gpuHealthSvc   *gpumetricsserver.MetricsSvcImpl
-	nicHealthSvc   *nicmetricsserver.MetricsSvcImpl
-	enableNICAgent bool
-	enableDebugAPI bool
-	enableGPUAgent bool
-	serverWg       sync.WaitGroup
-	errChan        chan error
+	grpc                *grpc.Server
+	gpuHealthSvc        *gpumetricsserver.MetricsSvcImpl
+	nicHealthSvc        *nicmetricsserver.MetricsSvcImpl
+	enableNICMonitoring bool
+	enableGPUMonitoring bool
+	enableDebugAPI      bool
+	serverWg            sync.WaitGroup
+	errChan             chan error
 }
 
 // SvcHandlerOption set desired option
 type SvcHandlerOption func(s *SvcHandler)
 
-// WithNICAgentEnable is an option to enable or disable the NIC agent.
-func WithNICAgentEnable(enableNICAgent bool) SvcHandlerOption {
+// WithNICMonitoring is an option to enable or disable the NIC agent.
+func WithNICMonitoring(enableNICMonitoring bool) SvcHandlerOption {
 	return func(s *SvcHandler) {
-		s.enableNICAgent = enableNICAgent
+		s.enableNICMonitoring = enableNICMonitoring
 	}
 }
 
@@ -66,10 +65,10 @@ func WithDebugAPIOption(enableDebugAPI bool) SvcHandlerOption {
 	}
 }
 
-// WithGPUAgentEnable is an option to enable or disable the GPU agent.
-func WithGPUAgentEnable(enableGPUAgent bool) SvcHandlerOption {
+// WithGPUMonitoring is an option to enable or disable the GPU agent.
+func WithGPUMonitoring(enableGPUMonitoring bool) SvcHandlerOption {
 	return func(s *SvcHandler) {
-		s.enableGPUAgent = enableGPUAgent
+		s.enableGPUMonitoring = enableGPUMonitoring
 	}
 }
 
@@ -106,14 +105,15 @@ func (s *SvcHandler) Stop() {
 // Run starts the gRPC server and listens for incoming connections on the specified sockets.
 func (s *SvcHandler) Run() error {
 	// register all the services with the gRPC server
-	if s.enableGPUAgent {
+	// all the services should be registered before starting the server
+	if s.enableGPUMonitoring {
 		metricssvc.RegisterMetricsServiceServer(s.grpc, s.gpuHealthSvc)
 	}
-	if s.enableNICAgent {
+	if s.enableNICMonitoring {
 		nicmetricssvc.RegisterMetricsServiceServer(s.grpc, s.nicHealthSvc)
 	}
 
-	if s.enableGPUAgent {
+	if s.enableGPUMonitoring {
 		// start listening on the socket for GPU metrics
 		gpuLis, err := s.listenOnSocket(globals.MetricsSocketPath)
 		if err != nil {
@@ -124,7 +124,7 @@ func (s *SvcHandler) Run() error {
 	}
 
 	// start listening on the socket for NIC metrics if enabled
-	if s.enableNICAgent {
+	if s.enableNICMonitoring {
 		nicLis, err := s.listenOnSocket(globals.NICMetricsSocketPath)
 		if err != nil {
 			return fmt.Errorf("failed to listen on socket %s: %v", globals.NICMetricsSocketPath, err)
