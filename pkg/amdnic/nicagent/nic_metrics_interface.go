@@ -28,17 +28,52 @@ type NICInterface interface {
 }
 
 // NIC represents the card data
+// NICToPort: currently it's a 1:1 mapping but this has to be changed if the ports are getting breaked down further
 type NIC struct {
 	Index        string
-	UUID         string `json:"id"`
-	ProductName  string `json:"product_name"`
-	SerialNumber string `json:"serial_number"`
-	Ports        map[string]*Port
+	UUID         string           `json:"id"`
+	ProductName  string           `json:"product_name"`
+	SerialNumber string           `json:"serial_number"`
+	Ports        map[string]*Port // NIC ports by Port ID
+	Lifs         map[string]*Lif  // NIC lifs by Lif IDq
 }
 
 // Port represents the network port data
 type Port struct {
+	Index      string
+	UUID       string `json:"id"`
+	Name       string `json:"name"`
+	MACAddress string
+}
+
+// LIf represents the logical interface data
+type Lif struct {
 	Index string
 	UUID  string `json:"id"`
 	Name  string `json:"name"`
+}
+
+// GetPortName returns the name of the first port associated with the NIC.
+// This is a simplified method assuming a 1:1 mapping between NIC and Port.
+func (n *NIC) GetPortName() string {
+	for _, port := range n.Ports {
+		return port.Name
+	}
+	return ""
+}
+
+// GetPortIndex returns the index of the first port associated with the NIC.
+func (n *NIC) GetPortIndex() string {
+	for _, port := range n.Ports {
+		return port.Index
+	}
+	return ""
+}
+
+// GetLifName returns the name of the lif associated with the given UUID.
+func (n *NIC) GetLifName(uuid string) string {
+	if lif, ok := n.Lifs[uuid]; ok {
+		return lif.Name
+	}
+	return ""
 }

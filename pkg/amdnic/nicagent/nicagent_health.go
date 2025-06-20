@@ -48,27 +48,25 @@ func (na *NICAgentClient) GetNICHealthStates() (map[string]interface{}, error) {
 
 	nicHealthMap := make(map[string]interface{})
 	for _, nic := range na.nics {
-		for _, port := range nic.Ports {
-			for _, lif := range port.Lifs {
-				nicState := nicmetricssvc.NICState{}
-				pciAddr, err := na.getPCIAddress(lif.Name)
-				if err != nil {
-					logger.Log.Printf("failed to get PCI address for LIF %s, err: %+v", lif.Name, err)
-					return nil, err
-				}
-				adminState, err := na.getAdminStatus(lif.UUID)
-				if err != nil {
-					logger.Log.Printf("failed to get admin state for LIF %s, err: %+v", lif.UUID, err)
-					return nil, err
-				}
-				nicState.Device = pciAddr
-				nicState.UUID = lif.UUID
-				switch adminState {
-				case strings.ToLower(nicmetricssvc.AdminState_UP.String()):
-					nicState.Health = strings.ToLower(nicmetricssvc.Health_HEALTHY.String())
-				case strings.ToLower(nicmetricssvc.AdminState_DOWN.String()):
-					nicState.Health = strings.ToLower(nicmetricssvc.Health_UNHEALTHY.String())
-				}
+		for _, lif := range nic.Lifs {
+			nicState := nicmetricssvc.NICState{}
+			pciAddr, err := na.getPCIAddress(lif.Name)
+			if err != nil {
+				logger.Log.Printf("failed to get PCI address for LIF %s, err: %+v", lif.Name, err)
+				return nil, err
+			}
+			adminState, err := na.getAdminStatus(lif.UUID)
+			if err != nil {
+				logger.Log.Printf("failed to get admin state for LIF %s, err: %+v", lif.UUID, err)
+				return nil, err
+			}
+			nicState.Device = pciAddr
+			nicState.UUID = lif.UUID
+			switch adminState {
+			case strings.ToLower(nicmetricssvc.AdminState_UP.String()):
+				nicState.Health = strings.ToLower(nicmetricssvc.Health_HEALTHY.String())
+			case strings.ToLower(nicmetricssvc.AdminState_DOWN.String()):
+				nicState.Health = strings.ToLower(nicmetricssvc.Health_UNHEALTHY.String())
 			}
 		}
 	}
