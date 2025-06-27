@@ -149,12 +149,12 @@ func (nc *NICCtlClient) UpdateLifStats() error {
 		"Rx unicast drop packets":   nc.na.m.nicLifStatsRxUnicastDropPackets,
 		"Rx multicast drop packets": nc.na.m.nicLifStatsRxMulticastDropPackets,
 		"Rx broadcast drop packets": nc.na.m.nicLifStatsRxBroadcastDropPackets,
-		"Rx DMA error":              nc.na.m.nicLifStatsRxDMAError,
+		"Rx DMA errors":             nc.na.m.nicLifStatsRxDMAErrors,
 		"Tx unicast packets":        nc.na.m.nicLifStatsTxUnicastPackets,
 		"Tx unicast drop packets":   nc.na.m.nicLifStatsTxUnicastDropPackets,
 		"Tx multicast drop packets": nc.na.m.nicLifStatsTxMulticastDropPackets,
 		"Tx broadcast drop packets": nc.na.m.nicLifStatsTxBroadcastDropPackets,
-		"Tx DMA error":              nc.na.m.nicLifStatsTxDMAError,
+		"Tx DMA errors":             nc.na.m.nicLifStatsTxDMAErrors,
 	}
 
 	lifStatsOut, err := ExecWithContext("nicctl show lif statistics --json")
