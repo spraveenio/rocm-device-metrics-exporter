@@ -107,6 +107,18 @@ type metrics struct {
 	rdmaRespTxLocSglInvErr   prometheus.GaugeVec
 
 	rdmaRespRxS0TableErr prometheus.GaugeVec
+
+	//LifStats
+	nicLifStatsRxUnicastPackets       prometheus.GaugeVec
+	nicLifStatsRxUnicastDropPackets   prometheus.GaugeVec
+	nicLifStatsRxMulticastDropPackets prometheus.GaugeVec
+	nicLifStatsRxBroadcastDropPackets prometheus.GaugeVec
+	nicLifStatsRxDMAErrors            prometheus.GaugeVec
+	nicLifStatsTxUnicastPackets       prometheus.GaugeVec
+	nicLifStatsTxUnicastDropPackets   prometheus.GaugeVec
+	nicLifStatsTxMulticastDropPackets prometheus.GaugeVec
+	nicLifStatsTxBroadcastDropPackets prometheus.GaugeVec
+	nicLifStatsTxDMAErrors            prometheus.GaugeVec
 }
 
 func (na *NICAgentClient) ResetMetrics() error {
@@ -171,6 +183,17 @@ func (na *NICAgentClient) ResetMetrics() error {
 	na.m.rdmaRespTxLocSglInvErr.Reset()
 
 	na.m.rdmaRespRxS0TableErr.Reset()
+
+	na.m.nicLifStatsRxUnicastPackets.Reset()
+	na.m.nicLifStatsRxUnicastDropPackets.Reset()
+	na.m.nicLifStatsRxMulticastDropPackets.Reset()
+	na.m.nicLifStatsRxBroadcastDropPackets.Reset()
+	na.m.nicLifStatsRxDMAErrors.Reset()
+	na.m.nicLifStatsTxUnicastPackets.Reset()
+	na.m.nicLifStatsTxUnicastDropPackets.Reset()
+	na.m.nicLifStatsTxMulticastDropPackets.Reset()
+	na.m.nicLifStatsTxBroadcastDropPackets.Reset()
+	na.m.nicLifStatsTxDMAErrors.Reset()
 
 	return nil
 }
@@ -361,6 +384,17 @@ func (na *NICAgentClient) initFieldMetricsMap() {
 		na.m.rdmaRespTxLocSglInvErr,
 
 		na.m.rdmaRespRxS0TableErr,
+
+		na.m.nicLifStatsRxUnicastPackets,
+		na.m.nicLifStatsRxUnicastDropPackets,
+		na.m.nicLifStatsRxMulticastDropPackets,
+		na.m.nicLifStatsRxBroadcastDropPackets,
+		na.m.nicLifStatsRxDMAErrors,
+		na.m.nicLifStatsTxUnicastPackets,
+		na.m.nicLifStatsTxUnicastDropPackets,
+		na.m.nicLifStatsTxMulticastDropPackets,
+		na.m.nicLifStatsTxBroadcastDropPackets,
+		na.m.nicLifStatsTxDMAErrors,
 	}
 }
 
@@ -651,6 +685,57 @@ func (na *NICAgentClient) initPrometheusMetrics() {
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_S0_TABLE_ERR.String()),
 			Help: "Response rx S0 Table error count",
 		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+
+		/* Lif stats */
+		nicLifStatsRxUnicastPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_UNICAST_PACKETS.String()),
+			Help: "Total number of unicast packets received by the NIC",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+
+		nicLifStatsRxUnicastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_UNICAST_DROP_PACKETS.String()),
+			Help: "Number of unicast packets that were dropped during reception",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+
+		nicLifStatsRxMulticastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_MULTICAST_DROP_PACKETS.String()),
+			Help: "Number of multicast packets that were dropped during reception",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+
+		nicLifStatsRxBroadcastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_BROADCAST_DROP_PACKETS.String()),
+			Help: "Number of broadcast packets that were dropped during reception",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+
+		nicLifStatsRxDMAErrors: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_DMA_ERRORS.String()),
+			Help: "Number of errors encountered while performing Direct Memory Access (DMA) during packet reception",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+
+		nicLifStatsTxUnicastPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_UNICAST_PACKETS.String()),
+			Help: "Total number of unicast packets transmitted by the NIC",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+
+		nicLifStatsTxUnicastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_UNICAST_DROP_PACKETS.String()),
+			Help: "Number of unicast packets that were dropped during transmission",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+
+		nicLifStatsTxMulticastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_MULTICAST_DROP_PACKETS.String()),
+			Help: "Number of multicast packets that were dropped during transmission",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+
+		nicLifStatsTxBroadcastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_BROADCAST_DROP_PACKETS.String()),
+			Help: "Number of broadcast packets that were dropped during transmission",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+
+		nicLifStatsTxDMAErrors: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_DMA_ERRORS.String()),
+			Help: "Number of errors encountered while performing Direct Memory Access (DMA) during packet transmission",
+		}, append([]string{LabelPortName, LabelLifName}, labels...)),
 	}
 	na.initFieldMetricsMap()
 }
