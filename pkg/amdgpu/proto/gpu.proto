@@ -295,22 +295,6 @@ enum VRAMType {
   VRAM_TYPE_UNKNOWN = 15;
 }
 
-// VRAM vendor
-enum VRAMVendor {
-  VRAM_VENDOR_NONE     = 0;
-  VRAM_VENDOR_SAMSUNG  = 1;
-  VRAM_VENDOR_INFINEON = 2;
-  VRAM_VENDOR_ELPIDA   = 3;
-  VRAM_VENDOR_ETRON    = 4;
-  VRAM_VENDOR_NANYA    = 5;
-  VRAM_VENDOR_HYNIX    = 6;
-  VRAM_VENDOR_MOSEL    = 7;
-  VRAM_VENDOR_WINBOND  = 8;
-  VRAM_VENDOR_ESMT     = 9;
-  VRAM_VENDOR_MICRON   = 10;
-  VRAM_VENDOR_UNKNOWN  = 11;
-}
-
 // GPU throttling status
 enum GPUThrottlingStatus {
   GPU_THROTTLING_STATUS_NONE = 0;
@@ -324,7 +308,7 @@ message GPUVRAMStatus {
   // VRAM memory type
   VRAMType   Type   = 1;
   // VRAM vendor
-  VRAMVendor Vendor = 2;
+  string     Vendor = 2;
   // VRAM size (in MB)
   uint64     Size   = 3;
 }

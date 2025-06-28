@@ -48,41 +48,42 @@ pkg: pkg-clean
 		exit 1;\
 	fi
 	@echo "Copying profiler dependent libraries form ${PROFILER_DEB_LIBS}"
-	@cp -vaf $(PROFILER_DEB_LIBS)/. ${PKG_LIB_PATH}/lib/
+	@cp -vaf $(PROFILER_DEB_LIBS)/rocprofilerdeplib/lib* ${PKG_LIB_PATH}/lib/
 	ls -lart ${PKG_LIB_PATH}/lib
 	@echo "Copying rocprofiler client library and binary"
 	@cp -vf ${ROCPROFILER_ASSETS}/librocpclient* ${PKG_LIB_PATH}/lib/
 	@cp -vf ${ROCPROFILER_ASSETS}/rocpctl ${PKG_PATH}/rocpctl
 	@cp -vf ${ROCPROFLER_SDK_ASSETS}/* ${SDK_COUNTER_DEF}/
 	#copy default config
-	@jq '.CommonConfig.HealthService.Enable = false | del(.GPUConfig.ExtraPodLabels)' $(CONFIG_DIR)/config.json > ${METRICS_CONF_PATH}/config.json
+	@jq 'del(.GPUConfig.ExtraPodLabels, .NICConfig)' $(CONFIG_DIR)/config.json > ${METRICS_CONF_PATH}/config.json
 	@cat ${METRICS_CONF_PATH}/config.json
 	# list all the files
-	ls -lart ${PKG_LIB_PATH}/lib
+	@ls -lart ${PKG_LIB_PATH}/lib
 	#copy and strip files
-	chmod +x ${PKG_PATH}/gpuagent
-	ls -alsh ${PKG_PATH}/gpuagent
-	chmod +x ${PKG_PATH}/rocpctl
-	ls -alsh ${PKG_PATH}/rocpctl
+	@chmod +x ${PKG_PATH}/gpuagent
+	@ls -alsh ${PKG_PATH}/gpuagent
+	@chmod +x ${PKG_PATH}/rocpctl
+	@ls -alsh ${PKG_PATH}/rocpctl
 	#strip prebuilt binaries
-	strip ${PKG_PATH}/gpuagent
-	strip ${PKG_PATH}/rocpctl
-	ls -alsh ${PKG_PATH}/gpuagent
-	ls -alsh ${PKG_PATH}/rocpctl
-	cd ${PKG_PATH} && strip ${PKG_PATH}/gpuagent
-	cp -vf ${LUA_PROTO} ${PKG_LUA_PATH}/plugin.proto
-	cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
-	strip ${PKG_PATH}/amd-metrics-exporter
-	cp -vf $(CURDIR)/bin/metricsclient ${PKG_PATH}/
-	cd ${TOP_DIR}
-	sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
-	dpkg-deb -Zxz --build debian ${TOP_DIR}/bin
+	@strip ${PKG_PATH}/gpuagent
+	@strip ${PKG_PATH}/rocpctl
+	@ls -alsh ${PKG_PATH}/gpuagent
+	@ls -alsh ${PKG_PATH}/rocpctl
+	@cd ${PKG_PATH} && strip ${PKG_PATH}/gpuagent
+	@cp -vf ${LUA_PROTO} ${PKG_LUA_PATH}/plugin.proto
+	@cp -vf ${ASSETS_PATH}/gpuctl.gobin ${PKG_PATH}/gpuctl
+	@cp -vf $(CURDIR)/bin/amd-metrics-exporter ${PKG_PATH}/
+	@strip ${PKG_PATH}/amd-metrics-exporter
+	@cp -vf $(CURDIR)/bin/metricsclient ${PKG_PATH}/
+	@cd ${TOP_DIR}
+	@sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
+	@dpkg-deb -Zxz --build debian ${TOP_DIR}/bin
 	#remove copied files
-	rm -rf ${PKG_LIB_PATH}
-	rm -rf ${METRICS_CONF_DIR}
-	rm -rf ${PKG_LUA_PATH}/plugin.proto
+	@rm -rf ${PKG_LIB_PATH}
+	@rm -rf ${METRICS_CONF_DIR}
+	@rm -rf ${PKG_LUA_PATH}/plugin.proto
 	# revert the dynamic version set file
-	git checkout $(DEBIAN_CONTROL)
+	@git checkout $(DEBIAN_CONTROL)
 	# rename for internal build
-	mv -vf ${TOP_DIR}/bin/amdgpu-exporter_*~${UBUNTU_VERSION_NUMBER}_amd64.deb ${TOP_DIR}/bin/amdgpu-exporter_${UBUNTU_VERSION_NUMBER}_amd64.deb
+	@mv -vf ${TOP_DIR}/bin/amdgpu-exporter_*~${UBUNTU_VERSION_NUMBER}_amd64.deb ${TOP_DIR}/bin/amdgpu-exporter_${UBUNTU_VERSION_NUMBER}_amd64.deb
 

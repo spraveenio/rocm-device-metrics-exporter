@@ -18,7 +18,7 @@ set -euo pipefail
 #
 #
 # entry point script run on creating a node management container
-LD_LIBRARY_PATH=/opt/rocm/lib /home/amd/bin/gpuagent &
+LD_PRELOAD=/home/amd/lib/libamd_smi.so.25 /home/amd/bin/gpuagent &
 
 # sleep before starting promethesu server
 sleep 10
