@@ -260,10 +260,6 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 	if err != nil {
 		logger.Log.Printf("FetchPodLabelsForNode failed with err : %v", err)
 	}
-	usedVRAM, err := ga.fsysDeviceHandler.GetAllUsedVRAM()
-	if err != nil {
-		logger.Log.Printf("GetAllUsedVRAM failed with err : %v", err)
-	}
 	nonGpuLabels := ga.populateLabelsFromGPU(nil, nil, nil)
 	ga.m.gpuNodesTotal.With(nonGpuLabels).Set(float64(len(resp.Response)))
 	for _, gpu := range resp.Response {
@@ -274,7 +270,7 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 			//nolint
 			gpuProfMetrics, _ = pmetrics[gpuid]
 		}
-		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, gpuProfMetrics, usedVRAM)
+		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, gpuProfMetrics)
 	}
 
 	return nil

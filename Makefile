@@ -92,9 +92,9 @@ HTML_DIR := $(BUILD_DIR)/html
 
 # library branch to build amdsmi libraries for gpuagent
 AMDSMI_BRANCH ?= amd-mainline
-AMDSMI_COMMIT ?= rocm-6.4.1
+AMDSMI_COMMIT ?= 738b678
 
-ROCM_VERSION ?= 6.4.1
+ROCM_VERSION ?= 7.0.0
 
 export ${GOROOT}
 export ${GOPATH}
@@ -119,8 +119,18 @@ UBUNTU_VERSION_NUMBER = 24.04
 UBUNTU_LIBDIR = UBUNTU24
 endif
 
-PACKAGE_VERSION := "1.3.1"
-DEBIAN_VERSION := "1.3.1"
+# set version and run `make update-version` to all docs
+PACKAGE_VERSION ?= "1.3.2"
+ifneq (,$(findstring exporter,$(RELEASE)))
+#remove prefix from main tag
+DEBIAN_VERSION := $(shell echo "$(RELEASE)" | cut -c 10-)
+else ifneq (,$(findstring v,$(RELEASE)))
+#remove prefix for release tag
+DEBIAN_VERSION := $(shell echo "$(RELEASE)" | sed 's/^.//')
+else
+#apt is only released until this version
+DEBIAN_VERSION := "1.3.2"
+endif
 REL_IMAGE_TAG := $(subst $\",,v$(PACKAGE_VERSION))
 HELM_VERSION := $(REL_IMAGE_TAG)
 

@@ -7,7 +7,10 @@ HOURLY_TAG_LABEL ?= latest
 docker:
 	@echo "building amd exporter container"
 	@TOP_DIR=$(TOP_DIR) MOCK=$(MOCK) OS=RHEL9 ./build_prep_docker.sh
-	@docker build --build-arg BASE_IMAGE=$(RHEL_BASE_MIN_IMAGE) -t $(EXPORTER_IMAGE) . -f Dockerfile.exporter-release
+	@docker build --build-arg BASE_IMAGE=$(RHEL_BASE_MIN_IMAGE) \
+		--build-arg ROCM_VERSION=$(ROCM_VERSION) \
+		-t $(EXPORTER_IMAGE) \
+		. -f Dockerfile.exporter-release
 	@TOP_DIR=$(TOP_DIR) ./build_post_docker.sh
 
 .PHONY: docker-cicd
@@ -15,7 +18,11 @@ docker-cicd:
 	@echo "building cicd docker for local publish"
 	@echo "HOURLY_TAG : $(HOURLY_TAG_LABEL)"
 	@TOP_DIR=$(TOP_DIR) OS=RHEL9 ./build_prep_docker.sh
-	@docker build --build-arg BASE_IMAGE=$(RHEL_BASE_MIN_IMAGE) -t $(EXPORTER_IMAGE) --label HOURLY_TAG=$(HOURLY_TAG_LABEL) . -f Dockerfile.exporter-release
+	@docker build --build-arg BASE_IMAGE=$(RHEL_BASE_MIN_IMAGE) \
+		--build-arg ROCM_VERSION=$(ROCM_VERSION) \
+		-t $(EXPORTER_IMAGE) \
+		--label HOURLY_TAG=$(HOURLY_TAG_LABEL) \
+		. -f Dockerfile.exporter-release
 	@TOP_DIR=$(TOP_DIR) ./build_post_docker.sh
 
 .PHONY: docker-save

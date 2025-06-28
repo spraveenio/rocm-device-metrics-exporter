@@ -27,7 +27,10 @@ endif
 	@rm -rf  ${TOP_DIR}/build/assets/${OS} || true
 	@mkdir -p ${TOP_DIR}/build/assets/${OS}/
 	@cp -rvf ${TOP_DIR}/libamdsmi/build/exporterout ${TOP_DIR}/build/assets/${OS}/
-	@mv ${TOP_DIR}/build/assets/${OS}/exporterout ${TOP_DIR}/build/assets/${OS}/lib
+	@echo "updating prebuilt assets amd_smi_lib directory"
+	@rm -rf ${TOP_DIR}/assets/amd_smi_lib/x86_64/${OS}
+	@mkdir -p ${TOP_DIR}/assets/amd_smi_lib/x86_64/${OS}
+	@cp -ravf ${TOP_DIR}/build/assets/${OS}/exporterout ${TOP_DIR}/assets/amd_smi_lib/x86_64/${OS}/lib
 
 .PHONY: amdsmi-compile-rhel
 amdsmi-compile-rhel:

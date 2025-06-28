@@ -5,29 +5,41 @@ FROM ${BASE_IMAGE}
 LABEL maintainer="AMD Inc"
 LABEL OS="mcr.microsoft.com/azurelinux/base/core:3.0"
 
-ARG ROCM_VERSION=6.4.1
+ARG ROCM_VERSION=7.0.0
 ARG AMDGPU_VERSION=6.4.1
 ARG AMDGPU_REPO_URL=https://repo.radeon.com
 
+# http://rocm-ci.amd.com/job/compute-rocm-dkms-no-npi-hipclang/16267/
+
 RUN tdnf clean all && tdnf install -y ca-certificates && \
-    echo "[amdgpu]" > /etc/yum.repos.d/amdgpu.repo && \
-    echo "name=AMDGPU repository" >> /etc/yum.repos.d/amdgpu.repo && \
-    echo "baseurl=${AMDGPU_REPO_URL}/amdgpu/${AMDGPU_VERSION}/azurelinux/3.0/main/x86_64/" >> /etc/yum.repos.d/amdgpu.repo && \
-    echo "enabled=1" >> /etc/yum.repos.d/amdgpu.repo && \
-    echo "priority=50" >> /etc/yum.repos.d/amdgpu.repo && \
-    echo "gpgcheck=1" >> /etc/yum.repos.d/amdgpu.repo && \
-    echo "gpgkey=${AMDGPU_REPO_URL}/rocm/rocm.gpg.key" >> /etc/yum.repos.d/amdgpu.repo && \
     echo "[ROCm-${ROCM_VERSION}]" > /etc/yum.repos.d/rocm.repo && \
     echo "name=ROCm${ROCM_VERSION}" >> /etc/yum.repos.d/rocm.repo && \
-    echo "baseurl=${AMDGPU_REPO_URL}/rocm/azurelinux3/${AMDGPU_VERSION}/main" >> /etc/yum.repos.d/rocm.repo && \
+    echo "baseurl=http://compute-artifactory.amd.com/artifactory/rocm-osdb-azurelinux-3.x/compute-rocm-dkms-no-npi-hipclang-16267/" >> /etc/yum.repos.d/rocm.repo && \
     echo "enabled=1" >> /etc/yum.repos.d/rocm.repo && \
-    echo "priority=50" >> /etc/yum.repos.d/rocm.repo && \
-    echo "gpgcheck=1" >> /etc/yum.repos.d/rocm.repo && \
-    echo "gpgkey=${AMDGPU_REPO_URL}/rocm/rocm.gpg.key" >> /etc/yum.repos.d/rocm.repo && \
-    tdnf install -y sudo findutils procps elfutils-libelf cmake kmod file libcap-devel amd-smi-lib libdrm-amdgpu \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/rocm.repo && \
+    tdnf install -y sudo findutils procps elfutils-libelf cmake kmod file libcap-devel amd-smi-lib \
     vim net-tools numactl numactl-libs hsa-amd-aqlprofile rocprofiler-sdk hip-runtime-amd && \
     rm -rf /var/cache/yum && rm -rf /var/cache/dnf && tdnf clean all
 
+#RUN tdnf clean all && tdnf install -y ca-certificates && \
+#    echo "[amdgpu]" > /etc/yum.repos.d/amdgpu.repo && \
+#    echo "name=AMDGPU repository" >> /etc/yum.repos.d/amdgpu.repo && \
+#    echo "baseurl=${AMDGPU_REPO_URL}/amdgpu/${AMDGPU_VERSION}/azurelinux/3.0/main/x86_64/" >> /etc/yum.repos.d/amdgpu.repo && \
+#    echo "enabled=1" >> /etc/yum.repos.d/amdgpu.repo && \
+#    echo "priority=50" >> /etc/yum.repos.d/amdgpu.repo && \
+#    echo "gpgcheck=1" >> /etc/yum.repos.d/amdgpu.repo && \
+#    echo "gpgkey=${AMDGPU_REPO_URL}/rocm/rocm.gpg.key" >> /etc/yum.repos.d/amdgpu.repo && \
+#    echo "[ROCm-${ROCM_VERSION}]" > /etc/yum.repos.d/rocm.repo && \
+#    echo "name=ROCm${ROCM_VERSION}" >> /etc/yum.repos.d/rocm.repo && \
+#    echo "baseurl=${AMDGPU_REPO_URL}/rocm/azurelinux3/${AMDGPU_VERSION}/main" >> /etc/yum.repos.d/rocm.repo && \
+#    echo "enabled=1" >> /etc/yum.repos.d/rocm.repo && \
+#    echo "priority=50" >> /etc/yum.repos.d/rocm.repo && \
+#    echo "gpgcheck=1" >> /etc/yum.repos.d/rocm.repo && \
+#    echo "gpgkey=${AMDGPU_REPO_URL}/rocm/rocm.gpg.key" >> /etc/yum.repos.d/rocm.repo && \
+#    tdnf install -y sudo findutils procps elfutils-libelf cmake kmod file libcap-devel amd-smi-lib libdrm-amdgpu \
+#    vim net-tools numactl numactl-libs hsa-amd-aqlprofile rocprofiler-sdk hip-runtime-amd && \
+#    rm -rf /var/cache/yum && rm -rf /var/cache/dnf && tdnf clean all
+ 
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/amd/bin/:/opt/rocm/bin/
 ENV LD_LIBRARY_PATH=/opt/rocm/lib:$LD_LIBRARY_PATH
 RUN mkdir -p /home/amd/bin/
@@ -35,7 +47,7 @@ RUN mkdir -p /home/amd/tools/
 
 # override built libraries
 ADD ./librocpclient.so /opt/rocm/lib/librocpclient.so
-ADD ./librocpclient.so /opt/rocm-${ROCM_VERSION}/lib/librocpclient.so
+ADD ./libamd_smi.so.25 /home/amd/lib/libamd_smi.so.25
 
 ADD ./rocpctl /home/amd/bin/rocpctl
 ADD ./gpuagent /home/amd/bin/gpuagent
@@ -48,8 +60,8 @@ RUN chmod +x /home/amd/tools/entrypoint.sh
 LABEL name="amd-device-metrics-exporter" \ 
     maintainer="praveenkumar.shanmugam@amd.com,nitish.bhat@amd.com,yan.sun3@amd.com,shrey.ajmera@amd.com" \
     vendor="Advanced Micro Devices, Inc." \
-    version="v1.3.0" \
-    release="v1.3.0" \
+    version="v1.3.2" \
+    release="v1.3.2" \
     summary="AMD Device Metrics Exporter enables out-of-the-box metrics collection for AMD GPUs on Kubernetes." \
     description="AMD Device Metrics Exporter enables Prometheus-format metrics collection for AMD GPUs in HPC and AI environments. It provides detailed telemetry including temperature, utilization, memory usage, and power consumption."
 

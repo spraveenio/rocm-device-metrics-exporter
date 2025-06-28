@@ -1476,13 +1476,9 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	// update periodically. this is required only for first state
 	// of the metrics pull response from prometheus
 	newGPUState := ga.processEccErrorMetrics(resp.Response, wls)
-	usedVRAM, err := ga.fsysDeviceHandler.GetAllUsedVRAM()
-	if err != nil {
-		logger.Log.Printf("GetAllUsedVRAM failed with err : %v", err)
-	}
 	_ = ga.updateNewHealthState(newGPUState)
 	for _, gpu := range resp.Response {
-		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, nil, usedVRAM)
+		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, nil)
 	}
 	return nil
 }
@@ -1713,7 +1709,6 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 	gpu *amdgpu.GPU,
 	partitionMap map[string]*amdgpu.GPU,
 	profMetrics map[string]float64,
-	usedPartitionVram map[string]float64,
 ) {
 	if !ga.exporterEnabledGPU(getGPUInstanceID(gpu)) {
 		return
@@ -1907,20 +1902,11 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 		ga.m.gpuUsedGTT.With(labels).Set(utils.NormalizeUint64(vramUsage.UsedGTT))
 		ga.m.gpuFreeGTT.With(labels).Set(utils.NormalizeUint64(vramUsage.FreeGTT))
 	}
-	vramFound := false
 	if vramStatus != nil {
 		totalVRAM = utils.NormalizeUint64(vramStatus.Size)
 	}
-	// populate from drm sysfs
-	if usedPartitionVram != nil {
-		nodeID := fmt.Sprintf("%v", gpu.Status.NodeId)
-		if v, ok := usedPartitionVram[nodeID]; ok {
-			usedVRAM = v
-			vramFound = true
-		}
-	}
-	if !vramFound && vramUsage != nil {
-		usedVRAM = utils.NormalizeUint64(vramUsage.UsedVRAM)
+	if vramUsage != nil {
+		usedVRAM = normalizeUint64(vramUsage.UsedVRAM)
 	}
 	freeVRAM = totalVRAM - usedVRAM
 	if totalVRAM != 0 {
