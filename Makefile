@@ -391,7 +391,7 @@ k8s-e2e:
 .PHONY: helm-lint
 helm-lint:
 	#copy default config
-	jq 'del(.ServerPort, .GPUConfig.ExtraPodLabels)' $(CONFIG_DIR)/config.json > $(HELM_CHARTS_DIR)/config.json
+	jq 'del(.ServerPort, .GPUConfig.ExtraPodLabels, .NICConfig)' $(CONFIG_DIR)/config.json > $(HELM_CHARTS_DIR)/config.json
 	cd $(HELM_CHARTS_DIR); helm lint
 
 .PHONY: helm-build
