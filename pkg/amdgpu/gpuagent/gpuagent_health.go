@@ -218,14 +218,17 @@ func (ga *GPUAgentClient) processHealthValidation() error {
 		gpuUUIDMap[gpuuid] = gpuid
 	}
 
-	evtData, err = ga.getEvents(amdgpu.EventSeverity_EVENT_SEVERITY_CRITICAL)
-	if err != nil || (evtData != nil && evtData.ApiStatus != 0) {
-		errOccured = true
-		logger.Log.Printf("gpuagent get events failed %v", err)
-	} else {
-		// business logic for health detection
-		for _, evt := range evtData.Event {
-			eventErrCheck(evt)
+	// for gim driver we disable events for now
+	if !ga.enableSriov {
+		evtData, err = ga.getEvents(amdgpu.EventSeverity_EVENT_SEVERITY_CRITICAL)
+		if err != nil || (evtData != nil && evtData.ApiStatus != 0) {
+			errOccured = true
+			logger.Log.Printf("gpuagent get events failed %v", err)
+		} else {
+			// business logic for health detection
+			for _, evt := range evtData.Event {
+				eventErrCheck(evt)
+			}
 		}
 	}
 

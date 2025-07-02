@@ -66,6 +66,7 @@ type Exporter struct {
 	zmqDisable          bool
 	enableNICMonitoring bool
 	enableGPUMonitoring bool
+	enableSriov         bool
 	k8sApiClient        *k8sclient.K8sClient
 	ctx                 context.Context
 	cancel              context.CancelFunc
@@ -306,6 +307,13 @@ func WithGPUMonitoring(enableGPUAgent bool) ExporterOption {
 	}
 }
 
+func WithSRIOV(enableSriov bool) ExporterOption {
+	return func(e *Exporter) {
+		logger.Log.Printf("Host SRIOV mode set to %v", enableSriov)
+		e.enableSriov = enableSriov
+	}
+}
+
 // StartMain - doesn't return it exits only on failure
 func (e *Exporter) StartMain(enableDebugAPI bool) {
 	defer e.Close()
@@ -331,7 +339,11 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 	mh.InitConfig()
 
 	if e.enableGPUMonitoring {
-		gpuclient = gpuagent.NewAgent(mh, e.GetK8sApiClient(), !e.zmqDisable)
+		gpuclient = gpuagent.NewAgent(mh,
+			gpuagent.WithZmq(!e.zmqDisable),
+			gpuagent.WithK8sClient(e.GetK8sApiClient()),
+			gpuagent.WithSRIOV(e.enableSriov),
+		)
 		if err := gpuclient.Init(); err != nil {
 			logger.Log.Printf("gpuclient init err :%+v", err)
 		}

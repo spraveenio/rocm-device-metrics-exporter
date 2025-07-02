@@ -22,3 +22,8 @@ assets:
   - name    : profiler_lib
     version : 7.0.0
     branch  : 2182494
+
+  - name    : gpuagent_sriov_static.bin.gz
+    version : 1.120.0-9
+    branch  : master
+

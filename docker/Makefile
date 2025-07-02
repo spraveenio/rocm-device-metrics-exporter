@@ -1,6 +1,8 @@
 EXPORTER_IMAGE ?= $(DOCKER_REGISTRY)/$(EXPORTER_IMAGE_NAME):$(EXPORTER_IMAGE_TAG)
+EXPORTER_SRIOV_IMAGE ?= $(DOCKER_REGISTRY)/$(EXPORTER_SRIOV_IMAGE_NAME):$(EXPORTER_IMAGE_TAG)
 # name used for saving the container images as tar.gz
 DOCKER_CONTAINER_IMAGE ?= $(EXPORTER_IMAGE_NAME)-$(EXPORTER_IMAGE_TAG)
+DOCKER_SRIOV_CONTAINER_IMAGE ?= $(EXPORTER_SRIOV_IMAGE_NAME)-$(EXPORTER_IMAGE_TAG)
 HOURLY_TAG_LABEL ?= latest
 
 .PHONY: docker
@@ -37,3 +39,24 @@ azure:
 	@TOP_DIR=$(TOP_DIR) OS=AZURE3 ./build_prep_docker.sh
 	@docker build --build-arg BASE_IMAGE=$(AZURE_BASE_IMAGE) -t $(EXPORTER_IMAGE) --label HOURLY_TAG=$(HOURLY_TAG_LABEL) . -f Dockerfile.azure.linux3.exporter-release
 	@TOP_DIR=$(TOP_DIR) ./build_post_docker.sh
+
+.PHONY: docker-sriov
+docker-sriov:
+	@echo "building amd exporter sriov container BASE_IMAGE:$(EXPORTER_SRIOV_BASE_IMAGE), image: $(EXPORTER_SRIOV_IMAGE)"
+	@TOP_DIR=$(TOP_DIR) OS=RHEL9 SRIOV=1 ./build_prep_docker.sh
+	@docker build --build-arg BASE_IMAGE=$(EXPORTER_SRIOV_BASE_IMAGE) -t $(EXPORTER_SRIOV_IMAGE) --label HOURLY_TAG=$(HOURLY_TAG_LABEL) . -f Dockerfile.sriov.exporter-release
+	@TOP_DIR=$(TOP_DIR) ./build_post_docker.sh
+
+.PHONY: docker-sriov-ub22
+docker-sriov-ub22:
+	@echo "building amd exporter sriov container BASE_IMAGE:$(BUILD_BASE_IMAGE), image: $(EXPORTER_SRIOV_IMAGE)"
+	# we use the same libs for ubuntu as well
+	@TOP_DIR=$(TOP_DIR) OS=RHEL9 SRIOV=1 ./build_prep_docker.sh
+	@docker build --build-arg BASE_IMAGE=$(BUILD_BASE_IMAGE) -t $(EXPORTER_SRIOV_IMAGE) --label HOURLY_TAG=$(HOURLY_TAG_LABEL) . -f Dockerfile.sriov.ub22.exporter-release
+	@TOP_DIR=$(TOP_DIR) ./build_post_docker.sh
+
+.PHONY: docker-sriov-save
+docker-sriov-save: ## save the container
+	@echo saving docker image to $(DOCKER_SRIOV_CONTAINER_IMAGE).tar.gz
+	@docker save $(EXPORTER_SRIOV_IMAGE) | gzip > $(DOCKER_SRIOV_CONTAINER_IMAGE).tar.gz
+
