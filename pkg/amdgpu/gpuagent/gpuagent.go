@@ -59,6 +59,7 @@ type GPUAgentClient struct {
 	isKubernetes           bool
 	enableZmq              bool
 	enableProfileMetrics   bool
+	enableSriov            bool
 	staticHostLabels       map[string]string
 	ctx                    context.Context
 	cancel                 context.CancelFunc
@@ -76,6 +77,30 @@ type gpuCache struct {
 	lastTimestamp time.Time
 }
 
+// GPUAgentClientOptions set desired options
+type GPUAgentClientOptions func(ga *GPUAgentClient)
+
+func WithZmq(enableZmq bool) GPUAgentClientOptions {
+	return func(ga *GPUAgentClient) {
+		logger.Log.Printf("Zmq enable %v", enableZmq)
+		ga.enableZmq = enableZmq
+	}
+}
+
+func WithK8sClient(k8sclient *k8sclient.K8sClient) GPUAgentClientOptions {
+	return func(ga *GPUAgentClient) {
+		logger.Log.Printf("K8sClient option set")
+		ga.k8sApiClient = k8sclient
+	}
+}
+
+func WithSRIOV(enableSriov bool) GPUAgentClientOptions {
+	return func(ga *GPUAgentClient) {
+		logger.Log.Printf("sriov mode set %v", enableSriov)
+		ga.enableSriov = enableSriov
+	}
+}
+
 func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclient amdgpu.GPUSvcClient, evtclient amdgpu.EventSvcClient, err error) {
 	agentAddr := mh.GetAgentAddr()
 	logger.Log.Printf("Agent connecting to %v", agentAddr)
@@ -89,13 +114,24 @@ func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclie
 	return
 }
 
-func NewAgent(mh *metricsutil.MetricsHandler, k8sclient *k8sclient.K8sClient, enableZmq bool) *GPUAgentClient {
-	ga := &GPUAgentClient{mh: mh, enableZmq: enableZmq, computeNodeHealthState: true}
+func NewAgent(mh *metricsutil.MetricsHandler, opts ...GPUAgentClientOptions) *GPUAgentClient {
+	ga := &GPUAgentClient{
+		mh:                     mh,
+		computeNodeHealthState: true,
+	}
+	for _, o := range opts {
+		o(ga)
+	}
+
 	ga.healthState = make(map[string]*metricssvc.GPUState)
 	ga.mockEccField = make(map[string]map[string]uint32)
 	ga.rocpclient = rocprofiler.NewRocProfilerClient("rocpclient")
-	ga.enableProfileMetrics = true
-	ga.k8sApiClient = k8sclient
+	if ga.enableSriov {
+		logger.Log.Printf("profiler is disabled on sriov deployment")
+		ga.enableProfileMetrics = false
+	} else {
+		ga.enableProfileMetrics = true
+	}
 	ga.fsysDeviceHandler = fsysdevice.GetFsysDeviceHandler()
 	ga.gCache = &gpuCache{}
 	mh.RegisterMetricsClient(ga)

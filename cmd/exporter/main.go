@@ -42,6 +42,7 @@ var (
 	versionOpt          = flag.Bool("version", false, "show version")
 	enableNICMonitoring = flag.Bool("monitor-nic", false, "Enable NIC Monitoring")
 	enableGPUMonitoring = flag.Bool("monitor-gpu", true, "Enable GPU Monitoring (default: true, enabled by default)")
+	sriov               = flag.Bool("sriov-enable", false, "sriov host mode (default: false, disabled by default)")
 )
 
 func main() {
@@ -114,6 +115,7 @@ func main() {
 		*agentGrpcPort, *metricsConfig,
 		exporter.WithNICMonitoring(*enableNICMonitoring),
 		exporter.WithGPUMonitoring(*enableGPUMonitoring),
+		exporter.WithSRIOV(*sriov),
 	)
 
 	enableDebugAPI := true // default

@@ -12,7 +12,9 @@ BUILD_CONTAINER ?= $(DOCKER_REGISTRY)/device-metrics-exporter-build:$(DOCKER_BUI
 # Exporter container environment
 EXPORTER_IMAGE_TAG ?= latest
 EXPORTER_IMAGE_NAME ?= device-metrics-exporter
-RHEL_BASE_MIN_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:9.4
+EXPORTER_SRIOV_BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:9.6
+EXPORTER_SRIOV_IMAGE_NAME ?= device-metrics-exporter-sriov
+RHEL_BASE_MIN_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:9.6
 AZURE_BASE_IMAGE ?= mcr.microsoft.com/azurelinux/base/core:3.0
 
 # Test runner container environment
@@ -23,7 +25,7 @@ TEST_RUNNER_RHEL_BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:9.5
 # External repo builders
 GPUAGENT_BASE_IMAGE ?= ubuntu:22.04
 GPUAGENT_BUILDER_IMAGE ?= gpuagent-builder:v1
-AMDSMI_BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:9.4
+AMDSMI_BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:9.6
 AMDSMI_BASE_UBUNTU22 ?= ubuntu:22.04
 AMDSMI_BASE_UBUNTU24 ?= ubuntu:24.04
 AMDSMI_BASE_AZURE ?= mcr.microsoft.com/azurelinux/base/core:3.0
@@ -39,6 +41,8 @@ export DOCKER_REGISTRY
 export BUILD_CONTAINER
 export BUILD_BASE_IMAGE
 export EXPORTER_IMAGE_NAME
+export EXPORTER_SRIOV_BASE_IMAGE
+export EXPORTER_SRIOV_IMAGE_NAME
 export EXPORTER_IMAGE_TAG
 
 # testrunner base images
@@ -219,7 +223,6 @@ gen-test-runner: gopkglist
 
 .PHONY:clean
 clean: pkg-clean
-	rm -rf pkg/amdgpu/gen
 	rm -rf bin
 	rm -rf docker/obj
 	rm -rf docker/*.tgz
@@ -301,6 +304,19 @@ docker-cicd: gen amdexporter
 docker: gen amdexporter
 	${MAKE} -C docker TOP_DIR=$(CURDIR)
 	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
+
+.PHONY: docker-sriov
+docker-sriov: gen amdexporter
+	echo "Building docker for sriov driver rhel9"
+	${MAKE} -C docker docker-sriov TOP_DIR=$(CURDIR)
+	${MAKE} -C docker docker-sriov-save TOP_DIR=$(CURDIR)
+
+# for development we use ubuntu based
+.PHONY: docker-sriov-ub22
+docker-sriov-ub22: gen amdexporter
+	echo "Building docker for sriov driver ub22"
+	${MAKE} -C docker docker-sriov-ub22 TOP_DIR=$(CURDIR)
+	${MAKE} -C docker docker-sriov-save TOP_DIR=$(CURDIR)
 
 .PHONY: docker-mock
 docker-mock: gen amdexporter
