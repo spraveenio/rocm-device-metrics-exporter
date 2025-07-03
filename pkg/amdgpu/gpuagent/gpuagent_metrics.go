@@ -1823,7 +1823,7 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 		delete(labelsWithIndex, "clock_type")
 	}
 
-	ga.m.gpuPowerUsage.With(labels).Set(utils.NormalizeUint64(stats.PowerUsage))
+	ga.m.gpuPowerUsage.With(labels).Set(float64(stats.PowerUsage))
 
 	ga.m.gpuEccCorrectTotal.With(labels).Set(utils.NormalizeUint64(stats.TotalCorrectableErrors))
 	ga.m.gpuEccUncorrectTotal.With(labels).Set(utils.NormalizeUint64(stats.TotalUncorrectableErrors))
@@ -1906,7 +1906,7 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 		totalVRAM = utils.NormalizeUint64(vramStatus.Size)
 	}
 	if vramUsage != nil {
-		usedVRAM = normalizeUint64(vramUsage.UsedVRAM)
+		usedVRAM = utils.NormalizeUint64(vramUsage.UsedVRAM)
 	}
 	freeVRAM = totalVRAM - usedVRAM
 	if totalVRAM != 0 {
