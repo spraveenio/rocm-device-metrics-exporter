@@ -681,9 +681,7 @@ func (tr *TestRunner) watchGPUState() {
 			// then the pre-existing test status info of partitioned deviceID is no longer existing
 			// need to remove those expired deviceIDs from status DB
 			// otherwise the SMI lib keeps cannot retrieve information of those expired deviceIDs
-			_, ok1 := tr.gpuIndexToKFDIDMap[deviceID]
-			_, ok2 := tr.kfdIDToGPUIndexMap[deviceID]
-			if !ok1 && !ok2 {
+			if _, ok := tr.gUIDToGPUIndexMap[deviceID]; !ok {
 				delete(statusObj.TestStatus, deviceID)
 				logger.Log.Printf("removing expired deviceID %v from status DB", deviceID)
 				updateStatusDB = true
