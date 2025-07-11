@@ -45,4 +45,55 @@ const (
 
 	// max number of extra pod labels that will be exported in the logs
 	MaxSupportedPodLabels = 20
+
+	// amdgpuhealth tool log file name
+	GPUHealthCheckerLogFile = "amdgpuhealth.log"
+
+	// log directory path of amdgpuhealth tool
+	GPUHealthCheckerLogDir = "/var/log/"
+
+	// default exporter label that is applied
+	DefaultExporterLabel = "app.kubernetes.io/name"
+
+	// default value of exporter label
+	DefaultExporterLabelValue = "amd-metrics-exporter"
+
+	// Metrics endpoint - returns user configured metrics in prometheus format
+	MetricsHandlerPrefix = "/metrics"
+
+	// Metrics endpoint - returns all static metrics in JSON format
+	AMDGPUHandlerPrefix = "/gpumetrics"
+
+	// Host directory where amdgpuhealth utility is copied to
+	AMDGPUHealthHostDirPath = "/var/lib/amd-metrics-exporter"
+
+	// Path of amdgpuhealth utility
+	AMDGPUHealthContainerPath = "/home/amd/bin/amdgpuhealth"
+)
+
+// Handling token authorization and TLS for device metrics exporter and prometheus endpoints
+// Token and certificates info is stored as Kubernetes Secrets and mounted as volumes in NPD pod
+// Below are the paths we use as mount paths for the tokens and certs
+const (
+	// AMD device metrics exporter root ca mount path
+	AMDDeviceMetricsExporterRootCAPath = "/etc/tls/amd-device-exporter-rootca/ca.crt"
+
+	// AMD device metrics exporter bearer token path
+	AMDDeviceMetricsExporterBearerToken = "/etc/tls/amd-device-exporter-bearertoken/token"
+
+	// NPD client certificate and private key mount path
+	NPDClientCertPath = "/etc/tls/npd-client-cert"
+
+	// Prometheus server root ca mount path
+	PrometheusServerRootCACertPath = "/etc/tls/prometheus-rootca/ca.crt"
+
+	// Prometheus authorization bearer token
+	PrometheusServerBearerToken = "/etc/tls/prometheus-bearertoken/token"
+)
+
+type DeviceType string
+
+const (
+	GPUDevice DeviceType = "GPU"
+	NICDevice DeviceType = "NIC"
 )

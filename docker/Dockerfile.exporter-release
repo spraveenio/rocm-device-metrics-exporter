@@ -63,6 +63,7 @@ ADD ./rocpctl /home/amd/bin/rocpctl
 ADD ./gpuagent /home/amd/bin/gpuagent
 ADD ./amd-metrics-exporter /home/amd/bin/server
 ADD ./metricsclient /home/amd/bin/metricsclient
+ADD ./amdgpuhealth /home/amd/bin/amdgpuhealth
 ADD ./entrypoint.sh /home/amd/tools/entrypoint.sh
 RUN chmod +x /home/amd/tools/entrypoint.sh
 

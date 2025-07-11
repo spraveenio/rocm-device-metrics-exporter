@@ -176,8 +176,8 @@ func (tr *TestRunner) init(cfgPath string) {
 
 func (tr *TestRunner) initK8sClientIfNeeded() {
 	if utils.IsKubernetes() {
-		tr.isK8s = true
-		k8sClient, err := k8sclient.NewClient(context.Background(), tr.hostName)
+		runner.isK8s = true
+		k8sClient, err := k8sclient.NewClient(context.Background(), "", runner.hostName)
 		if err != nil {
 			logger.Log.Printf("failed to create k8s client: %v", err)
 			logger.Log.Fatal(err)

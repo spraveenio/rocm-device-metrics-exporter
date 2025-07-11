@@ -20,7 +20,7 @@
 #
 
 ls -al
-rm -rf gpuagent gpuctl amd-metrics-exporter metricsclient LICENSE \
+rm -rf gpuagent gpuctl amd-metrics-exporter metricsclient amdgpuhealth LICENSE \
 	libamd_smi.so.24.6 librocpclient.so rocpctl \
 	libamd* amdsmi* libgim*
 

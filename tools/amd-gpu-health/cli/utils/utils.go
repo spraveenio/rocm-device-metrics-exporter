@@ -1,0 +1,525 @@
+/**
+# Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the \"License\");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an \"AS IS\" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+**/
+
+package utils
+
+import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/prometheus/client_golang/api"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
+
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+)
+
+type roundTripperWithAuth struct {
+	base    http.RoundTripper
+	authReq *http.Request
+}
+
+func (r roundTripperWithAuth) RoundTrip(req *http.Request) (*http.Response, error) {
+	// if Prometheus server has token based authorization, we need to pass the token in the request
+	// token is created as generic/opaque secret and volume mounted on below path in NPD pod
+	if _, err := os.Stat(globals.PrometheusServerBearerToken); err == nil {
+		token, err1 := os.ReadFile(globals.PrometheusServerBearerToken)
+		if err1 == nil {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		}
+	}
+	return r.base.RoundTrip(req)
+}
+
+// if amd exporter metrics endpoint has TLS enabled, the corresponding
+// root ca must be stored as generic secret and mounted as volume in NPD pod
+func getTLSConfig() (*tls.Config, error) {
+	tlsConf := &tls.Config{}
+	// if mTLS is configured, client should present it's certificate
+	if _, err := os.Stat(globals.NPDClientCertPath); err == nil {
+		cert, err1 := tls.LoadX509KeyPair(filepath.Join(globals.NPDClientCertPath, "tls.crt"),
+			filepath.Join(globals.NPDClientCertPath, "tls.key"))
+		if err1 == nil {
+			tlsConf.Certificates = []tls.Certificate{cert}
+		}
+	}
+	// for TLS, validate server side certificate using it's Root CA
+	if _, err := os.Stat(globals.AMDDeviceMetricsExporterRootCAPath); err == nil {
+		cacert, err1 := os.ReadFile(globals.AMDDeviceMetricsExporterRootCAPath)
+		if err1 != nil {
+			logger.Log.Printf("unable to read metrics endpoint root ca certificate. error:%v", err1)
+			return nil, err1
+		}
+		caCerts := x509.NewCertPool()
+		caCerts.AppendCertsFromPEM(cacert)
+		tlsConf.RootCAs = caCerts
+		return tlsConf, nil
+	}
+	return nil, nil
+}
+
+func QueryMetricsEndpoint(url string) (data string) {
+	var resp *http.Response
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		logger.Log.Printf("unable to query metrics endpoint. error:%v", err)
+		return
+	}
+
+	// if endpoint has TLS enabled, NPD needs to pass the certs in the http request
+	tlsConf, err := getTLSConfig()
+	if err == nil && tlsConf != nil {
+		client.Transport = &http.Transport{
+			TLSClientConfig: tlsConf,
+		}
+	}
+	// if endpoint has token based authorization enabled, NPD needs to set the token in all requests
+	// token is created as generic/opaque secret and volume mounted on below path
+	if _, err := os.Stat(globals.AMDDeviceMetricsExporterBearerToken); err == nil {
+		token, err1 := os.ReadFile(globals.AMDDeviceMetricsExporterBearerToken)
+		if err1 == nil {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		}
+	}
+	resp, err = client.Do(req)
+	if err != nil {
+		logger.Log.Printf("unable to query metrics endpoint. error:%v", err)
+		return
+	}
+	defer resp.Body.Close()
+	dataBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Log.Printf("unable to read metrics endpoint response. error:%v", err)
+		return
+	}
+	data = string(dataBytes)
+	return
+}
+
+func getPrometheusTLSConfig() (*tls.Config, error) {
+	tlsConf := tls.Config{}
+	// if Prometheus server has HTTPS enabled, client needs the Prometheus Root CA to validate server's certificate
+	if _, err := os.Stat(globals.PrometheusServerRootCACertPath); err == nil {
+		cacert, err1 := os.ReadFile(globals.PrometheusServerRootCACertPath)
+		if err1 != nil {
+			logger.Log.Printf("unable to read metrics endpoint root ca certificate. error:%v", err1)
+			return nil, err1
+		}
+		caCerts := x509.NewCertPool()
+		caCerts.AppendCertsFromPEM(cacert)
+		tlsConf.RootCAs = caCerts
+	}
+	// if Prometheus has mTLS enabled, we need to present client certificate during authentication
+	if _, err := os.Stat(globals.NPDClientCertPath); err == nil {
+		cert, err1 := tls.LoadX509KeyPair(filepath.Join(globals.NPDClientCertPath, "tls.crt"),
+			filepath.Join(globals.NPDClientCertPath, "tls.key"))
+		if err1 == nil {
+			tlsConf.Certificates = []tls.Certificate{cert}
+			return &tlsConf, nil
+		}
+	}
+	return nil, nil
+}
+
+func QueryPrometheusEndpoint(url, promQuery string) (*model.Value, error) {
+	conf := api.Config{
+		Address: url,
+	}
+	req, _ := http.NewRequest("GET", url, nil)
+	rt := roundTripperWithAuth{
+		base:    &http.Transport{},
+		authReq: req,
+	}
+	tlsConf, err := getPrometheusTLSConfig()
+	if err == nil {
+		rt.base = &http.Transport{
+			TLSClientConfig: tlsConf,
+		}
+	}
+	conf.RoundTripper = rt
+
+	client, err := api.NewClient(conf)
+	if err != nil {
+		return nil, fmt.Errorf("error creating prometheus client: %v", err)
+	}
+	v1api := v1.NewAPI(client)
+	ctx := context.Background()
+
+	result, _, err := v1api.Query(ctx, promQuery, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("query prometheus endpoint failed with error: %v", err)
+	}
+	return &result, nil
+}
+
+func ParsePromethuesResponse(response model.Value) []float64 {
+	var metricVals []float64
+	switch response.Type() {
+	case model.ValVector:
+		vecs := response.(model.Vector)
+		for _, vec := range vecs {
+			metricVals = append(metricVals, float64(vec.Value))
+		}
+	}
+	return metricVals
+}
+
+// ParseGPUMetricResponse parses GetGPUs response and extract value(s) of specific metricName for all the GPUs.
+// All the reported metrics are of integer or float type.
+// Return type is array of float to handle both type of metrics.
+func ParseGPUMetricsResponse(response, metricName string) []float64 {
+	var gpuResponse amdgpu.GPUGetResponse
+	err := json.Unmarshal([]byte(response), &gpuResponse)
+	var res []float64
+	if err != nil {
+		logger.Log.Printf("unable to parse metrics response. error:%v", err)
+		return res
+	}
+	if exportermetrics.GPUMetricField_GPU_NODES_TOTAL.String() == strings.ToUpper(metricName) {
+		res = append(res, float64(len(gpuResponse.Response)))
+		return res
+	}
+	for _, gpu := range gpuResponse.Response {
+		gpuMetrics := FetchMetricFromGPU(gpu, metricName)
+		res = append(res, gpuMetrics...)
+	}
+	return res
+}
+
+// Fetch a specific metric value from a GPU
+func FetchMetricFromGPU(gpu *amdgpu.GPU, metricName string) []float64 {
+	var res float64
+	stats := gpu.Stats
+	if stats == nil {
+		return []float64{}
+	}
+	metricName = strings.ToUpper(metricName)
+	switch metricName {
+	case exportermetrics.GPUMetricField_GPU_PACKAGE_POWER.String():
+		res = float64(stats.PackagePower)
+	case exportermetrics.GPUMetricField_GPU_AVERAGE_PACKAGE_POWER.String():
+		res = float64(stats.AvgPackagePower)
+	case exportermetrics.GPUMetricField_GPU_EDGE_TEMPERATURE.String():
+		if stats.Temperature != nil {
+			res = float64(stats.Temperature.EdgeTemperature)
+		}
+	case exportermetrics.GPUMetricField_GPU_JUNCTION_TEMPERATURE.String():
+		if stats.Temperature != nil {
+			res = float64(stats.Temperature.JunctionTemperature)
+		}
+	case exportermetrics.GPUMetricField_GPU_MEMORY_TEMPERATURE.String():
+		if stats.Temperature != nil {
+			res = float64(stats.Temperature.MemoryTemperature)
+		}
+	case exportermetrics.GPUMetricField_GPU_HBM_TEMPERATURE.String():
+		if stats.Temperature != nil {
+			out := []float64{}
+			for _, temp := range stats.Temperature.HBMTemperature {
+				out = append(out, float64(temp))
+			}
+			return out
+		}
+	case exportermetrics.GPUMetricField_GPU_GFX_ACTIVITY.String():
+		if stats.Usage != nil {
+			res = float64(stats.Usage.GFXActivity)
+		}
+	case exportermetrics.GPUMetricField_GPU_UMC_ACTIVITY.String():
+		if stats.Usage != nil {
+			res = float64(stats.Usage.UMCActivity)
+		}
+	case exportermetrics.GPUMetricField_GPU_MMA_ACTIVITY.String():
+		if stats.Usage != nil {
+			res = float64(stats.Usage.MMActivity)
+		}
+	case exportermetrics.GPUMetricField_GPU_VCN_ACTIVITY.String():
+		if stats.Usage != nil {
+			out := []float64{}
+			for _, vcna := range stats.Usage.VCNActivity {
+				out = append(out, float64(vcna))
+			}
+			return out
+		}
+	case exportermetrics.GPUMetricField_GPU_JPEG_ACTIVITY.String():
+		if stats.Usage != nil {
+			out := []float64{}
+			for _, jpega := range stats.Usage.JPEGActivity {
+				out = append(out, float64(jpega))
+			}
+			return out
+		}
+	case exportermetrics.GPUMetricField_GPU_VOLTAGE.String():
+		if stats.Voltage != nil {
+			res = float64(stats.Voltage.Voltage)
+		}
+	case exportermetrics.GPUMetricField_GPU_GFX_VOLTAGE.String():
+		if stats.Voltage != nil {
+			res = float64(stats.Voltage.GFXVoltage)
+		}
+	case exportermetrics.GPUMetricField_GPU_MEMORY_VOLTAGE.String():
+		if stats.Voltage != nil {
+			res = float64(stats.Voltage.MemoryVoltage)
+		}
+	case exportermetrics.GPUMetricField_PCIE_SPEED.String():
+		if gpu.Status.PCIeStatus != nil {
+			res = float64(gpu.Status.PCIeStatus.Speed)
+		}
+	case exportermetrics.GPUMetricField_PCIE_MAX_SPEED.String():
+		if gpu.Status.PCIeStatus != nil {
+			res = float64(gpu.Status.PCIeStatus.MaxSpeed)
+		}
+	case exportermetrics.GPUMetricField_PCIE_BANDWIDTH.String():
+		if gpu.Status.PCIeStatus != nil {
+			res = float64(gpu.Status.PCIeStatus.Bandwidth)
+		}
+	case exportermetrics.GPUMetricField_GPU_ENERGY_CONSUMED.String():
+		res = float64(stats.EnergyConsumed)
+	case exportermetrics.GPUMetricField_PCIE_REPLAY_COUNT.String():
+		if stats.PCIeStats != nil {
+			res = float64(stats.PCIeStats.ReplayCount)
+		}
+	case exportermetrics.GPUMetricField_PCIE_RECOVERY_COUNT.String():
+		if stats.PCIeStats != nil {
+			res = float64(stats.PCIeStats.RecoveryCount)
+		}
+	case exportermetrics.GPUMetricField_PCIE_REPLAY_ROLLOVER_COUNT.String():
+		if stats.PCIeStats != nil {
+			res = float64(stats.PCIeStats.ReplayRolloverCount)
+		}
+	case exportermetrics.GPUMetricField_PCIE_NACK_SENT_COUNT.String():
+		if stats.PCIeStats != nil {
+			res = float64(stats.PCIeStats.NACKSentCount)
+		}
+	case exportermetrics.GPUMetricField_PCIE_NAC_RECEIVED_COUNT.String():
+		if stats.PCIeStats != nil {
+			res = float64(stats.PCIeStats.NACKReceivedCount)
+		}
+	case exportermetrics.GPUMetricField_GPU_CLOCK.String():
+		if gpu.Status.ClockStatus != nil {
+			out := []float64{}
+			for _, c := range gpu.Status.ClockStatus {
+				out = append(out, float64(c.Frequency))
+			}
+			return out
+		}
+	case exportermetrics.GPUMetricField_GPU_POWER_USAGE.String():
+		res = float64(stats.PowerUsage)
+	case exportermetrics.GPUMetricField_GPU_TOTAL_VRAM.String():
+		if gpu.Status.GetVRAMStatus() != nil {
+			res = float64(gpu.Status.GetVRAMStatus().Size)
+		}
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_TOTAL.String():
+		res = float64(stats.TotalCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_TOTAL.String():
+		res = float64(stats.TotalUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_SDMA.String():
+		res = float64(stats.SDMACorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_SDMA.String():
+		res = float64(stats.SDMAUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_GFX.String():
+		res = float64(stats.GFXCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_GFX.String():
+		res = float64(stats.GFXUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MMHUB.String():
+		res = float64(stats.MMHUBCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MMHUB.String():
+		res = float64(stats.MMHUBUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_ATHUB.String():
+		res = float64(stats.ATHUBCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_ATHUB.String():
+		res = float64(stats.ATHUBUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_BIF.String():
+		res = float64(stats.BIFCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_BIF.String():
+		res = float64(stats.BIFUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_HDP.String():
+		res = float64(stats.HDPCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_HDP.String():
+		res = float64(stats.HDPUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_XGMI_WAFL.String():
+		res = float64(stats.XGMIWAFLCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_XGMI_WAFL.String():
+		res = float64(stats.XGMIWAFLUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_DF.String():
+		res = float64(stats.DFCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_DF.String():
+		res = float64(stats.DFUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_SMN.String():
+		res = float64(stats.SMNCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_SMN.String():
+		res = float64(stats.SMNUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_SEM.String():
+		res = float64(stats.SEMCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_SEM.String():
+		res = float64(stats.SEMUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MP0.String():
+		res = float64(stats.MP0CorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MP0.String():
+		res = float64(stats.MP0UncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MP1.String():
+		res = float64(stats.MP1CorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MP1.String():
+		res = float64(stats.MP1UncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_FUSE.String():
+		res = float64(stats.FUSECorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_FUSE.String():
+		res = float64(stats.FUSEUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_UMC.String():
+		res = float64(stats.UMCCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_UMC.String():
+		res = float64(stats.UMCUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_NOP_TX.String():
+		res = float64(stats.XGMINeighbor0TxNOPs)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_REQ_TX.String():
+		res = float64(stats.XGMINeighbor0TxRequests)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_RESP_TX.String():
+		res = float64(stats.XGMINeighbor0TxResponses)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_BEATS_TX.String():
+		res = float64(stats.XGMINeighbor0TXBeats)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_NOP_TX.String():
+		res = float64(stats.XGMINeighbor1TxNOPs)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_REQ_TX.String():
+		res = float64(stats.XGMINeighbor1TxRequests)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_RESP_TX.String():
+		res = float64(stats.XGMINeighbor1TxResponses)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_BEATS_TX.String():
+		res = float64(stats.XGMINeighbor1TXBeats)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_TX_THRPUT.String():
+		res = float64(stats.XGMINeighbor0TxThroughput)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_TX_THRPUT.String():
+		res = float64(stats.XGMINeighbor1TxThroughput)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_2_TX_THRPUT.String():
+		res = float64(stats.XGMINeighbor2TxThroughput)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_3_TX_THRPUT.String():
+		res = float64(stats.XGMINeighbor3TxThroughput)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_4_TX_THRPUT.String():
+		res = float64(stats.XGMINeighbor4TxThroughput)
+	case exportermetrics.GPUMetricField_GPU_XGMI_NBR_5_TX_THRPUT.String():
+		res = float64(stats.XGMINeighbor5TxThroughput)
+	case exportermetrics.GPUMetricField_GPU_USED_VRAM.String():
+		if stats.VRAMUsage != nil {
+			res = float64(stats.VRAMUsage.UsedVRAM)
+		}
+	case exportermetrics.GPUMetricField_GPU_FREE_VRAM.String():
+		var total, used float64
+		if gpu.Status.GetVRAMStatus() != nil {
+			total = float64(gpu.Status.GetVRAMStatus().Size)
+		}
+		if stats.VRAMUsage != nil {
+			used = float64(stats.VRAMUsage.UsedVRAM)
+		}
+		if total > 0 {
+			res = float64(total - used)
+		}
+	case exportermetrics.GPUMetricField_GPU_TOTAL_VISIBLE_VRAM.String():
+		if stats.VRAMUsage != nil {
+			res = float64(stats.VRAMUsage.TotalVisibleVRAM)
+		}
+	case exportermetrics.GPUMetricField_GPU_USED_VISIBLE_VRAM.String():
+		if stats.VRAMUsage != nil {
+			res = float64(stats.VRAMUsage.UsedVisibleVRAM)
+		}
+	case exportermetrics.GPUMetricField_GPU_FREE_VISIBLE_VRAM.String():
+		if stats.VRAMUsage != nil {
+			res = float64(stats.VRAMUsage.FreeVisibleVRAM)
+		}
+	case exportermetrics.GPUMetricField_GPU_TOTAL_GTT.String():
+		if stats.VRAMUsage != nil {
+			res = float64(stats.VRAMUsage.TotalGTT)
+		}
+	case exportermetrics.GPUMetricField_GPU_USED_GTT.String():
+		if stats.VRAMUsage != nil {
+			res = float64(stats.VRAMUsage.UsedGTT)
+		}
+	case exportermetrics.GPUMetricField_GPU_FREE_GTT.String():
+		if stats.VRAMUsage != nil {
+			res = float64(stats.VRAMUsage.FreeGTT)
+		}
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MCA.String():
+		res = float64(stats.MCACorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MCA.String():
+		res = float64(stats.MCAUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_VCN.String():
+		res = float64(stats.VCNCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_VCN.String():
+		res = float64(stats.VCNUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_JPEG.String():
+		res = float64(stats.JPEGCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_JPEG.String():
+		res = float64(stats.JPEGUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_IH.String():
+		res = float64(stats.IHCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_IH.String():
+		res = float64(stats.IHUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MPIO.String():
+		res = float64(stats.MPIOCorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MPIO.String():
+		res = float64(stats.MPIOUncorrectableErrors)
+	case exportermetrics.GPUMetricField_GPU_XGMI_LINK_RX.String():
+		if stats.XGMILinkStats != nil {
+			out := []float64{}
+			for _, linkStat := range stats.XGMILinkStats {
+				out = append(out, float64(linkStat.DataRead))
+			}
+			return out
+		}
+	case exportermetrics.GPUMetricField_GPU_XGMI_LINK_TX.String():
+		if stats.XGMILinkStats != nil {
+			out := []float64{}
+			for _, linkStat := range stats.XGMILinkStats {
+				out = append(out, float64(linkStat.DataWrite))
+			}
+			return out
+		}
+	case exportermetrics.GPUMetricField_GPU_VIOLATION_CURRENT_ACCUMULATED_COUNTER.String():
+		if stats.ViolationStats != nil {
+			res = float64(stats.ViolationStats.CurrentAccumulatedCounter)
+		}
+	case exportermetrics.GPUMetricField_GPU_VIOLATION_PROCESSOR_HOT_RESIDENCY_ACCUMULATED.String():
+		if stats.ViolationStats != nil {
+			res = float64(stats.ViolationStats.ProcessorHotResidencyAccumulated)
+		}
+	case exportermetrics.GPUMetricField_GPU_VIOLATION_PPT_RESIDENCY_ACCUMULATED.String():
+		if stats.ViolationStats != nil {
+			res = float64(stats.ViolationStats.PPTResidencyAccumulated)
+		}
+	case exportermetrics.GPUMetricField_GPU_VIOLATION_SOCKET_THERMAL_RESIDENCY_ACCUMULATED.String():
+		if stats.ViolationStats != nil {
+			res = float64(stats.ViolationStats.SocketThermalResidencyAccumulated)
+		}
+	case exportermetrics.GPUMetricField_GPU_VIOLATION_VR_THERMAL_RESIDENCY_ACCUMULATED.String():
+		if stats.ViolationStats != nil {
+			res = float64(stats.ViolationStats.VRThermalResidencyAccumulated)
+		}
+	case exportermetrics.GPUMetricField_GPU_VIOLATION_HBM_THERMAL_RESIDENCY_ACCUMULATED.String():
+		if stats.ViolationStats != nil {
+			res = float64(stats.ViolationStats.HBMThermalResidencyAccumulated)
+		}
+	}
+	return []float64{res}
+}
