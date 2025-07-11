@@ -37,14 +37,11 @@ import (
 	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/config"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/metricssvc"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
 	metricsserver "github.com/ROCm/device-metrics-exporter/pkg/exporter/svc"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
-)
-
-const (
-	metricsHandlerPrefix = "/metrics"
 )
 
 var (
@@ -76,7 +73,7 @@ type Exporter struct {
 func prometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.String()
-		if strings.Contains(strings.ToLower(url), metricsHandlerPrefix) {
+		if strings.Contains(strings.ToLower(url), globals.MetricsHandlerPrefix) {
 			// pull metrics only for metrics handler
 			_ = mh.UpdateMetrics()
 		}
@@ -92,7 +89,9 @@ func startMetricsServer(c *config.ConfigHandler, bindAddr string) *http.Server {
 	router.Use(prometheusMiddleware)
 
 	reg := mh.GetRegistry()
-	router.Handle(metricsHandlerPrefix, promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+	router.Handle(globals.MetricsHandlerPrefix, promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+	// below route is for daemons like node-problem-detector that need all the metrics
+	router.Methods("GET").Subrouter().HandleFunc(globals.AMDGPUHandlerPrefix, mh.HandleGPUMetricsQuery)
 	// pprof
 	router.Methods("GET").Subrouter().Handle("/debug/vars", expvar.Handler())
 	router.Methods("GET").Subrouter().HandleFunc("/debug/pprof/", pprof.Index)
@@ -237,7 +236,7 @@ func NewExporter(agentGrpcport int, configFile string, opts ...ExporterOption) *
 	}
 	if utils.IsKubernetes() {
 		hostname, _ := utils.GetHostName()
-		k8sApiClient, err := k8sclient.NewClient(ctx, hostname)
+		k8sApiClient, err := k8sclient.NewClient(ctx, "", hostname)
 		if err != nil {
 			logger.Log.Fatalf("failed to create k8s client: %v", err)
 			// if k8s client creation fails, we return nil to indicate that exporter is not ready
@@ -365,6 +364,9 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 		logger.Log.Printf("NIC health states: %+v, err: %v", nicHealth, err)
 	}
 
+	if utils.IsKubernetes() {
+		copyFilesToHost()
+	}
 	// start file watcher for config changes
 	foreverWatcher(e)
 }

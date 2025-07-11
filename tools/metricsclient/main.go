@@ -358,16 +358,15 @@ var jout = flag.Bool("json", false, "output in json format")
 
 func main() {
 	var (
-		socketPath = flag.String("socket", fmt.Sprintf("unix://%v", globals.MetricsSocketPath), "metrics grpc socket path")
-		getOpt     = flag.Bool("get", false, "get health status of gpu")
-		setId      = flag.String("id", "1", "gpu id")
-		nodeLabel  = flag.Bool("label", false, "get k8s node label")
-		podRes     = flag.Bool("pod", false, "get node resource info")
-		nodePod    = flag.Bool("npod", false, "get pod labels from node")
-		devMap     = flag.Bool("gpu", false, "show logical gpu device map")
-		eccFile    = flag.String("ecc-file-path", "", "json ecc err file")
-		gpuctl     = flag.Bool("gpuctl", false, "enable gpu control operations")
-		gpuctlPort = flag.String("gpuctl-port", "50061", "port for gpuctl operations")
+		socketPath   = flag.String("socket", fmt.Sprintf("unix://%v", globals.MetricsSocketPath), "metrics grpc socket path")
+		getOpt       = flag.Bool("get", false, "get health status of gpu")
+		setId        = flag.String("id", "1", "gpu id")
+		getNodeLabel = flag.Bool("label", false, "get k8s node label")
+		podRes       = flag.Bool("pod", false, "get node resource info")
+		nodePod      = flag.Bool("npod", false, "get pod labels from node")
+		devMap       = flag.Bool("gpu", false, "show logical gpu device map")
+		eccFile      = flag.String("ecc-file-path", "", "json ecc err file")
+		kubeConfig   = flag.String("kube-config", "", "kubernetes config file")
 	)
 	flag.Parse()
 
@@ -377,7 +376,36 @@ func main() {
 	}
 
 	if *nodePod {
-		getNodePods()
+		nodeName := utils.GetNodeName()
+		if nodeName == "" {
+			fmt.Println("not a k8s deployment")
+			return
+		}
+		kc, err := k8sclient.NewClient(context.Background(), *kubeConfig, nodeName)
+		if err != nil {
+			fmt.Printf("err: %+v", err)
+			return
+		}
+		clientset := kc.GetClientSet()
+		if clientset == nil {
+			fmt.Printf("Invalid clientset")
+			return
+		}
+		// List pods scheduled on the node
+		podList, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
+		})
+		if err != nil {
+			log.Fatalf("Failed to list pods on node: %v", err)
+		}
+
+		fmt.Printf("\nPods scheduled on node %s:\n", nodeName)
+		for _, pod := range podList.Items {
+			fmt.Printf("- %s/%s (Phase: %s)\n", pod.Namespace, pod.Name, pod.Status.Phase)
+			fmt.Println("  Labels:")
+			printLabels(pod.Labels)
+			fmt.Println()
+		}
 		return
 	}
 
@@ -386,14 +414,31 @@ func main() {
 		return
 	}
 
-	if *nodeLabel {
-		getNodeLabel()
-		return
-	}
-
-	if *gpuctl {
-		getGpuAgent(*gpuctlPort, *jout)
-		return
+	if *getNodeLabel {
+		nodeName := utils.GetNodeName()
+		if nodeName == "" {
+			fmt.Println("not a k8s deployment")
+			return
+		}
+		kc, err := k8sclient.NewClient(context.Background(), *kubeConfig, nodeName)
+		if err != nil {
+			fmt.Printf("err: %+v", err)
+			return
+		}
+		clientset := kc.GetClientSet()
+		if clientset == nil {
+			fmt.Printf("Invalid clientset")
+			return
+		}
+		node, err := clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		if err != nil {
+			fmt.Printf("err: %+v", err)
+			return
+		}
+		// Extract and print the labels
+		for key, value := range node.Labels {
+			fmt.Printf("Label %s = %s\n", key, value)
+		}
 	}
 
 	if *eccFile != "" {

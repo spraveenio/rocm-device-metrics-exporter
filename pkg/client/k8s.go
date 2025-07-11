@@ -34,7 +34,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 	//
@@ -66,12 +68,17 @@ type K8sClient struct {
 	podInformer  cache.SharedIndexInformer
 }
 
-func NewClient(ctx context.Context, nodeName string) (*K8sClient, error) {
-
+func NewClient(ctx context.Context, configPath, nodeName string) (*K8sClient, error) {
+	var config *rest.Config
+	var err error
 	if nodeName == "" {
 		return nil, fmt.Errorf("node name cannot be empty")
 	}
-	config, err := rest.InClusterConfig()
+	if configPath == "" {
+		config, err = rest.InClusterConfig()
+	} else {
+		config, err = clientcmd.BuildConfigFromFlags("", configPath)
+	}
 	if err != nil {
 		logger.Log.Printf("k8s cluster config error %v", err)
 		return nil, err
@@ -373,4 +380,38 @@ func (k *K8sClient) ListPods() ([]*v1.Pod, error) {
 		}
 	}
 	return pods, nil
+}
+
+func (k *K8sClient) GetMetricsExporterPodOnNode(ns, nodeName string) (*v1.Pod, error) {
+	pods, err := k.ListPods()
+	if err != nil {
+		logger.Log.Printf("Error retrieving pods running on node. Error:%v", err)
+		return nil, err
+	}
+	for _, pod := range pods {
+		if lblVal, ok := pod.Labels[globals.DefaultExporterLabel]; ok && lblVal == globals.DefaultExporterLabelValue {
+			return pod, nil
+		}
+	}
+	return nil, err
+}
+
+func (k *K8sClient) GetGPUMetricsEndpointURL(ns, nodeName string) (url string) {
+	podInfo, err := k.GetMetricsExporterPodOnNode(ns, nodeName)
+	if err != nil || podInfo == nil {
+		return
+	}
+	var endpointIP, port string
+	endpointIP = podInfo.Status.PodIP
+	// parse container env variables for the port info
+	for _, env := range podInfo.Spec.Containers[0].Env {
+		if env.Name == "METRICS_EXPORTER_PORT" {
+			port = env.Value
+			break
+		}
+	}
+	if endpointIP != "" && port != "" {
+		url = fmt.Sprintf("http://%s:%s/%s", endpointIP, port, globals.AMDGPUHandlerPrefix)
+	}
+	return
 }

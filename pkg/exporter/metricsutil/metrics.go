@@ -17,11 +17,14 @@
 package metricsutil
 
 import (
-	"regexp"
+	"encoding/json"
+	"net/http"
 	"sync"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/config"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -101,6 +104,31 @@ func (mh *MetricsHandler) UpdateMetrics() error {
 	}
 	wg.Wait()
 	return nil
+}
+
+func (mh *MetricsHandler) HandleGPUMetricsQuery(w http.ResponseWriter, req *http.Request) {
+	var gpuResponse *amdgpu.GPUGetResponse
+	var resp interface{}
+	var err error
+	for _, client := range mh.clients {
+		if client.GetDeviceType() == globals.GPUDevice {
+			resp, err = client.QueryMetrics()
+			break
+		}
+	}
+	if err != nil {
+		http.Error(w, "An error occured while querying metrics:\n"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	gpuResponse, ok := resp.(*amdgpu.GPUGetResponse)
+	if ok && gpuResponse != nil {
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(gpuResponse)
+		if err == nil {
+			return
+		}
+	}
+	http.Error(w, "An error occured while querying metrics:\n"+err.Error(), http.StatusInternalServerError)
 }
 
 func (mh *MetricsHandler) GetMetricsConfig() *exportermetrics.GPUMetricConfig {

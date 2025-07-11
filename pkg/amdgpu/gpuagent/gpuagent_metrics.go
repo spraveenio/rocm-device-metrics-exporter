@@ -1487,6 +1487,23 @@ func (ga *GPUAgentClient) UpdateMetricsStats() error {
 	return ga.getMetricsAll()
 }
 
+func (ga *GPUAgentClient) QueryMetrics() (interface{}, error) {
+	var resp *amdgpu.GPUGetResponse
+	var err error
+	ga.Lock()
+	resp, _, err = ga.getGPUs()
+	ga.Unlock()
+	if err != nil {
+		logger.Log.Printf("querymetrics - get gpus returned error:%v", err)
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (ga *GPUAgentClient) GetDeviceType() globals.DeviceType {
+	return globals.GPUDevice
+}
+
 func (ga *GPUAgentClient) getWorkloadInfo(wls map[string]scheduler.Workload, gpu *amdgpu.GPU) *scheduler.Workload {
 	if gpu == nil || gpu.Status == nil {
 		return nil

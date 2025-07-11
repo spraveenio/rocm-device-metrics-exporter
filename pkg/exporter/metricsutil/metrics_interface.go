@@ -16,6 +16,10 @@
 
 package metricsutil
 
+import (
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
+)
+
 type MetricsInterface interface {
 	// one time statistic pull for clients
 	UpdateStaticMetrics() error
@@ -31,6 +35,12 @@ type MetricsInterface interface {
 
 	// reset metric states
 	ResetMetrics() error
+
+	// query all metrics for the devices
+	QueryMetrics() (interface{}, error)
+
+	// get device type - gpu or ainic
+	GetDeviceType() globals.DeviceType
 }
 
 type MetricsClient interface {

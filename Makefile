@@ -278,7 +278,7 @@ gopkglist:
 	go install golang.org/x/tools/cmd/goimports@latest
 	go install github.com/alta/protopatch/cmd/protoc-gen-go-patch@latest
 
-amdexporter: metricsclient
+amdexporter: metricsclient amdgpuhealth
 	@echo "building amd metrics exporter"
 	CGO_ENABLED=0 go build  -C cmd/exporter -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/amd-metrics-exporter
 
@@ -293,6 +293,10 @@ metricutil:
 metricsclient:
 	@echo "building metrics client"
 	CGO_ENABLED=0 go build -C tools/metricsclient -o $(CURDIR)/bin/metricsclient
+
+amdgpuhealth:
+	@echo "building amd gpu health util"
+	CGO_ENABLED=0 go build -C tools/amd-gpu-health -o $(CURDIR)/bin/amdgpuhealth
 
 .PHONY: docker-cicd
 docker-cicd: gen amdexporter
