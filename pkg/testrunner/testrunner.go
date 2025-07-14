@@ -693,7 +693,9 @@ func (tr *TestRunner) watchGPUState() {
 		}
 		if updateStatusDB {
 			// remove expired deviceIDs from status DB if needed
-			SaveRunnerStatus(statusObj, tr.statusDBPath)
+			if err = SaveRunnerStatus(statusObj, tr.statusDBPath); err != nil {
+				logger.Log.Printf("Error saving runner status after removing expired deviceIDs: %+v", err)
+			}
 		}
 		if len(ids) > 0 {
 			logger.Log.Printf("found GPU %+v with incomplete test before restart %+v, start to rerun test", ids, statusObj)
