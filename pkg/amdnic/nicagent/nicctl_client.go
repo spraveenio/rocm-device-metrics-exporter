@@ -142,7 +142,7 @@ func (nc *NICCtlClient) UpdateLifStats() error {
 	nc.Lock()
 	defer nc.Unlock()
 
-	lifStatsOut, err := ExecWithContext("nicctl show lif statistics --json")
+	lifStatsOut, err := ExecWithContext("nicctl show lif statistics -j")
 	if err != nil {
 		logger.Log.Printf("failed to get lif statistics, err: %+v", err)
 		return err

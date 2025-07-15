@@ -88,7 +88,7 @@ func (na *NICAgentClient) getAdminStatus(lifUUID string) (string, error) {
 		} `json:"nic"`
 	}
 
-	lifOut, err := exec.Command("/bin/bash", "-c", fmt.Sprintf("nicctl show lif -l %s --json", lifUUID)).Output()
+	lifOut, err := exec.Command("/bin/bash", "-c", fmt.Sprintf("nicctl show lif -l %s -j", lifUUID)).Output()
 	if err != nil {
 		logger.Log.Printf("failed to get lif statistics, err: %+v", err)
 		return "", err
