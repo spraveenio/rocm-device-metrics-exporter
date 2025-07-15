@@ -101,5 +101,9 @@ var (
 		"0x74b9": "MI325X", // MI325X VF
 		"0x74a9": "MI300X-HF",
 		"0x74bd": "MI300X-HF",
+		"0x75a0": "MI350X",
+		"0x75b0": "MI350X", // MI350X VF
+		"0x75a3": "MI355X",
+		"0x75b3": "MI355X", // MI355X VF
 	}
 )
