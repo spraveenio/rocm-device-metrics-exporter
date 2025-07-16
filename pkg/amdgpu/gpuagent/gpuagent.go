@@ -101,6 +101,16 @@ func WithSRIOV(enableSriov bool) GPUAgentClientOptions {
 	}
 }
 
+func WithK8sSchedulerClient(k8sScheduler scheduler.SchedulerClient) GPUAgentClientOptions {
+	return func(ga *GPUAgentClient) {
+		if utils.IsKubernetes() {
+			ga.isKubernetes = true
+			logger.Log.Printf("K8sSchedulerClient option set")
+			ga.k8sScheduler = k8sScheduler
+		}
+	}
+}
+
 func initclients(mh *metricsutil.MetricsHandler) (conn *grpc.ClientConn, gpuclient amdgpu.GPUSvcClient, evtclient amdgpu.EventSvcClient, err error) {
 	agentAddr := mh.GetAgentAddr()
 	logger.Log.Printf("Agent connecting to %v", agentAddr)
@@ -152,15 +162,6 @@ func (ga *GPUAgentClient) Init() error {
 	ga.gpuclient = gpuclient
 	ga.evtclient = evtclient
 
-	if utils.IsKubernetes() {
-		ga.isKubernetes = true
-		k8sScl, err := scheduler.NewKubernetesClient(ga.ctx)
-		if err != nil {
-			logger.Log.Printf("gpu client init failure err :%v", err)
-			return err
-		}
-		ga.k8sScheduler = k8sScl
-	}
 	slurmScl, err := scheduler.NewSlurmClient(ga.ctx, ga.enableZmq)
 	if err != nil {
 		logger.Log.Printf("gpu client init failure err :%v", err)

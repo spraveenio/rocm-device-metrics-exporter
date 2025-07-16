@@ -40,6 +40,7 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 	metricsserver "github.com/ROCm/device-metrics-exporter/pkg/exporter/svc"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 )
@@ -337,11 +338,22 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()
 
+	// create scheduler client
+	var k8sScl scheduler.SchedulerClient
+	var err error
+	if utils.IsKubernetes() {
+		k8sScl, err = scheduler.NewKubernetesClient(e.ctx)
+		if err != nil {
+			logger.Log.Printf("failed to create k8s scheduler client: %v", err)
+		}
+	}
+
 	if e.enableGPUMonitoring {
 		gpuclient = gpuagent.NewAgent(mh,
 			gpuagent.WithZmq(!e.zmqDisable),
 			gpuagent.WithK8sClient(e.GetK8sApiClient()),
 			gpuagent.WithSRIOV(e.enableSriov),
+			gpuagent.WithK8sSchedulerClient(k8sScl),
 		)
 		if err := gpuclient.Init(); err != nil {
 			logger.Log.Printf("gpuclient init err :%+v", err)
@@ -353,7 +365,9 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 	}
 
 	if e.enableNICMonitoring {
-		nicAgent = nicagent.NewAgent(mh)
+		nicAgent = nicagent.NewAgent(mh,
+			nicagent.WithK8sSchedulerClient(k8sScl),
+		)
 		if err := nicAgent.Init(); err != nil {
 			logger.Log.Printf("nic client init err :%+v", err)
 		}

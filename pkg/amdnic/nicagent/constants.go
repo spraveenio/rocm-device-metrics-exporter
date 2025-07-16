@@ -16,6 +16,12 @@ limitations under the License.
 
 package nicagent
 
+import (
+	"strings"
+
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+)
+
 const (
 	// Port name label for port metrics
 	LabelPortName = "port_name"
@@ -32,4 +38,12 @@ const (
 	NICCtlClientName = "NICCTL_Client"
 	NICCtlBinary     = "nicctl"
 	RDMABinary       = "rdma"
+)
+
+var (
+	workloadLabels = []string{
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_POD.String()),
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_NAMESPACE.String()),
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_CONTAINER.String()),
+	}
 )

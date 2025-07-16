@@ -189,6 +189,7 @@ func getNewAgent(t *testing.T) *GPUAgentClient {
 		mh,
 		WithK8sClient(nil),
 		WithZmq(true),
+		WithK8sSchedulerClient(nil),
 	)
 	ga.initializeContext()
 	ga.gpuclient = gpuMockCl
