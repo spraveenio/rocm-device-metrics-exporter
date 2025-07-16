@@ -26,6 +26,7 @@ import (
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/gen/nicmetrics"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 )
 
 type RDMAStatsClient struct {
@@ -95,7 +96,7 @@ func (rc *RDMAStatsClient) GetClientName() string {
 	return RDMAClientName
 }
 
-func (rc *RDMAStatsClient) UpdateNICStats() error {
+func (rc *RDMAStatsClient) UpdateNICStats(workloads map[string]scheduler.Workload) error {
 	rc.Lock()
 	defer rc.Unlock()
 	res, err := exec.Command("rdma", "statistic", "-j").CombinedOutput()

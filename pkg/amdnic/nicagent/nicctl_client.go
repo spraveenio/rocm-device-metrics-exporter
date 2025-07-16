@@ -23,6 +23,7 @@ import (
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/gen/nicmetrics"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 )
 
@@ -30,8 +31,6 @@ type NICCtlClient struct {
 	sync.Mutex
 	na *NICAgentClient
 }
-
-var tempVar int // To be removed
 
 func newNICCtlClient(na *NICAgentClient) *NICCtlClient {
 	nc := &NICCtlClient{na: na}
@@ -58,15 +57,17 @@ func (rc *NICCtlClient) GetClientName() string {
 	return NICCtlClientName
 }
 
-func (nc *NICCtlClient) UpdateNICStats() error {
+func (nc *NICCtlClient) UpdateNICStats(workloads map[string]scheduler.Workload) error {
 	var wg sync.WaitGroup
-	fn_ptrs := []func() error{nc.UpdateCardStats, nc.UpdatePortStats, nc.UpdateLifStats}
+	fn_ptrs := []func(map[string]scheduler.Workload) error{
+		nc.UpdatePortStats,
+		nc.UpdateLifStats}
 
 	for _, fn := range fn_ptrs {
 		wg.Add(1)
-		go func(f func() error) {
+		go func(f func(map[string]scheduler.Workload) error) {
 			defer wg.Done()
-			if err := f(); err != nil {
+			if err := f(workloads); err != nil {
 				logger.Log.Printf("failed to update NIC stats, err: %+v", err)
 			}
 		}(fn)
@@ -75,15 +76,7 @@ func (nc *NICCtlClient) UpdateNICStats() error {
 	return nil
 }
 
-func (nc *NICCtlClient) UpdateCardStats() error {
-	nc.Lock()
-	defer nc.Unlock()
-	tempVar += 1
-	nc.na.m.nicNodesTotal.Set(float64(tempVar))
-	return nil
-}
-
-func (nc *NICCtlClient) UpdatePortStats() error {
+func (nc *NICCtlClient) UpdatePortStats(workloads map[string]scheduler.Workload) error {
 	nc.Lock()
 	defer nc.Unlock()
 
@@ -138,7 +131,7 @@ func (nc *NICCtlClient) UpdatePortStats() error {
 	return nil
 }
 
-func (nc *NICCtlClient) UpdateLifStats() error {
+func (nc *NICCtlClient) UpdateLifStats(workloads map[string]scheduler.Workload) error {
 	nc.Lock()
 	defer nc.Unlock()
 
@@ -159,6 +152,11 @@ func (nc *NICCtlClient) UpdateLifStats() error {
 	for _, nic := range lifStats.NIC {
 		labels := nc.na.populateLabelsFromNIC(nic.ID)
 		for _, lif := range nic.Lif {
+			workloadLabels := nc.na.getAssociatedWorkloadLabels(nic.ID, lif.Spec.ID, workloads)
+			for k, v := range workloadLabels {
+				labels[k] = v
+			}
+			// Add additional labels for NIC metrics
 			labels[LabelLifName] = nc.na.nics[nic.ID].GetLifName(lif.Spec.ID)
 			labels[LabelPortName] = nc.na.nics[nic.ID].GetPortName()
 

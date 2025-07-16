@@ -56,17 +56,34 @@ func NewKubernetesClient(ctx context.Context) (SchedulerClient, error) {
 	}
 	logger.Log.Printf("created k8s scheduler client")
 	return &podResourcesClient{clientConn: client, ctx: ctx}, nil
-
 }
 
-func (pr *podResourcesClient) ListWorkloads() (map[string]Workload, error) {
-	prCl := kube.NewPodResourcesListerClient(pr.clientConn)
-	ctx, cancel := context.WithTimeout(pr.ctx, time.Second*10)
+func (cl *podResourcesClient) ListWorkloads() (map[string]Workload, error) {
+	prCl := kube.NewPodResourcesListerClient(cl.clientConn)
+	ctx, cancel := context.WithTimeout(cl.ctx, time.Second*10)
 	defer cancel()
 	resp, err := prCl.List(ctx, &kube.ListPodResourcesRequest{})
 	if err != nil {
 		logger.Log.Printf("failed to list pod resources, %v", err)
-		return nil, fmt.Errorf("failed to list pod resources, %v", err)
+		if cl.isConnectionError(err) {
+			logger.Log.Printf("attempting to reconnect to kubelet socket...")
+			if recErr := cl.reconnect(); recErr != nil {
+				return nil, fmt.Errorf("failed to reconnect: %v (original error: %v)", recErr, err)
+			}
+
+			// Retry once after reconnect
+			prCl = kube.NewPodResourcesListerClient(cl.clientConn)
+			ctx, cancel = context.WithTimeout(cl.ctx, time.Second*10)
+			defer cancel()
+
+			resp, err = prCl.List(ctx, &kube.ListPodResourcesRequest{})
+			if err != nil {
+				logger.Log.Printf("retry after reconnect failed: %v", err)
+				return nil, fmt.Errorf("failed to list pod resources after reconnect, %v", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to list pod resources, %v", err)
+		}
 	}
 
 	podInfo := make(map[string]Workload)
@@ -106,4 +123,28 @@ func (cl *podResourcesClient) Close() error {
 
 func (cl *podResourcesClient) Type() SchedulerType {
 	return Kubernetes
+}
+
+// reconnect tries to close the existing connection and dial again.
+// You can call this if you detect the connection is broken during usage.
+func (cl *podResourcesClient) reconnect() error {
+	if cl.clientConn != nil {
+		_ = cl.clientConn.Close()
+	}
+
+	var err error
+	cl.clientConn, err = grpc.NewClient("unix://"+globals.PodResourceSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Log.Printf("failed to reconnect to kubelet socket: %v", err)
+		return err
+	}
+	logger.Log.Printf("reconnected to kubelet socket")
+	return nil
+}
+
+// isConnectionError checks if the error is related to connection issues
+func (cl *podResourcesClient) isConnectionError(err error) bool {
+	return strings.Contains(err.Error(), "connection refused") ||
+		strings.Contains(err.Error(), "connection reset") ||
+		strings.Contains(err.Error(), "transport is closing")
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -42,7 +43,7 @@ var (
 )
 
 type metrics struct {
-	nicNodesTotal prometheus.Gauge
+	nicNodesTotal prometheus.GaugeVec
 	nicMaxSpeed   prometheus.GaugeVec
 
 	// Port stats
@@ -198,6 +199,17 @@ func (na *NICAgentClient) ResetMetrics() error {
 	return nil
 }
 
+func (na *NICAgentClient) GetExporterNonNICLabels() []string {
+	labelList := []string{
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_HOSTNAME.String()),
+	}
+	// Add custom labels
+	for label := range customLabelMap {
+		labelList = append(labelList, strings.ToLower(label))
+	}
+	return labelList
+}
+
 func (na *NICAgentClient) GetExportLabels() []string { //TODO .. move to exporter/utils
 	labelList := []string{}
 	for key, enabled := range exportLabels {
@@ -227,7 +239,6 @@ func (na *NICAgentClient) GetExportLabels() []string { //TODO .. move to exporte
 }
 
 func (na *NICAgentClient) initLabelConfigs(config *exportermetrics.NICMetricConfig) {
-
 	// list of mandatory labels
 	exportLabels = make(map[string]bool)
 	for _, name := range exportermetrics.NICMetricLabel_name {
@@ -399,12 +410,13 @@ func (na *NICAgentClient) initFieldMetricsMap() {
 }
 
 func (na *NICAgentClient) initPrometheusMetrics() {
+	nonNICLabels := na.GetExporterNonNICLabels()
 	labels := na.GetExportLabels()
 	na.m = &metrics{
-		nicNodesTotal: prometheus.NewGauge(prometheus.GaugeOpts{
+		nicNodesTotal: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_TOTAL.String()),
 			Help: "Number of NICs in the node",
-		}),
+		}, nonNICLabels),
 
 		nicMaxSpeed: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_MAX_SPEED.String()),
@@ -690,52 +702,52 @@ func (na *NICAgentClient) initPrometheusMetrics() {
 		nicLifStatsRxUnicastPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_UNICAST_PACKETS.String()),
 			Help: "Total number of unicast packets received by the NIC",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 
 		nicLifStatsRxUnicastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_UNICAST_DROP_PACKETS.String()),
 			Help: "Number of unicast packets that were dropped during reception",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 
 		nicLifStatsRxMulticastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_MULTICAST_DROP_PACKETS.String()),
 			Help: "Number of multicast packets that were dropped during reception",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 
 		nicLifStatsRxBroadcastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_BROADCAST_DROP_PACKETS.String()),
 			Help: "Number of broadcast packets that were dropped during reception",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 
 		nicLifStatsRxDMAErrors: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_RX_DMA_ERRORS.String()),
 			Help: "Number of errors encountered while performing Direct Memory Access (DMA) during packet reception",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 
 		nicLifStatsTxUnicastPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_UNICAST_PACKETS.String()),
 			Help: "Total number of unicast packets transmitted by the NIC",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 
 		nicLifStatsTxUnicastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_UNICAST_DROP_PACKETS.String()),
 			Help: "Number of unicast packets that were dropped during transmission",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 
 		nicLifStatsTxMulticastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_MULTICAST_DROP_PACKETS.String()),
 			Help: "Number of multicast packets that were dropped during transmission",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 
 		nicLifStatsTxBroadcastDropPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_BROADCAST_DROP_PACKETS.String()),
 			Help: "Number of broadcast packets that were dropped during transmission",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 
 		nicLifStatsTxDMAErrors: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_NIC_LIF_STATS_TX_DMA_ERRORS.String()),
 			Help: "Number of errors encountered while performing Direct Memory Access (DMA) during packet transmission",
-		}, append([]string{LabelPortName, LabelLifName}, labels...)),
+		}, append(append([]string{LabelPortName, LabelLifName}, labels...), workloadLabels...)),
 	}
 	na.initFieldMetricsMap()
 }
@@ -767,7 +779,8 @@ func (na *NICAgentClient) InitConfigs() error {
 }
 
 func (na *NICAgentClient) UpdateStaticMetrics() error {
-	na.m.nicNodesTotal.Set(float64(1)) //TODO
+	labels := na.populateLabelsFromNIC("")
+	na.m.nicNodesTotal.With(labels).Set(float64(len(na.nics)))
 	return nil
 }
 
@@ -797,7 +810,6 @@ func (na *NICAgentClient) populateLabelsFromNIC(UUID string) map[string]string {
 	nic, found := na.nics[UUID]
 	if !found {
 		logger.Log.Printf("could not find NIC: %s from the local cache", UUID)
-		return labels
 	}
 
 	for ckey, enabled := range exportLabels {
@@ -807,13 +819,20 @@ func (na *NICAgentClient) populateLabelsFromNIC(UUID string) map[string]string {
 		key := strings.ToLower(ckey)
 		switch ckey {
 		case exportermetrics.NICMetricLabel_NIC_UUID.String():
-			labels[key] = nic.UUID
+			if nic != nil {
+				labels[key] = nic.UUID
+			}
 		case exportermetrics.NICMetricLabel_NIC_ID.String():
-			labels[key] = nic.Index
+			if nic != nil {
+				labels[key] = nic.Index
+			}
 		case exportermetrics.NICMetricLabel_NIC_SERIAL_NUMBER.String():
-			labels[key] = nic.SerialNumber
+			if nic != nil {
+				labels[key] = nic.SerialNumber
+			}
 		case exportermetrics.NICMetricLabel_NIC_HOSTNAME.String():
-			labels[key] = "ubuntu" //TODO
+			labels[key] = na.staticHostLabels[exportermetrics.NICMetricLabel_NIC_HOSTNAME.String()]
+
 		default:
 			logger.Log.Printf("Invalid label is ignored %v", key)
 		}
@@ -822,6 +841,35 @@ func (na *NICAgentClient) populateLabelsFromNIC(UUID string) map[string]string {
 	// Add custom labels
 	for label, value := range customLabelMap {
 		labels[label] = value
+	}
+	return labels
+}
+
+// getAssociatedWorkloadLabels returns the workload labels for a given NIC and LIF
+func (na *NICAgentClient) getAssociatedWorkloadLabels(nicID string, lifID string, workloads map[string]scheduler.Workload) map[string]string {
+	labels := map[string]string{
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_POD.String()):       "",
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_NAMESPACE.String()): "",
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_CONTAINER.String()): "",
+	}
+
+	if _, nicFound := na.nics[nicID]; !nicFound {
+		logger.Log.Printf("NIC %s not found in the local cache", nicID)
+		return labels
+	}
+	if _, lifFound := na.nics[nicID].Lifs[lifID]; !lifFound {
+		logger.Log.Printf("LIF %s not found in NIC %s", lifID, nicID)
+		return labels
+	}
+
+	lif, found := na.nics[nicID].Lifs[lifID]
+	if found {
+		if wl, wlFound := workloads[lif.PCIeAddress]; wlFound {
+			podInfo := wl.Info.(scheduler.PodResourceInfo)
+			labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_POD.String())] = podInfo.Pod
+			labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_NAMESPACE.String())] = podInfo.Namespace
+			labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_CONTAINER.String())] = podInfo.Container
+		}
 	}
 	return labels
 }
@@ -839,6 +887,16 @@ func (na *NICAgentClient) getNICs() (map[string]*NIC, error) {
 					Name string `json:"name"`
 				} `json:"spec"`
 			} `json:"port"`
+			Lif []struct {
+				Spec struct {
+					ID         string `json:"id"`
+					MACAddress string `json:"mac_address"`
+				} `json:"spec"`
+				Status struct {
+					Name string `json:"name"`
+					HwID string `json:"hw_id"`
+				} `json:"status"`
+			} `json:"lif"`
 		} `json:"nic"`
 	}
 
@@ -909,14 +967,51 @@ func (na *NICAgentClient) getNICs() (map[string]*NIC, error) {
 			lifIndex := 0
 			nics[nic.ID].Lifs = map[string]*Lif{}
 			for _, lif := range nic.Lif {
+				pcieAddr, err := na.getPCIeAddress(nic.ID, lif.Status.HwID)
+				if err != nil || pcieAddr == "" {
+					logger.Log.Printf("NIC: %s, failed to get PCIe address for LIF: %s, err: %+v", nic.ID, lif.Spec.ID, err)
+					continue
+				}
 				nics[nic.ID].Lifs[lif.Spec.ID] = &Lif{
-					Index: fmt.Sprintf("%v", lifIndex),
-					UUID:  lif.Spec.ID,
-					Name:  lif.Status.Name,
+					Index:       fmt.Sprintf("%v", lifIndex),
+					UUID:        lif.Spec.ID,
+					Name:        lif.Status.Name,
+					PCIeAddress: pcieAddr,
 				}
 				lifIndex++
 			}
 		}
 	}
 	return nics, nil
+}
+
+// populateStaticHostLabels populates static host labels for NIC metrics
+func (na *NICAgentClient) populateStaticHostLabels() error {
+	na.staticHostLabels = map[string]string{}
+	hostname, err := utils.GetHostName()
+	if err != nil {
+		return err
+	}
+	na.staticHostLabels[exportermetrics.NICMetricLabel_NIC_HOSTNAME.String()] = hostname
+	return nil
+}
+
+// getPCIeAddress retrieves the PCIe address for a given NIC and LIF hardware ID
+func (na *NICAgentClient) getPCIeAddress(NICID, lIfHwID string) (string, error) {
+	cmd := fmt.Sprintf("nicctl debug execute --cmd \"pcieutil dev\" -c %s | grep -w %s | awk '{print $4}'", NICID, lIfHwID)
+	pcieAddr, err := ExecWithContext(cmd)
+	if err != nil {
+		logger.Log.Printf("failed to get nic data, err: %+v", err)
+		return "", err
+	}
+
+	// convert the PCIe address to the required format: 0:84:00.1 -> 0000:84:00.1
+	pcieAddrStr := strings.TrimSpace(string(pcieAddr))
+	splitIndex := strings.Index(pcieAddrStr, ":")
+	if splitIndex == -1 {
+		return "", fmt.Errorf("invalid PCIe address format: %s", pcieAddrStr)
+	}
+	domain := pcieAddrStr[:splitIndex]
+	result := fmt.Sprintf("%s:%s", fmt.Sprintf("%04s", domain), pcieAddrStr[splitIndex+1:])
+	return result, nil
 }

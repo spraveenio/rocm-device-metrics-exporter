@@ -389,6 +389,12 @@ enum NICMetricLabel {
     NIC_ID                          = 2;
     // mandatory field HOSTNAME cannot be disabled
     NIC_HOSTNAME                    = 3;
+    // mandatory field POD cannot be disabled
+    NIC_POD                         = 4;
+    // mandatory field NAMESPACE cannot be disabled
+    NIC_NAMESPACE                   = 5;
+    // mandatory field CONTAINER cannot be disabled
+    NIC_CONTAINER                   = 6;
 }
 
 message NICMetricConfig {

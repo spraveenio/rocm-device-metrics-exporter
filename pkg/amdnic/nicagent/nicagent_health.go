@@ -19,9 +19,7 @@ package nicagent
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/gen/nicmetricssvc"
@@ -49,18 +47,13 @@ func (na *NICAgentClient) GetNICHealthStates() (map[string]interface{}, error) {
 	nicHealthMap := make(map[string]interface{})
 	for _, nic := range na.nics {
 		for _, lif := range nic.Lifs {
-			nicState := nicmetricssvc.NICState{}
-			pciAddr, err := na.getPCIAddress(lif.Name)
-			if err != nil {
-				logger.Log.Printf("failed to get PCI address for LIF %s, err: %+v", lif.Name, err)
-				return nil, err
-			}
+			nicState := &nicmetricssvc.NICState{}
 			adminState, err := na.getAdminStatus(lif.UUID)
 			if err != nil {
 				logger.Log.Printf("failed to get admin state for LIF %s, err: %+v", lif.UUID, err)
 				return nil, err
 			}
-			nicState.Device = pciAddr
+			nicState.Device = lif.PCIeAddress
 			nicState.UUID = lif.UUID
 			switch adminState {
 			case strings.ToLower(nicmetricssvc.AdminState_UP.String()):
@@ -68,6 +61,7 @@ func (na *NICAgentClient) GetNICHealthStates() (map[string]interface{}, error) {
 			case strings.ToLower(nicmetricssvc.AdminState_DOWN.String()):
 				nicState.Health = strings.ToLower(nicmetricssvc.Health_UNHEALTHY.String())
 			}
+			nicHealthMap[lif.PCIeAddress] = nicState
 		}
 	}
 	return nicHealthMap, nil
@@ -101,16 +95,4 @@ func (na *NICAgentClient) getAdminStatus(lifUUID string) (string, error) {
 	}
 
 	return resp.NIC[0].Lif[0].Spec.AdminState, nil
-}
-
-// GetPCIAddress returns the PCI address (BDF format) of the given network interface
-func (na *NICAgentClient) getPCIAddress(ifName string) (string, error) {
-	symlink := filepath.Join("/sys/class/net", ifName, "device")
-	resolved, err := os.Readlink(symlink)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve symlink: %w", err)
-	}
-	//last part which is the PCI address (e.g., 0000:00:1f.6)
-	pciAddr := filepath.Base(resolved)
-	return pciAddr, nil
 }

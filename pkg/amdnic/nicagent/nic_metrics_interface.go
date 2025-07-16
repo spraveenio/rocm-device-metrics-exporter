@@ -16,9 +16,11 @@
 
 package nicagent
 
+import "github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
+
 type NICInterface interface {
 	// fill AINIC stats
-	UpdateNICStats() error
+	UpdateNICStats(map[string]scheduler.Workload) error
 	// Initiate connection and return connection status
 	Init() error
 	// Return NIC Client name implementing this interface
@@ -35,7 +37,7 @@ type NIC struct {
 	ProductName  string           `json:"product_name"`
 	SerialNumber string           `json:"serial_number"`
 	Ports        map[string]*Port // NIC ports by Port ID
-	Lifs         map[string]*Lif  // NIC lifs by Lif IDq
+	Lifs         map[string]*Lif  // NIC lifs by Lif ID
 }
 
 // Port represents the network port data
@@ -48,9 +50,10 @@ type Port struct {
 
 // LIf represents the logical interface data
 type Lif struct {
-	Index string
-	UUID  string `json:"id"`
-	Name  string `json:"name"`
+	Index       string
+	UUID        string
+	Name        string
+	PCIeAddress string
 }
 
 // GetPortName returns the name of the first port associated with the NIC.
