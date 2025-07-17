@@ -19,6 +19,7 @@ package metricsutil
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"sync"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
