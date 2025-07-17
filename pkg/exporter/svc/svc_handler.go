@@ -34,11 +34,13 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
+	"google.golang.org/grpc"
 )
 
 // SvcHandler is a struct that manages the gRPC server and metrics services.
 type SvcHandler struct {
 	grpc                *grpc.Server
+	mh                  *metricsutil.MetricsHandler
 	gpuHealthSvc        *gpumetricsserver.MetricsSvcImpl
 	nicHealthSvc        *nicmetricsserver.MetricsSvcImpl
 	enableNICMonitoring bool
@@ -73,8 +75,9 @@ func WithGPUMonitoring(enableGPUMonitoring bool) SvcHandlerOption {
 }
 
 // InitSvcs initializes the service handler with gRPC server and metrics services.
-func InitSvcs(opts ...SvcHandlerOption) *SvcHandler {
+func InitSvcs(mh *metricsutil.MetricsHandler, opts ...SvcHandlerOption) *SvcHandler {
 	svcHandler := &SvcHandler{
+		mh:      mh,
 		grpc:    grpc.NewServer(),
 		errChan: make(chan error, 2), // Buffered channel for 2 potential error from 2 listeners
 	}
@@ -94,6 +97,7 @@ func (s *SvcHandler) RegisterNICHealthClient(client nicmetricsserver.HealthInter
 	return s.nicHealthSvc.RegisterHealthClient(client)
 }
 
+// Stop stops the gRPC server.
 func (s *SvcHandler) Stop() {
 	if s.grpc != nil {
 		logger.Log.Printf("stopping Health gRPC server")
@@ -104,6 +108,18 @@ func (s *SvcHandler) Stop() {
 
 // Run starts the gRPC server and listens for incoming connections on the specified sockets.
 func (s *SvcHandler) Run() error {
+	if s.mh != nil {
+		if enabled := s.mh.GetHealthServiceState(); !enabled {
+			logger.Log.Printf("health service is disabled")
+			return nil
+		}
+	}
+
+	if s.grpc == nil {
+		logger.Log.Printf("creating new gRPC server")
+		s.grpc = grpc.NewServer()
+	}
+
 	// register all the services with the gRPC server
 	// all the services should be registered before starting the server
 	if s.enableGPUMonitoring {

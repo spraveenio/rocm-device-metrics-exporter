@@ -66,6 +66,8 @@ type Exporter struct {
 	enableGPUMonitoring bool
 	enableSriov         bool
 	k8sApiClient        *k8sclient.K8sClient
+	svcHandler          *metricsserver.SvcHandler
+	k8sScl              scheduler.SchedulerClient
 	ctx                 context.Context
 	cancel              context.CancelFunc
 }
@@ -143,8 +145,8 @@ func foreverWatcher(e *Exporter) {
 		if !serverRunning() {
 			mh.InitConfig()
 			serverPort := runConf.GetServerPort()
-			logger.Log.Printf("starting server on %s:%v", e.bindAddr, serverPort)
-			srvHandler = startMetricsServer(runConf, e.bindAddr)
+			logger.Log.Printf("starting server on %v", serverPort)
+			srvHandler = startMetricsServer(runConf)
 			go e.svcHandler.Run()
 
 		}
@@ -319,32 +321,24 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 	defer e.Close()
 	logger.Init(utils.IsKubernetes())
 
-	svcHandler := metricsserver.InitSvcs(
-		metricsserver.WithDebugAPIOption(enableDebugAPI),
-		metricsserver.WithNICMonitoring(e.enableNICMonitoring),
-		metricsserver.WithGPUMonitoring(e.enableGPUMonitoring),
-	)
-	go func() {
-		logger.Log.Printf("metrics service starting")
-		if err := svcHandler.Run(); err != nil {
-			logger.Log.Printf("metrics service start failed: %+v", err)
-		}
-		logger.Log.Printf("metrics service stopped")
-		os.Exit(0)
-	}()
-
 	runConf = config.NewConfigHandler(e.configFile, e.agentGrpcPort)
 
 	mh, _ = metricsutil.NewMetrics(runConf)
 	mh.InitConfig()
 
+	e.svcHandler = metricsserver.InitSvcs(mh,
+		metricsserver.WithDebugAPIOption(enableDebugAPI),
+		metricsserver.WithNICMonitoring(e.enableNICMonitoring),
+		metricsserver.WithGPUMonitoring(e.enableGPUMonitoring),
+	)
+
 	// create scheduler client
-	var k8sScl scheduler.SchedulerClient
-	var err error
 	if utils.IsKubernetes() {
-		k8sScl, err = scheduler.NewKubernetesClient(e.ctx)
+		k8sScl, err := scheduler.NewKubernetesClient(e.ctx)
 		if err != nil {
 			logger.Log.Printf("failed to create k8s scheduler client: %v", err)
+		} else {
+			e.k8sScl = k8sScl
 		}
 	}
 
@@ -353,25 +347,25 @@ func (e *Exporter) StartMain(enableDebugAPI bool) {
 			gpuagent.WithZmq(!e.zmqDisable),
 			gpuagent.WithK8sClient(e.GetK8sApiClient()),
 			gpuagent.WithSRIOV(e.enableSriov),
-			gpuagent.WithK8sSchedulerClient(k8sScl),
+			gpuagent.WithK8sSchedulerClient(e.k8sScl),
 		)
 		if err := gpuclient.Init(); err != nil {
 			logger.Log.Printf("gpuclient init err :%+v", err)
 		}
 		e.startWatchers()
-		if err := svcHandler.RegisterGPUHealthClient(gpuclient); err != nil {
+		if err := e.svcHandler.RegisterGPUHealthClient(gpuclient); err != nil {
 			logger.Log.Printf("health client registration err: %+v", err)
 		}
 	}
 
 	if e.enableNICMonitoring {
 		nicAgent = nicagent.NewAgent(mh,
-			nicagent.WithK8sSchedulerClient(k8sScl),
+			nicagent.WithK8sSchedulerClient(e.k8sScl),
 		)
 		if err := nicAgent.Init(); err != nil {
 			logger.Log.Printf("nic client init err :%+v", err)
 		}
-		if err := svcHandler.RegisterNICHealthClient(nicAgent); err != nil {
+		if err := e.svcHandler.RegisterNICHealthClient(nicAgent); err != nil {
 			logger.Log.Printf("nic health client registration err: %+v", err)
 		}
 		nicHealth, err := nicAgent.GetNICHealthStates()
