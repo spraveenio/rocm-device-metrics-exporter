@@ -16,7 +16,8 @@ copyright = "Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved
 # Required settings
 html_theme = "rocm_docs_theme"
 html_theme_options = {
-    "flavor": "instinct"
+    "flavor": "instinct",
+    "repository_url": "https://github.com/rocm/device-metrics-exporter",
 }
 
 extensions = [
@@ -30,3 +31,4 @@ exclude_patterns = ['.venv']
 
 # Supported linux version numbers
 ubuntu_version_numbers = [('24.04', 'noble'), ('22.04', 'jammy')]
+
