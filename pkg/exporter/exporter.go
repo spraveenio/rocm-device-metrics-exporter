@@ -147,7 +147,12 @@ func foreverWatcher(e *Exporter) {
 			serverPort := runConf.GetServerPort()
 			logger.Log.Printf("starting server on %v", serverPort)
 			srvHandler = startMetricsServer(runConf)
-			go e.svcHandler.Run()
+			go func() {
+				err := e.svcHandler.Run()
+				if err != nil {
+					logger.Log.Printf("health service start failed")
+				}
+			}()
 
 		}
 	}
