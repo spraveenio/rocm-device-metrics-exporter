@@ -974,10 +974,10 @@ typedef struct {
  */
 typedef struct {
     uint32_t num_links;     //!< number of links
-    uint32_t bit_rate;      //!< current link speed in Gb/s
-    uint32_t max_bandwidth; //!< max bandwidth of the link in Gb/s
     struct _links {
         amdsmi_bdf_t bdf;               //!< bdf of the destination gpu
+        uint32_t bit_rate;              //!< current link speed in Gb/s
+        uint32_t max_bandwidth;         //!< max bandwidth of the link in Gb/s
         amdsmi_link_type_t link_type;   //!< type of the link
         uint64_t read;                  //!< total data received for each link in KB
         uint64_t write;                 //!< total data transfered for each link in KB
@@ -4176,21 +4176,6 @@ amdsmi_status_t amdsmi_set_gpu_clk_limit(amdsmi_processor_handle processor_handl
                                          amdsmi_clk_type_t clk_type,
                                          amdsmi_clk_limit_type_t limit_type,
                                          uint64_t clk_value);
-
-/**
- *  @brief Frees heap memory allocated by reg_table and pm_metrics
- *
- *  @ingroup tagClkPowerPerfQuery
- *
- *  @platform{gpu_bm_linux}
- *
- *  @details Frees heap memory.
- *
- *  @param[in] p a pointer to the memory to free.
- *
- *  @return ::void
- */
-void amdsmi_free_name_value_pairs(void *p);
 
 /**
  *  @brief This function sets the clock frequency information. It is not supported on

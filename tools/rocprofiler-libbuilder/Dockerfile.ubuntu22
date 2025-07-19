@@ -5,6 +5,8 @@ FROM ${BUILD_BASE_IMAGE}
 LABEL maintainer="AMD Inc"
 ARG ROCM_VERSION=7.0.0
 ARG AMDGPU_VERSION=7.0.0
+ARG AMD_HIPCLANG_BUILD_ID=16274
+ARG AMDGPU_BUILD=2182974
 
 LABEL maintainer="AMD Inc"
 LABEL OS=${BUILD_BASE_IMAGE}
@@ -17,7 +19,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 #  sh -c 'echo deb [arch=amd64] https://repo.radeon.com/amdgpu/$AMDGPU_VERSION/ubuntu jammy main > /etc/apt/sources.list.d/amdgpu.list' && \
   wget https://artifactory-cdn.amd.com/artifactory/list/amdgpu-deb/amdgpu-install-internal_7.0-22.04-1_all.deb && \
   apt-get install -y ./amdgpu-install-internal_7.0-22.04-1_all.deb && \
-  amdgpu-repo --amdgpu-build=2182494 --rocm-build=compute-rocm-dkms-no-npi-hipclang/16267 && \
+  amdgpu-repo --amdgpu-build=2182974 --rocm-build=compute-rocm-dkms-no-npi-hipclang/16274 && \
   apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   sudo \
   libelf1 \

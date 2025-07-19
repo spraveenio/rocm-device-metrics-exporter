@@ -40,11 +40,11 @@ done to respective components, then the component needs to be rebuilt
 accordingly. Exporter container built after any component built will pack the newly built components.
 
 
-|Component        |  Directory              |   Build Container(one time)      | Compilation Target            |
-|-----------------|-------------------------|----------------------------------|-------------------------------|
-|amd-smi          | $(TOP_DIR)/libamdsmi    | `make amdsmi-build-all-builders` | `make amdsmi-compile-all`     | 
-|gpuagent         | $(TOP_DIR)/gpuagent     | `make gpuagent-build`            | `make gpuagent-compile-full`  |
-|rocprofilerclient| $(TOP_DIR)/rocprofilerclient | `make rocprofiler-build`    | `make rocprofiler-compile`    |
+|Component        |  Directory              |    Compilation Target            |
+|-----------------|-------------------------|----------------------------------|
+|amd-smi          | $(TOP_DIR)/libamdsmi    | `make amdsmi-compile-all`     | 
+|gpuagent         | $(TOP_DIR)/gpuagent     | `make gpuagent-compile-full`  |
+|rocprofilerclient| $(TOP_DIR)/rocprofilerclient `make rocprofiler-compile`    |
 
 
 ### Build and Launch Docker Build Container Shell

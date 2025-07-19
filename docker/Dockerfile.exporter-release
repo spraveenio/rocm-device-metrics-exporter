@@ -1,20 +1,20 @@
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.4
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.6
+ARG AMD_HIPCLANG_BUILD_ID=16274
+ARG AMDGPU_BUILD=2182974
 
 FROM ${BASE_IMAGE}
 
 LABEL maintainer="AMD Inc"
 LABEL OS="registry.access.redhat.com/ubi9/ubi-minimal:9.6"
-LABEL BUILD="http://rocm-ci.amd.com/job/compute-rocm-dkms-no-npi-hipclang/16267/"
+LABEL BUILD="http://rocm-ci.amd.com/job/compute-rocm-dkms-no-npi-hipclang/16274/"
 
 ARG ROCM_VERSION=7.0.0
 ARG AMDGPU_VERSION=7.0.0
 ARG AMDGPU_REPO_URL=https://repo.radeon.com
 
-# http://rocm-ci.amd.com/job/compute-rocm-dkms-no-npi-hipclang/16267/
-
 RUN microdnf install -y wget yum && microdnf update -y && \
     yum install -y https://artifactory-cdn.amd.com/artifactory/list/amdgpu-rpm/rhel/amdgpu-install-internal-7.0_9-1.noarch.rpm && \
-    amdgpu-repo --amdgpu-build=2182494 --rocm-build=compute-rocm-dkms-no-npi-hipclang/16267 && \
+    amdgpu-repo --amdgpu-build=2182974 --rocm-build=compute-rocm-dkms-no-npi-hipclang/16274 && \
     microdnf install -y sudo findutils procps elfutils-libelf cmake kmod file \
     libcap-devel amd-smi-lib libdrm-amdgpu vim net-tools numactl numactl-libs \
     hsa-amd-aqlprofile rocprofiler-sdk hip-runtime-amd && \
@@ -57,7 +57,8 @@ RUN cd /opt/rocm/lib && \
 
 # override built libraries
 ADD ./librocpclient.so /opt/rocm/lib/librocpclient.so
-ADD ./libamd_smi.so.25 /home/amd/lib/libamd_smi.so.25
+ADD ./libamd_smi.so.25.4 /home/amd/lib/libamd_smi.so.25.4
+RUN cd /home/amd/lib/ && ln -sf libamd_smi.so.25.4 libamd_smi.so.25
 
 ADD ./rocpctl /home/amd/bin/rocpctl
 ADD ./gpuagent /home/amd/bin/gpuagent

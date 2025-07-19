@@ -21,7 +21,7 @@ ROCPROFILER_ASSET_DIR := $(ASSETS_PATH)/rocprofiler/
 .PHONY: amdsmi-build
 amdsmi-build:
 ifeq ($(OS), RHEL9)
-	$(eval DOCKERFILE=$(AMDSMI_BUILD_DIR)/Dockerfile.rhel9.4)
+	$(eval DOCKERFILE=$(AMDSMI_BUILD_DIR)/Dockerfile.rhel9)
 	$(eval BUILDER_IMAGE=$(AMDSMI_BUILDER_IMAGE))
 	$(eval BASE_IMAGE=${AMDSMI_BASE_IMAGE})
 else ifeq ($(OS), UBUNTU22)
