@@ -16,6 +16,7 @@ else
 endif
 	@echo "Building amdsmi library for $(BUILD_IMAGE_OS)"
 	@docker run --rm -it --privileged \
+		--network host \
 		-e "USER_NAME=$(shell whoami)" \
 		-e "USER_UID=$(shell id -u)" \
 		-e "USER_GID=$(shell id -g)" \
@@ -34,18 +35,22 @@ endif
 
 .PHONY: amdsmi-compile-rhel
 amdsmi-compile-rhel:
+	${MAKE} amdsmi-build-rhel
 	OS=RHEL9 ${MAKE} amdsmi-compile
 
 .PHONY: amdsmi-compile-ub22
 amdsmi-compile-ub22:
+	${MAKE} amdsmi-build-ub22
 	OS=UBUNTU22 ${MAKE} amdsmi-compile
 
 .PHONY: amdsmi-compile-ub24
 amdsmi-compile-ub24:
+	${MAKE} amdsmi-build-ub24
 	OS=UBUNTU24 ${MAKE} amdsmi-compile
 
 .PHONY: amdsmi-compile-azure
 amdsmi-compile-azure:
+	${MAKE} amdsmi-build-azure
 	OS=AZURE3 ${MAKE} amdsmi-compile
 
 # compiles the gpuagent from source
@@ -79,6 +84,7 @@ gpuagent-compile-full:
 
 .PHONY: rocprofiler-compile
 rocprofiler-compile:
+	${MAKE} rocprofiler-build
 	@docker run --rm -it --privileged \
 		-e "USER_NAME=$(shell whoami)" \
 		-e "USER_UID=$(shell id -u)" \

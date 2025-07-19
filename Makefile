@@ -96,7 +96,7 @@ HTML_DIR := $(BUILD_DIR)/html
 
 # library branch to build amdsmi libraries for gpuagent
 AMDSMI_BRANCH ?= amd-mainline
-AMDSMI_COMMIT ?= 738b678
+AMDSMI_COMMIT ?= 0bcb2c9
 
 ROCM_VERSION ?= 7.0.0
 
@@ -429,13 +429,6 @@ slurm-sim:
 .PHONY: build-dev-container
 build-dev-container:
 	${MAKE} -C tools/base-image all INSECURE_REGISTRY=$(INSECURE_REGISTRY)
-
-.PHONY: amdsmi-build-all-builders
-amdsmi-build-all-builders:
-	${MAKE} amdsmi-build-azure
-	${MAKE} amdsmi-build-ub24
-	${MAKE} amdsmi-build-ub22
-	${MAKE} amdsmi-build-rhel
 
 .PHONY: amdsmi-compile-all
 amdsmi-compile-all:
