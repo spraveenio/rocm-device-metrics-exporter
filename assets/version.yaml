@@ -1,14 +1,14 @@
 assets:
   - name    : gpuagent_mock.bin.gz
-    version : 1.116.0-24 (private build)
-    branch  : 6.4.2
+    version : 1.121.0-30
+    branch  : master
 
   - name    : gpuagent_static.bin.gz
-    version : 1.121.0-27 (private build)
+    version : 1.121.0-30
     branch  : master
 
   - name    : gpuctl.gobin
-    version : 1.121.0-27 (private build)
+    version : 1.121.0-30
     branch  : master
 
   - name    : amd_smi_lib

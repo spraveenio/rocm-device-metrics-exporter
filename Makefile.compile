@@ -133,15 +133,11 @@ endif
 
 .PHONY: libcopy-assets-UBUNTU22
 libcopy-assets-UBUNTU22:
-	#OS=UBUNTU22 ${MAKE} libcopy-assets
-	@echo "TODO: renable"
-	@echo "disabled for rocm7 build breakage"
+	OS=UBUNTU22 ${MAKE} libcopy-assets
 
 .PHONY: libcopy-assets-UBUNTU24
 libcopy-assets-UBUNTU24:
-	#OS=UBUNTU24 ${MAKE} libcopy-assets
-	@echo "TODO: renable"
-	@echo "disabled for rocm7 build breakage"
+	OS=UBUNTU24 ${MAKE} libcopy-assets
 
 .PHONY: profiler-libdependent-assets
 profiler-libdependent-assets:
