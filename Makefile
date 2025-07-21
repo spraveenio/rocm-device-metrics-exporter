@@ -441,8 +441,7 @@ amdsmi-compile-all:
 .PHONY: build-all
 build-all: 
 	${MAKE} amdsmi-compile-all
-	@echo "TODO: reenable after rocm7 debain build cicd fix"
-	#${MAKE} rocprofiler-compile
+	${MAKE} rocprofiler-compile
 	${MAKE} gpuagent-compile
 	@echo "Docker image build is available under docker/ directory"
 	${MAKE} docker
