@@ -1,6 +1,6 @@
 assets:
   - name    : gpuagent_mock.bin.gz
-    version : 1.121.0-30
+    version : 1.121.0-30+ (PR #101523)
     branch  : master
 
   - name    : gpuagent_static.bin.gz
