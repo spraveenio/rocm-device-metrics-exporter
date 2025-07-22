@@ -58,33 +58,33 @@ var (
 							testrunnerGen.TestTrigger_AUTO_UNHEALTHY_GPU_WATCH.String(): {
 								TestCases: []*testrunnerGen.TestParameter{
 									{
-										Framework:      GetAddr(testrunnerGen.TestParameter_RVS.String()),
-										Recipe:         GetAddr(globals.DefaultUnhealthyGPUTestName),
-										Iterations:     GetAddr(globals.DefaultUnhealthyGPUTestIterations),
-										StopOnFailure:  GetAddr(globals.DefaultUnhealthyGPUTestStopOnFailure),
-										TimeoutSeconds: GetAddr(globals.DefaultUnhealthyGPUTestTimeoutSeconds),
+										Framework:      testrunnerGen.TestParameter_RVS.String(),
+										Recipe:         globals.DefaultUnhealthyGPUTestName,
+										Iterations:     globals.DefaultUnhealthyGPUTestIterations,
+										StopOnFailure:  globals.DefaultUnhealthyGPUTestStopOnFailure,
+										TimeoutSeconds: globals.DefaultUnhealthyGPUTestTimeoutSeconds,
 									},
 								},
 							},
 							testrunnerGen.TestTrigger_PRE_START_JOB_CHECK.String(): {
 								TestCases: []*testrunnerGen.TestParameter{
 									{
-										Framework:      GetAddr(testrunnerGen.TestParameter_RVS.String()),
-										Recipe:         GetAddr(globals.DefaultPreJobCheckTestName),
-										Iterations:     GetAddr(globals.DefaultPreJobCheckTestIterations),
-										StopOnFailure:  GetAddr(globals.DefaultPreJobCheckTestStopOnFailure),
-										TimeoutSeconds: GetAddr(globals.DefaultPreJobCheckTestTimeoutSeconds),
+										Framework:      testrunnerGen.TestParameter_RVS.String(),
+										Recipe:         globals.DefaultPreJobCheckTestName,
+										Iterations:     globals.DefaultPreJobCheckTestIterations,
+										StopOnFailure:  globals.DefaultPreJobCheckTestStopOnFailure,
+										TimeoutSeconds: globals.DefaultPreJobCheckTestTimeoutSeconds,
 									},
 								},
 							},
 							testrunnerGen.TestTrigger_MANUAL.String(): {
 								TestCases: []*testrunnerGen.TestParameter{
 									{
-										Framework:      GetAddr(testrunnerGen.TestParameter_RVS.String()),
-										Recipe:         GetAddr(globals.DefaultManualTestName),
-										Iterations:     GetAddr(globals.DefaultManualTestIterations),
-										StopOnFailure:  GetAddr(globals.DefaultManualTestStopOnFailure),
-										TimeoutSeconds: GetAddr(globals.DefaultManualTestTimeoutSeconds),
+										Framework:      testrunnerGen.TestParameter_RVS.String(),
+										Recipe:         globals.DefaultManualTestName,
+										Iterations:     globals.DefaultManualTestIterations,
+										StopOnFailure:  globals.DefaultManualTestStopOnFailure,
+										TimeoutSeconds: globals.DefaultManualTestTimeoutSeconds,
 									},
 								},
 							},
@@ -261,14 +261,14 @@ func (tr *TestRunner) validateCfg() {
 
 	// 4. validate specific GPU model's test recipe
 	testParams := tr.getTestParameters(false)
-	switch strings.ToUpper(Deref(testParams.TestCases[0].Framework)) {
+	switch testParams.TestCases[0].Framework {
 	case testrunnerGen.TestParameter_RVS.String():
 		gpuModelSubDir, err := getGPUModelTestRecipeDir(tr.amdSMIPath)
 		if err != nil {
 			logger.Log.Printf("failed to get GPU model specific folder for rvs test recipe err %+v, using recipe from root conf folder", err)
 		}
 
-		testCfgPath := filepath.Join(tr.rvsTestCaseDir, Deref(testParams.TestCases[0].Recipe)+".conf")
+		testCfgPath := filepath.Join(tr.rvsTestCaseDir, testParams.TestCases[0].Recipe+".conf")
 		if gpuModelSubDir != "" {
 			// special handling for RVS
 			// RVS build may use alias for MI350X and MI355X
@@ -298,22 +298,16 @@ func (tr *TestRunner) validateCfg() {
 				tr.testCfgGPUModelName = gpuModelSubDir
 			}
 			// Always assign testCfgPath based on possibly updated gpuModelSubDir
-			testCfgPath = filepath.Join(tr.rvsTestCaseDir, gpuModelSubDir, Deref(testParams.TestCases[0].Recipe)+".conf")
+			testCfgPath = filepath.Join(tr.rvsTestCaseDir, gpuModelSubDir, testParams.TestCases[0].Recipe+".conf")
 		}
 		if _, err := os.Stat(testCfgPath); err != nil {
 			fmt.Printf("Trigger %+v cannot find corresponding test config file %+v, err: %+v\n", tr.testTrigger, testCfgPath, err)
-			tr.generateK8sEvent("", v1.EventTypeWarning,
-				testrunnerGen.TestEventReason_TestConfigError.String(), nil,
-				fmt.Sprintf("failed to find test recipe %+v", testCfgPath), []string{})
 			os.Exit(1)
 		}
 	case testrunnerGen.TestParameter_AGFHC.String():
 		gpuModelSubDir, err := getGPUModelTestRecipeDir(tr.amdSMIPath)
 		if err != nil || gpuModelSubDir == "" {
 			logger.Log.Printf("failed to get GPU model specific folder for agfhc test recipe err %+v", err)
-			tr.generateK8sEvent("", v1.EventTypeWarning,
-				testrunnerGen.TestEventReason_TestConfigError.String(), nil,
-				"failed to find AGFHC test recipes folder for current GPU model, please check test runner and AGFHC docs for supported GPU models", []string{})
 			os.Exit(1)
 		}
 
@@ -321,18 +315,15 @@ func (tr *TestRunner) validateCfg() {
 		gpuModelSubDir = strings.ToLower(gpuModelSubDir)
 		logger.Log.Printf("using test recipe from %+v folder", gpuModelSubDir)
 		tr.testCfgGPUModelName = gpuModelSubDir
-		testCfgPath := filepath.Join(tr.agfhcTestCaseDir, gpuModelSubDir, Deref(testParams.TestCases[0].Recipe)+".yml")
+		testCfgPath := filepath.Join(tr.agfhcTestCaseDir, gpuModelSubDir, testParams.TestCases[0].Recipe+".yml")
 
 		if _, err := os.Stat(testCfgPath); err != nil {
 			fmt.Printf("Trigger %+v cannot find corresponding test config file %+v, err: %+v\n", tr.testTrigger, testCfgPath, err)
-			tr.generateK8sEvent("", v1.EventTypeWarning,
-				testrunnerGen.TestEventReason_TestConfigError.String(), nil,
-				fmt.Sprintf("failed to find test recipe %+v", testCfgPath), []string{})
 			os.Exit(1)
 		}
 	}
 
-	if Deref(testParams.TestCases[0].Iterations) == 0 {
+	if testParams.TestCases[0].Iterations == 0 {
 		fmt.Printf("Trigger %+v has been configured to run with 0 iteration, should be non-zero iterations\n", tr.testTrigger)
 		tr.generateK8sEvent("", v1.EventTypeWarning,
 			testrunnerGen.TestEventReason_TestConfigError.String(), nil,
@@ -388,6 +379,36 @@ func (tr *TestRunner) readCfg(configPath string) {
 	}
 	tr.globalTestRunnerConfig = &config
 	tr.setConfigDefaults()
+}
+
+func (tr *TestRunner) setConfigDefaults() {
+	if tr.globalTestRunnerConfig == nil {
+		return
+	}
+	for _, categoryConfig := range tr.globalTestRunnerConfig.TestConfig {
+		if categoryConfig == nil {
+			continue
+		}
+		for _, triggerConfig := range categoryConfig.TestLocationTrigger {
+			if triggerConfig == nil {
+				continue
+			}
+			for _, params := range triggerConfig.TestParameters {
+				if params == nil {
+					continue
+				}
+				for _, testCase := range params.TestCases {
+					if testCase == nil {
+						continue
+					}
+					// set default values for framework for backward compatibility
+					if testCase.Framework == "" {
+						testCase.Framework = testrunnerGen.TestParameter_RVS.String()
+					}
+				}
+			}
+		}
+	}
 }
 
 func (tr *TestRunner) setConfigDefaults() {
@@ -615,7 +636,7 @@ func (tr *TestRunner) setTestRunner() {
 
 	var runnerType types.TestRunnerType
 	var binPath string
-	switch strings.ToUpper(Deref(testParams.TestCases[0].Framework)) {
+	switch testParams.TestCases[0].Framework {
 	case testrunnerGen.TestParameter_RVS.String():
 		runnerType = types.RVSRunner
 		binPath = tr.rvsPath
@@ -624,9 +645,6 @@ func (tr *TestRunner) setTestRunner() {
 		binPath = tr.agfhcPath
 	default:
 		logger.Log.Printf("unsupported test framework %v for category %v, location %v, trigger %v", testParams.TestCases[0].Framework, tr.testCategory, tr.testLocation, tr.testTrigger)
-		tr.generateK8sEvent("", v1.EventTypeWarning,
-			testrunnerGen.TestEventReason_TestConfigError.String(), nil,
-			fmt.Sprintf("cannot execute unsupported test framework %+v", testParams.TestCases[0].Framework), []string{})
 		os.Exit(1)
 	}
 
@@ -681,7 +699,7 @@ func (tr *TestRunner) watchGPUState() {
 			// then the pre-existing test status info of partitioned deviceID is no longer existing
 			// need to remove those expired deviceIDs from status DB
 			// otherwise the SMI lib keeps cannot retrieve information of those expired deviceIDs
-			if _, ok := tr.gUIDToGPUIndexMap[deviceID]; !ok {
+			if _, ok := tr.kfdIDToGPUIndexMap[deviceID]; !ok {
 				delete(statusObj.TestStatus, deviceID)
 				logger.Log.Printf("removing expired deviceID %v from status DB", deviceID)
 				updateStatusDB = true
@@ -844,15 +862,14 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 	// that means all devices were selected
 
 	var extraArgs []string
-	if parameters.TestCases[0].Arguments != nil && *parameters.TestCases[0].Arguments != "" {
-		extraArgs = strings.Split(*parameters.TestCases[0].Arguments, ",")
+	if parameters.TestCases[0].Arguments != "" {
+		extraArgs = strings.Split(parameters.TestCases[0].Arguments, ",")
 	}
-	testRecipe := Deref(parameters.TestCases[0].Recipe)
-	handler, err := tr.testRunnerIntf.GetTestHandler(testRecipe, types.TestParams{
-		Iterations:    uint(Deref(parameters.TestCases[0].Iterations)),
-		StopOnFailure: Deref(parameters.TestCases[0].StopOnFailure),
+	handler, err := tr.testRunnerIntf.GetTestHandler(parameters.TestCases[0].Recipe, types.TestParams{
+		Iterations:    uint(parameters.TestCases[0].Iterations),
+		StopOnFailure: parameters.TestCases[0].StopOnFailure,
 		DeviceIDs:     validIDs,
-		Timeout:       uint(Deref(parameters.TestCases[0].TimeoutSeconds)),
+		Timeout:       uint(parameters.TestCases[0].TimeoutSeconds),
 		ExtraArgs:     extraArgs,
 	})
 	if err != nil {
@@ -878,47 +895,39 @@ func (tr *TestRunner) testGPU(trigger string, ids []string, isRerun bool) {
 		// TODO: add error handling here if new running status failed to be saved
 	}
 
-	tr.AddTestRunningLabel(testRecipe, validIDs)
-	defer tr.RemoveTestRunningLabel(testRecipe, validIDs)
+	tr.AddTestRunningLabel(parameters.TestCases[0].Recipe, validIDs)
+	defer tr.RemoveTestRunningLabel(parameters.TestCases[0].Recipe, validIDs)
 
 	select {
-	case <-time.After(time.Duration(Deref(parameters.TestCases[0].TimeoutSeconds)) * time.Second * time.Duration(Deref(parameters.TestCases[0].Iterations))):
+	case <-time.After(time.Duration(parameters.TestCases[0].TimeoutSeconds) * time.Second * time.Duration(parameters.TestCases[0].Iterations)):
 		logger.Log.Printf("Trigger: %v Test: %v GPU Indexes: %v timeout", trigger, parameters.TestCases[0].Recipe, validIDs)
 		result := handler.Result()
 		result = AppendTimedoutTestSummary(result, validIDs)
 		handler.StopTest()
 		// when the test timedout
 		// save whatever test console logs that are cached
-		tr.saveAndExportHandlerLogs(handler, ids, testRecipe, validIDs)
-		tr.generateK8sEvent(testRecipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String(), result, "", validIDs)
+		tr.saveAndExportHandlerLogs(handler, ids, parameters.TestCases[0].Recipe, validIDs)
+		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String(), result, "", validIDs)
 		// exit on non-auto trigger's failure
 		tr.exitOnFailure()
 	case <-handler.Done():
 		// TODO: this has to change later based on result logs parsing.
 		// for now updating same result in all GPU
 		result := handler.Result()
-		logger.Log.Printf("Trigger: %v Test: %v GPU Indexes: %v completed. Result: %v", trigger, testRecipe, validIDs, result)
+		logger.Log.Printf("Trigger: %v Test: %v GPU Indexes: %v completed. Result: %v", trigger, parameters.TestCases[0].Recipe, validIDs, result)
 
 		// save log into gzip file
-		tr.saveAndExportHandlerLogs(handler, ids, testRecipe, validIDs)
+		tr.saveAndExportHandlerLogs(handler, ids, parameters.TestCases[0].Recipe, validIDs)
 
 		switch tr.getOverallResult(result, validIDs) {
 		case types.Success:
-			tr.generateK8sEvent(testRecipe, v1.EventTypeNormal,
-				testrunnerGen.TestEventReason_TestPassed.String(), result, "", validIDs)
-		case types.Queued:
-			tr.generateK8sEvent(testRecipe, v1.EventTypeWarning,
-				testrunnerGen.TestEventReason_TestQueued.String(), result, "", validIDs)
-		case types.Skipped:
-			tr.generateK8sEvent(testRecipe, v1.EventTypeWarning,
-				testrunnerGen.TestEventReason_TestSkipped.String(), result, "", validIDs)
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_TestPassed.String(), result, "", validIDs)
 		case types.Failure:
-			tr.generateK8sEvent(testRecipe, v1.EventTypeWarning,
-				testrunnerGen.TestEventReason_TestFailed.String(), result, "", validIDs)
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result, "", validIDs)
 			// exit on non-auto trigger's failure
 			tr.exitOnFailure()
 		case types.Timedout:
-			tr.generateK8sEvent(testRecipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String(), result, "", validIDs)
+			tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestTimedOut.String(), result, "", validIDs)
 			// exit on non-auto trigger's failure
 			tr.exitOnFailure()
 		}
@@ -972,24 +981,20 @@ func (tr *TestRunner) saveAndExportHandlerLogs(handler types.TestHandlerInterfac
 			SaveTestResultToGz(res.Stderr, stderrFilePath)
 			filesToExport = append(filesToExport, stderrFilePath)
 		}
-
 		switch tr.testRunnerIntf.(type) {
 		case *AgfhcTestRunner:
 			// if the result directory was generated by AGFHC
-			// and was not empty
-			if resultDir != "" {
-				agfhcGzipFilePath := GetLogFilePath(tr.logDir, timestamp, tr.testTrigger, recipe, "agfhc_all.tar")
-				if err := GzipFolder(resultDir, agfhcGzipFilePath); err != nil {
-					logger.Log.Printf("failed to gzip the AGFHC result directory %v: %v", resultDir, err)
-				} else {
-					filesToExport = append(filesToExport, agfhcGzipFilePath)
-				}
+			agfhcGzipFilePath := GetLogFilePath(tr.logDir, timestamp, tr.testTrigger, recipe, "agfhc_all.tar")
+			if err := GzipFolder(resultDir, agfhcGzipFilePath); err != nil {
+				logger.Log.Printf("failed to gzip the AGFHC result directory %v: %v", resultDir, err)
+			} else {
+				filesToExport = append(filesToExport, agfhcGzipFilePath)
 			}
 		}
-
 		if len(filesToExport) == 0 {
 			continue
 		}
+
 		cloudFileName := timestamp + ".tar.gz"
 		localCombinedTar := filepath.Join(globals.TestLogDir, cloudFileName)
 		err = CreateTarFile(localCombinedTar, filesToExport)
@@ -1019,10 +1024,10 @@ func (tr *TestRunner) saveAndExportHandlerLogs(handler types.TestHandlerInterfac
 				parameters := tr.getTestParameters(true)
 				if len(uploadFailed) == 0 { // generate success event
 					msg := fmt.Sprintf("Logs export to %s succeeded", strings.Join(uploadPassed, ", "))
-					tr.generateK8sEvent(Deref(parameters.TestCases[0].Recipe), v1.EventTypeNormal, testrunnerGen.TestEventReason_LogsExportPassed.String(), nil, msg, gpuIndexes)
+					tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeNormal, testrunnerGen.TestEventReason_LogsExportPassed.String(), nil, msg, gpuIndexes)
 				} else { // generate failure event
 					msg := fmt.Sprintf("Logs export to %s failed", strings.Join(uploadFailed, ", "))
-					tr.generateK8sEvent(Deref(parameters.TestCases[0].Recipe), v1.EventTypeWarning, testrunnerGen.TestEventReason_LogsExportFailed.String(), nil, msg, gpuIndexes)
+					tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_LogsExportFailed.String(), nil, msg, gpuIndexes)
 				}
 			}
 
@@ -1048,7 +1053,7 @@ func (tr *TestRunner) getOverallResult(result []*types.IterationResult, validIDs
 		for gpuIdx, actionResults := range iterResult.SuitesResult {
 			for action, result := range actionResults {
 				switch result {
-				case types.Failure:
+				case types.Failure, types.Skipped, types.Queued:
 					logger.Log.Printf("test on GPU %+v iteration %+v test action %+v didn't pass due to %+v", gpuIdx, iterResult.Number, action, result)
 					return types.Failure // if there is any failed action, directly mark overall test run failed
 				case types.Timedout:
@@ -1115,7 +1120,7 @@ func (tr *TestRunner) manualTestGPU() {
 	if len(allKFDIDs) == 0 {
 		logger.Log.Println("no GPU was detected by amd-smi")
 		result := BuildNoGPUTestSummary()
-		tr.generateK8sEvent(Deref(parameters.TestCases[0].Recipe), v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result, "", []string{})
+		tr.generateK8sEvent(parameters.TestCases[0].Recipe, v1.EventTypeWarning, testrunnerGen.TestEventReason_TestFailed.String(), result, "", []string{})
 		// exit on non-auto trigger's failure
 		tr.exitOnFailure()
 	}

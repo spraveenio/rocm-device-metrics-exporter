@@ -30,8 +30,8 @@ import (
 	types "github.com/ROCm/device-metrics-exporter/pkg/testrunner/interface"
 )
 
-var (
-	GPUIDPattern = "^GPU-\\d+"
+const (
+	successCode = "AGFHC_SUCCESS"
 )
 
 const (
@@ -135,34 +135,6 @@ func (atr *AgfhcTestRunner) ExtractLogLocation(output string) (string, string, e
 	return resultsFilePath, dirPath, nil
 }
 
-func failedDeviceIDs(subject string) (map[string]bool, bool) {
-	failedDeviceIDs := map[string]bool{}
-	if len(subject) == 0 {
-		return failedDeviceIDs, false
-	}
-
-	// Example subject: "GPU-00:GPU-01"
-	subjectsList := strings.Split(subject, ":")
-	for _, failedSubject := range subjectsList {
-		// from AGFHC manual, there are different types of values for the subject:
-		// 1. "GPU-##": GPU for the Repair
-		// 2. "SYSTEM": If the test is unable to call out a GPU
-		// 3. "PROGRAM": There is an issue when running AGFHC
-		//     or the dependent tools. More details can be found in
-		//     the primary_extended_info below.
-		// 4. "UNKNOWN”: Unable to determine the action subject
-		if IsValidGPUID(failedSubject) {
-			failedDeviceIDs[failedSubject] = true
-		} else {
-			// if the subject is SYSTEM, PROGRAM, or UNKNOWN,
-			// we consider all devices as failed
-			return failedDeviceIDs, true
-		}
-	}
-
-	return failedDeviceIDs, false
-}
-
 func (atr *AgfhcTestRunner) parseAgfhcTestResult(stdout string) (map[string]types.TestResults, error) {
 	// get the log file
 	file, _, err := atr.ExtractLogLocation(stdout)
@@ -190,13 +162,26 @@ func (atr *AgfhcTestRunner) parseAgfhcTestResult(stdout string) (map[string]type
 		return gpuID
 	}
 
+	failedDeviceIDs := func(subject string) map[string]bool {
+		failedDeviceIDs := map[string]bool{}
+		if len(subject) == 0 {
+			return failedDeviceIDs
+		}
+		// Example subject: "GPU-00:GPU-01"
+		subjectsList := strings.Split(subject, ":")
+		for _, id := range subjectsList {
+			failedDeviceIDs[id] = true
+		}
+		return failedDeviceIDs
+	}
+
 	mapToTestResultEnum := func(gpuID string, result, subject string) types.TestResult {
 		switch {
 		case AgfhcTestStatePassed == strings.ToLower(result):
 			return types.Success
 		case AgfhcTestStateFailed == strings.ToLower(result):
-			failedDevices, overallFailed := failedDeviceIDs(subject)
-			if !overallFailed && len(failedDevices) > 0 {
+			failedDevices := failedDeviceIDs(subject)
+			if len(failedDevices) > 0 {
 				// If the subject is not empty, it means the test failed on specific devices
 				if _, ok := failedDevices[gpuID]; ok {
 					// If the GPU ID is in the failed devices, return failure
@@ -247,13 +232,6 @@ func (atr *AgfhcTestRunner) loadTestSuites() error {
 		}
 	}
 	return nil
-}
-
-func IsValidGPUID(subject string) bool {
-	// Check if the subject starts with "GPU-" and is followed by digits
-	// for the SYSTEM, PROGRAM, and UNKNOWN cases, we will return false
-	re := regexp.MustCompile(GPUIDPattern)
-	return re.MatchString(subject)
 }
 
 // NewAgfhcTestRunner returns instance of NewAgfhcTestRunner

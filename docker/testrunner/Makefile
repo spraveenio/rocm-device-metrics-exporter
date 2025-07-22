@@ -13,7 +13,7 @@ else
 endif
 	@cp $(TOP_DIR)/bin/amd-test-runner .
 	@cp $(TOP_DIR)/LICENSE .
-	@docker build --build-arg BASE_IMAGE=$(TEST_RUNNER_RHEL_BASE_IMAGE) -t ${TESTRUNNER_IMAGE} . -f $(TOP_DIR)/docker/testrunner/Dockerfile
+	@docker build --build-arg BASE_IMAGE=$(TESTRUNNER_RHEL_BASE_IMAGE) -t ${TESTRUNNER_IMAGE} . -f $(DOCKERFILE)
 	@rm -f $(TOP_DIR)/docker/testrunner/amd-test-runner
 	@rm -f $(TOP_DIR)/docker/testrunner/LICENSE
 
@@ -28,7 +28,7 @@ else
 endif
 	@cp $(TOP_DIR)/bin/amd-test-runner .
 	@cp $(TOP_DIR)/LICENSE .
-	@docker build --build-arg BASE_IMAGE=$(TEST_RUNNER_RHEL_BASE_IMAGE) -t ${TESTRUNNER_IMAGE} . -f $(TOP_DIR)/docker/testrunner/Dockerfile
+	@docker build --build-arg BASE_IMAGE=$(TESTRUNNER_RHEL_BASE_IMAGE) -t ${TESTRUNNER_IMAGE} --label HOURLY_TAG=$(HOURLY_TAG_LABEL) . -f $(DOCKERFILE)
 	@rm -f $(TOP_DIR)/docker/testrunner/amd-test-runner
 	@rm -f $(TOP_DIR)/docker/testrunner/LICENSE
 
