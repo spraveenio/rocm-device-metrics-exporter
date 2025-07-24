@@ -21,7 +21,6 @@ import (
 
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
-	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -47,7 +46,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	logger.SetLogDir(globals.GPUHealthCheckerLogDir)
 	logger.SetLogFile(globals.GPUHealthCheckerLogFile)
-	logger.Init(utils.IsKubernetes())
+	logger.Init(false)
 	RootCmd.PersistentFlags().StringVar(&configFile, "config", "", "Config file (default is $HOME/.cobra.yaml)")
 }
 

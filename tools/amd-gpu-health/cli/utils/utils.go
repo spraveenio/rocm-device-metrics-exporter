@@ -78,9 +78,8 @@ func getTLSConfig() (*tls.Config, error) {
 		caCerts := x509.NewCertPool()
 		caCerts.AppendCertsFromPEM(cacert)
 		tlsConf.RootCAs = caCerts
-		return tlsConf, nil
 	}
-	return nil, nil
+	return tlsConf, nil
 }
 
 func QueryMetricsEndpoint(url string) (data string) {
