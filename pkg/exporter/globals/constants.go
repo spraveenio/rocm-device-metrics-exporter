@@ -56,7 +56,7 @@ const (
 	DefaultExporterLabel = "app.kubernetes.io/name"
 
 	// default value of exporter label
-	DefaultExporterLabelValue = "amd-metrics-exporter"
+	DefaultExporterLabelValue = "metrics-exporter"
 
 	// Metrics endpoint - returns user configured metrics in prometheus format
 	MetricsHandlerPrefix = "/metrics"

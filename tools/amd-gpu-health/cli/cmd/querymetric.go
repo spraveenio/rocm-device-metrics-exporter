@@ -61,7 +61,6 @@ var gaugeMetricCmd = &cobra.Command{
 func counterMetricCmdHandler(cmd *cobra.Command, args []string) {
 	//TODO: pass configfile namespace info values from config file
 	configPath := viper.GetString("kubeConfigPath")
-	ns := viper.GetString("namespace")
 	//get node name from env variable
 	nodeName, err := exputils.GetHostName()
 	if err != nil {
@@ -75,11 +74,12 @@ func counterMetricCmdHandler(cmd *cobra.Command, args []string) {
 		logger.Log.Printf("unable to instantiate k8s client. error:%v", err)
 		os.Exit(2)
 	}
-	metricsEndpoint := k8sc.GetGPUMetricsEndpointURL(ns, nodeName)
+	metricsEndpoint := k8sc.GetGPUMetricsEndpointURL(nodeName)
 	// if endpoint is not found, we should not exit with error code 1.
 	if metricsEndpoint == "" {
 		os.Exit(2)
 	}
+	logger.Log.Printf("metrics endpoint url=%v", metricsEndpoint)
 	// check if the below mandatory args are provided or not
 	if !cmd.Flags().Changed("metric") || !cmd.Flags().Changed("threshold") {
 		os.Exit(2)
@@ -94,6 +94,8 @@ func counterMetricCmdHandler(cmd *cobra.Command, args []string) {
 	}
 	for _, metric := range metrics {
 		if int64(metric) > counterMetricThreshold {
+			//below message to stdout will be captured in Node condition message
+			fmt.Printf("metric %s crossed threshold", metricName)
 			os.Exit(1)
 		}
 	}
@@ -103,7 +105,6 @@ func counterMetricCmdHandler(cmd *cobra.Command, args []string) {
 func gaugeMetricCmdHandler(cmd *cobra.Command, args []string) {
 	//TODO: pass configfile namespace info values from config file
 	configPath := viper.GetString("configPath")
-	ns := viper.GetString("namespace")
 	//get node name from env variable
 	nodeName, err := exputils.GetHostName()
 	if err != nil {
@@ -135,7 +136,7 @@ func gaugeMetricCmdHandler(cmd *cobra.Command, args []string) {
 			logger.Log.Printf("unable to instantiate k8s client. error:%v", err)
 			os.Exit(2)
 		}
-		metricsEndpoint := k8sc.GetGPUMetricsEndpointURL(ns, nodeName)
+		metricsEndpoint := k8sc.GetGPUMetricsEndpointURL(nodeName)
 		// if endpoint is not found, we should not exit with error code 1.
 		if metricsEndpoint == "" {
 			os.Exit(2)
@@ -150,6 +151,8 @@ func gaugeMetricCmdHandler(cmd *cobra.Command, args []string) {
 	// if crossed threshold, exit(1), else exit(0)
 	for _, metric := range metrics {
 		if metric > gaugeMetricThreshold {
+			//below message to stdout will be captured in Node condition message
+			fmt.Printf("metric %s crossed threshold", metricName)
 			os.Exit(1)
 		}
 	}

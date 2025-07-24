@@ -29,6 +29,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -382,22 +383,32 @@ func (k *K8sClient) ListPods() ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-func (k *K8sClient) GetMetricsExporterPodOnNode(ns, nodeName string) (*v1.Pod, error) {
-	pods, err := k.ListPods()
+func (k *K8sClient) GetMetricsExporterPodOnNode(nodeName string) (*v1.Pod, error) {
+	labelMatch := map[string]string{
+		globals.DefaultExporterLabel: globals.DefaultExporterLabelValue,
+	}
+	listOptions := metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labelMatch).String(),
+		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pods, err := k.clientset.CoreV1().Pods("").List(ctx, listOptions)
+	fmt.Printf("pod len=%v\n", len(pods.Items))
 	if err != nil {
 		logger.Log.Printf("Error retrieving pods running on node. Error:%v", err)
 		return nil, err
 	}
-	for _, pod := range pods {
+	for _, pod := range pods.Items {
 		if lblVal, ok := pod.Labels[globals.DefaultExporterLabel]; ok && lblVal == globals.DefaultExporterLabelValue {
-			return pod, nil
+			return &pod, nil
 		}
 	}
 	return nil, err
 }
 
-func (k *K8sClient) GetGPUMetricsEndpointURL(ns, nodeName string) (url string) {
-	podInfo, err := k.GetMetricsExporterPodOnNode(ns, nodeName)
+func (k *K8sClient) GetGPUMetricsEndpointURL(nodeName string) (url string) {
+	podInfo, err := k.GetMetricsExporterPodOnNode(nodeName)
 	if err != nil || podInfo == nil {
 		return
 	}
@@ -411,7 +422,7 @@ func (k *K8sClient) GetGPUMetricsEndpointURL(ns, nodeName string) (url string) {
 		}
 	}
 	if endpointIP != "" && port != "" {
-		url = fmt.Sprintf("http://%s:%s/%s", endpointIP, port, globals.AMDGPUHandlerPrefix)
+		url = fmt.Sprintf("http://%s:%s%s", endpointIP, port, globals.AMDGPUHandlerPrefix)
 	}
 	return
 }
