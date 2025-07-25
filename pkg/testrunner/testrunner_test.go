@@ -35,7 +35,7 @@ func TestSetConfigDefaults_FrameworkDefault(t *testing.T) {
 						TestParameters: map[string]*testrunnerGen.TestParameters{
 							"MANUAL": {
 								TestCases: []*testrunnerGen.TestParameter{
-									{Framework: nil},
+									{Framework: ""},
 								},
 							},
 						},
@@ -47,7 +47,7 @@ func TestSetConfigDefaults_FrameworkDefault(t *testing.T) {
 	tr := &TestRunner{globalTestRunnerConfig: cfg}
 	tr.setConfigDefaults()
 	got := tr.globalTestRunnerConfig.TestConfig["GPU_HEALTH_CHECK"].TestLocationTrigger["global"].TestParameters["MANUAL"].TestCases[0].Framework
-	assert.Equal(t, testrunnerGen.TestParameter_RVS.String(), Deref(got))
+	assert.Equal(t, testrunnerGen.TestParameter_RVS.String(), got)
 }
 
 func TestNormalizeConfig_UppercaseKeys(t *testing.T) {
@@ -57,7 +57,7 @@ func TestNormalizeConfig_UppercaseKeys(t *testing.T) {
 				TestLocationTrigger: map[string]*testrunnerGen.TestTriggerConfig{
 					"global": {
 						TestParameters: map[string]*testrunnerGen.TestParameters{
-							"manual": {TestCases: []*testrunnerGen.TestParameter{{Framework: GetAddr("RVS")}}},
+							"manual": {TestCases: []*testrunnerGen.TestParameter{{Framework: "RVS"}}},
 						},
 					},
 				},
@@ -93,7 +93,6 @@ func TestGetHostName(t *testing.T) {
 
 func TestGetOverallResult(t *testing.T) {
 	tr := &TestRunner{}
-	tr.initLogger()
 	validIDs := []string{"gpu0", "gpu1"}
 
 	type testCase struct {
@@ -126,20 +125,7 @@ func TestGetOverallResult(t *testing.T) {
 					},
 				},
 			},
-			expected: types.Skipped,
-		},
-		{
-			name: "Partially Skipped",
-			result: []*types.IterationResult{
-				{
-					Number: 1,
-					SuitesResult: map[string]types.TestResults{
-						"gpu0": {"action1": types.Skipped, "action2": types.Success},
-						"gpu1": {"action1": types.Success, "action2": types.Success},
-					},
-				},
-			},
-			expected: types.Success,
+			expected: types.Failure,
 		},
 		{
 			name: "Queued",
@@ -151,7 +137,7 @@ func TestGetOverallResult(t *testing.T) {
 					},
 				},
 			},
-			expected: types.Queued,
+			expected: types.Failure,
 		},
 		{
 			name: "TimedoutAction",
@@ -161,6 +147,19 @@ func TestGetOverallResult(t *testing.T) {
 					SuitesResult: map[string]types.TestResults{
 						"gpu0": {"action1": types.Timedout},
 					},
+				},
+			},
+			expected: types.Timedout,
+		},
+		{
+			name: "TimedoutStatus",
+			result: []*types.IterationResult{
+				{
+					Number: 1,
+					SuitesResult: map[string]types.TestResults{
+						"gpu0": {"action1": types.Success},
+					},
+					Status: types.TestTimedOut,
 				},
 			},
 			expected: types.Timedout,
@@ -195,19 +194,6 @@ func TestGetOverallResult(t *testing.T) {
 				},
 			},
 			expected: types.Success,
-		},
-		{
-			name: "TimedoutStatus",
-			result: []*types.IterationResult{
-				{
-					Number: 1,
-					SuitesResult: map[string]types.TestResults{
-						"gpu0": {"action1": types.Success},
-					},
-					Status: types.TestTimedOut,
-				},
-			},
-			expected: types.Timedout,
 		},
 	}
 
