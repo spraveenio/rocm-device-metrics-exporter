@@ -863,7 +863,7 @@ func (na *NICAgentClient) getAssociatedWorkloadLabels(nicID string, lifID string
 	}
 
 	lif, found := na.nics[nicID].Lifs[lifID]
-	if found {
+	if found && lif.PCIeAddress != "" {
 		if wl, wlFound := workloads[lif.PCIeAddress]; wlFound {
 			podInfo := wl.Info.(scheduler.PodResourceInfo)
 			labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_POD.String())] = podInfo.Pod
@@ -881,6 +881,7 @@ func (na *NICAgentClient) getNICs() (map[string]*NIC, error) {
 			ID           string `json:"id"`
 			ProductName  string `json:"product_name"`
 			SerialNumber string `json:"serial_number"`
+			EthBDF       string `json:"eth_bdf"`
 			Port         []struct {
 				Spec struct {
 					ID   string `json:"id"`
@@ -894,7 +895,6 @@ func (na *NICAgentClient) getNICs() (map[string]*NIC, error) {
 				} `json:"spec"`
 				Status struct {
 					Name string `json:"name"`
-					HwID string `json:"hw_id"`
 				} `json:"status"`
 			} `json:"lif"`
 		} `json:"nic"`
@@ -921,6 +921,7 @@ func (na *NICAgentClient) getNICs() (map[string]*NIC, error) {
 			UUID:         nic.ID,
 			ProductName:  nic.ProductName,
 			SerialNumber: nic.SerialNumber,
+			EthBDF:       nic.EthBDF,
 		}
 
 		cmd := fmt.Sprintf("nicctl show port --card %s -j", nic.ID)
@@ -966,19 +967,28 @@ func (na *NICAgentClient) getNICs() (map[string]*NIC, error) {
 		for _, nic := range resp.NIC {
 			lifIndex := 0
 			nics[nic.ID].Lifs = map[string]*Lif{}
-			for _, lif := range nic.Lif {
-				pcieAddr, err := na.getPCIeAddress(nic.ID, lif.Status.HwID)
-				if err != nil || pcieAddr == "" {
-					logger.Log.Printf("NIC: %s, failed to get PCIe address for LIF: %s, err: %+v", nic.ID, lif.Spec.ID, err)
-					continue
-				}
+			for index, lif := range nic.Lif {
 				nics[nic.ID].Lifs[lif.Spec.ID] = &Lif{
-					Index:       fmt.Sprintf("%v", lifIndex),
-					UUID:        lif.Spec.ID,
-					Name:        lif.Status.Name,
-					PCIeAddress: pcieAddr,
+					Index: fmt.Sprintf("%v", lifIndex),
+					UUID:  lif.Spec.ID,
+					Name:  lif.Status.Name,
 				}
 				lifIndex++
+
+				// assume first LIF is the PF and
+				// card's ethBDF is the PCIe address for the PF
+				if index == 0 {
+					nics[nic.ID].Lifs[lif.Spec.ID].IsPF = true
+					nics[nic.ID].Lifs[lif.Spec.ID].PCIeAddress = nics[nic.ID].EthBDF
+				} else {
+					pcieAddr, err := na.getPCIeAddress(nics[nic.ID].EthBDF)
+					if err != nil || pcieAddr == "" {
+						logger.Log.Printf("NIC: %s, failed to get PCIe address for LIF: %s, err: %v. Health monitoring will be skipped for this LIF",
+							nic.ID, lif.Status.Name, err)
+						continue
+					}
+					nics[nic.ID].Lifs[lif.Spec.ID].PCIeAddress = pcieAddr
+				}
 			}
 		}
 	}
@@ -996,22 +1006,52 @@ func (na *NICAgentClient) populateStaticHostLabels() error {
 	return nil
 }
 
-// getPCIeAddress retrieves the PCIe address for a given NIC and LIF hardware ID
-func (na *NICAgentClient) getPCIeAddress(NICID, lIfHwID string) (string, error) {
-	cmd := fmt.Sprintf("nicctl debug execute --cmd \"pcieutil dev\" -c %s | grep -w %s | awk '{print $4}'", NICID, lIfHwID)
-	pcieAddr, err := ExecWithContext(cmd)
+// getPCIeAddress retrieves the PCIe address of VF from the given ethBDF.
+// The ethBDF is expected to be in the format "0000:84:00
+func (na *NICAgentClient) getPCIeAddress(ethBDF string) (string, error) {
+	// bdf = 0000:84:00.0
+	parts := strings.Split(ethBDF, ":")
+	if len(parts) < 3 {
+		return "", fmt.Errorf("invalid ethBDF format: %s", ethBDF)
+	}
+	bus := parts[1]
+	device := strings.Split(parts[2], ".")[0]
+	// combine as "bus.device" for grep
+	pfPartialBDF := fmt.Sprintf("%s.%s", bus, device) // 84.00
+
+	// sample lspci output:
+	// root@genoa4:~# lspci | grep 84:00
+	// 84:00.0 Ethernet controller: Pensando Systems DSC Ethernet Controller
+	// 84:00.1 Ethernet controller: Pensando Systems DSC Ethernet Controller VF
+	// root@genoa4:~# lspci | grep 84:00 | awk '{print $1}'
+	// 84:00.0
+	// 84:00.1
+	// root@genoa4:~#
+	cmd := fmt.Sprintf("lspci | grep %s | awk '{print $1}'", pfPartialBDF)
+	out, err := ExecWithContext(cmd)
 	if err != nil {
-		logger.Log.Printf("failed to get nic data, err: %+v", err)
+		logger.Log.Printf("failed to list PCI devices, err: %+v", err)
 		return "", err
 	}
-
-	// convert the PCIe address to the required format: 0:84:00.1 -> 0000:84:00.1
-	pcieAddrStr := strings.TrimSpace(string(pcieAddr))
-	splitIndex := strings.Index(pcieAddrStr, ":")
-	if splitIndex == -1 {
-		return "", fmt.Errorf("invalid PCIe address format: %s", pcieAddrStr)
+	pcieAddrs := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(pcieAddrs) < 2 { // 1pf_1vf
+		return "", fmt.Errorf("could not find PCIe address for VF")
 	}
-	domain := pcieAddrStr[:splitIndex]
-	result := fmt.Sprintf("%s:%s", fmt.Sprintf("%04s", domain), pcieAddrStr[splitIndex+1:])
+	pcieAddr := pcieAddrs[1] // take the second line, which is the VF address
+
+	// 84:00.1 -> 0000:84:00.1
+	result := fmt.Sprintf("0000:%s", pcieAddr)
 	return result, nil
+}
+
+func (na *NICAgentClient) printNICs() {
+	for nicID, nic := range na.nics {
+		fmt.Printf("NIC ID: %s, Product Name: %s, Serial Number: %s, BDF: %s\n", nicID, nic.ProductName, nic.SerialNumber, nic.EthBDF)
+		for portID, port := range nic.Ports {
+			fmt.Printf("\tPort ID: %s, Name: %s, MAC Address: %s\n", portID, port.Name, port.MACAddress)
+		}
+		for lifID, lif := range nic.Lifs {
+			fmt.Printf("\tLIF ID: %s, Name: %s, PCIe Address: %s, IsPF: %v\n", lifID, lif.Name, lif.PCIeAddress, lif.IsPF)
+		}
+	}
 }

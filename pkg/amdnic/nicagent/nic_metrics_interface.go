@@ -36,6 +36,7 @@ type NIC struct {
 	UUID         string           `json:"id"`
 	ProductName  string           `json:"product_name"`
 	SerialNumber string           `json:"serial_number"`
+	EthBDF       string           `json:"eth_bdf"`
 	Ports        map[string]*Port // NIC ports by Port ID
 	Lifs         map[string]*Lif  // NIC lifs by Lif ID
 }
@@ -54,6 +55,7 @@ type Lif struct {
 	UUID        string
 	Name        string
 	PCIeAddress string
+	IsPF        bool
 }
 
 // GetPortName returns the name of the first port associated with the NIC.

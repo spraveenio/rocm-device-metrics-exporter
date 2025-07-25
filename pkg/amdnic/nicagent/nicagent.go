@@ -109,6 +109,7 @@ func (na *NICAgentClient) Init() error {
 		return err
 	}
 	na.nics = nics
+	na.printNICs()
 
 	if err := na.populateStaticHostLabels(); err != nil {
 		logger.Log.Printf("failed to populate static host labels, err: %v", err)
