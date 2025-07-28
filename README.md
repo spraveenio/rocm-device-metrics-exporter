@@ -12,7 +12,7 @@ docker run -d \
   --device=/dev/kfd \
   -p 5000:5000 \
   --name device-metrics-exporter \
-  rocm/device-metrics-exporter:v1.3.1
+  rocm/device-metrics-exporter:v1.4.0
 ```
 
 ## Features
@@ -33,7 +33,8 @@ docker run -d \
 
 ## Requirements
 
-- Ubuntu 22.04, 24.04
+- Ubuntu 22.04 or later
+- ROCm 6.2.0 or later
 - Docker (or compatible container runtime)
 
 | Rocm Version | Driver Version | Exporter Image Version | Platform     |

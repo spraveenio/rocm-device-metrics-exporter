@@ -124,7 +124,7 @@ UBUNTU_LIBDIR = UBUNTU24
 endif
 
 # set version and run `make update-version` to all docs
-PACKAGE_VERSION ?= "1.3.2"
+PACKAGE_VERSION ?= "1.4.0"
 ifneq (,$(findstring exporter,$(RELEASE)))
 #remove prefix from main tag
 DEBIAN_VERSION := $(shell echo "$(RELEASE)" | cut -c 10-)
@@ -133,7 +133,7 @@ else ifneq (,$(findstring v,$(RELEASE)))
 DEBIAN_VERSION := $(shell echo "$(RELEASE)" | sed 's/^.//')
 else
 #apt is only released until this version
-DEBIAN_VERSION := "1.3.2"
+DEBIAN_VERSION := "1.4.0"
 endif
 REL_IMAGE_TAG := $(subst $\",,v$(PACKAGE_VERSION))
 HELM_VERSION := $(REL_IMAGE_TAG)
@@ -417,7 +417,7 @@ helm-lint:
 .PHONY: helm-build
 helm-build: helm-lint
 	rm -rf helm-charts/device-metrics-exporter-charts*
-	helm package helm-charts/ --destination ./helm-charts --app-version ${HELM_CHART_VERSION} --version ${HELM_CHART_VERSION}
+	helm package helm-charts/ --destination ./helm-charts --app-version ${REL_IMAGE_TAG} --version ${REL_IMAGE_TAG}
 	cp -vf helm-charts/device-metrics-exporter-charts* helm-charts/device-metrics-exporter-charts.tgz
 
 .PHONY: slurm-sim
