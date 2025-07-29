@@ -76,6 +76,44 @@ The following table contains a full list of AINIC Metrics that are available usi
 | RDMA_RESP_TX_RNR_RETRY_ERR               | Response Tx retry not required error count                                  |
 | RDMA_RESP_TX_LOC_SGL_INV_ERR             | Response Tx local signal inversion error count                              |
 | RDMA_RESP_RX_S0_TABLE_ERR                | Response rx S0 Table error count                                            |
+|                                          |                                                                             |
+| --- RoCE Queue-Pair stats ---            |                                                                             |
+|   --- Send Queue Requester stats ---     |                                                                             |
+| QP_SQ_REQ_TX_NUM_PACKET                  | SQ Requester Tx Number of Packets                                           |
+| QP_SQ_REQ_TX_NUM_SEND_MSGS_WITH_RKE      | SQ Requester Tx Number Send Msg with Remote Key Error                       |
+| QP_SQ_REQ_TX_NUM_LOCAL_ACK_TIMEOUTS      | SQ Requester Number of local ACK timeouts for a Tx msg on QP                |
+| QP_SQ_REQ_TX_RNR_TIMEOUT                 | SQ Requester Number of send operation timeouts due to Receiver Not Ready NAK|
+| QP_SQ_REQ_TX_TIMES_SQ_DRAINED            | SQ Requester Number of times SQ moved to drained state after Tx complete    |
+| QP_SQ_REQ_TX_NUM_CNP_SENT                | SQ Requester Number of Congestion Notification Packets  sent for the SQ     |
+| QP_SQ_REQ_RX_NUM_PACKET                  | Number of Packets received on SQ                                            |
+| QP_SQ_REQ_RX_NUM_PKTS_WITH_ECN_MARKING   | Num Pkts received on SQ with Explicity congestion Notification bit set      |
+| QP_SQ_QCN_CURR_BYTE_COUNTER              | Current Byte counter used by Quantized congestion notification algo on SQ   |
+| QP_SQ_QCN_NUM_BYTE_COUNTER_EXPIRED       | QCN byte counter threshold hit count for the SQ                             |
+| QP_SQ_QCN_NUM_TIMER_EXPIRED              | QCN dedicated timer expiry count for the SQ                                 |
+| QP_SQ_QCN_NUM_ALPHA_TIMER_EXPIRED        | QCN Alpha timer expiry count for the SQ                                     |
+| QP_SQ_QCN_NUM_CNP_RCVD                   | QCN congestion notification pkt count rcvd on the SQ                        |
+| QP_SQ_QCN_NUM_CNP_PROCESSED              | Count of CNPs successfully processed by QCN algo on the SQ                  |
+|   --- Receive Queue Responder stats ---  |                                                                             |
+| QP_RQ_RSP_TX_NUM_PACKET                  | RQ Responder Tx number of Packets                                           |
+| QP_RQ_RSP_TX_RNR_ERROR                   | Count of Receiver Not Ready errors sent by RQ                               |
+| QP_RQ_RSP_TX_NUM_SEQUENCE_ERROR          | Count of Negative ACK sent by RQ due to Out of Sequence incoming msg        | 
+| QP_RQ_RSP_TX_NUM_RP_BYTE_THRES_HIT       | Number of times RP Byte threshold hit on RQ                                 |
+| QP_RQ_RSP_TX_NUM_RP_MAX_RATE_HIT         | Number of times Response Pkt max rate was hit affect Tx responses           |
+| QP_RQ_RSP_RX_NUM_PACKET                  | RQ Responder Rx number of Packets                                           |
+| QP_RQ_RSP_RX_NUM_SEND_MSGS_WITH_RKE      | RQ Responder count of send mgs with RDMA key                                |
+| QP_RQ_RSP_RX_NUM_PKTS_WITH_ECN_MARKING   | Number of packets received on RQ with Explicit Congestion Notification set  |
+| QP_RQ_RSP_RX_NUM_CNPS_RECEIVED           | Number of Congestion Notification Packets received on RQ                    |
+| QP_RQ_RSP_RX_MAX_RECIRC_EXCEEDED_DROP    | Number of incoming pkts on RQ dropped due to max internal recirculations hit|
+| QP_RQ_RSP_RX_NUM_MEM_WINDOW_INVALID      | Number of RDMA operations rejected due to invalid memory window access      |
+| QP_RQ_RSP_RX_NUM_DUPL_WITH_WR_SEND_OPC   | Number of incoming duplicate Send operation packets on RQ                   |
+| QP_RQ_RSP_RX_NUM_DUPL_READ_BACKTRACK     | Count of duplicate packets that resulted in backtracking of Packet Seq Num  |
+| QP_RQ_RSP_RX_NUM_DUPL_READ_ATOMIC_DROP   | Count of duplicate pkts that resulted in drop of RDMA operations            |
+| QP_SQ_QCN_CURR_BYTE_COUNTER              | Current Byte counter used by Quantized congestion notification algo on RQ   |
+| QP_SQ_QCN_NUM_BYTE_COUNTER_EXPIRED       | QCN byte counter threshold hit count for the RQ                             |
+| QP_SQ_QCN_NUM_TIMER_EXPIRED              | QCN dedicated timer expiry count for the RQ                                 |
+| QP_SQ_QCN_NUM_ALPHA_TIMER_EXPIRED        | QCN Alpha timer expiry count for the RQ                                     |
+| QP_SQ_QCN_NUM_CNP_RCVD                   | QCN congestion notification pkt count rcvd on the RQ                        |
+| QP_SQ_QCN_NUM_CNP_PROCESSED              | Count of CNPs successfully processed by QCN algo on the RQ                  |
 
 
 
