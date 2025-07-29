@@ -36,15 +36,6 @@ var (
 	Publish   string
 )
 
-var (
-	metricsConfig       = flag.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
-	agentGrpcPort       = flag.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
-	versionOpt          = flag.Bool("version", false, "show version")
-	enableNICMonitoring = flag.Bool("monitor-nic", false, "Enable NIC Monitoring")
-	enableGPUMonitoring = flag.Bool("monitor-gpu", true, "Enable GPU Monitoring (default: true, enabled by default)")
-	sriov               = flag.Bool("sriov-enable", false, "sriov host mode (default: false, disabled by default)")
-)
-
 func main() {
 	// Check environment variable to determine error handling behavior
 	relaxedMode := os.Getenv("AMD_EXPORTER_RELAXED_FLAGS_PARSING") != ""
@@ -63,6 +54,9 @@ func main() {
 	metricsConfig := fs.String("amd-metrics-config", globals.AMDMetricsFile, "AMD metrics exporter config file")
 	agentGrpcPort := fs.Int("agent-grpc-port", globals.GPUAgentPort, "Agent GRPC port")
 	versionOpt := fs.Bool("version", false, "show version")
+	enableNICMonitoring := fs.Bool("monitor-nic", false, "Enable NIC Monitoring")
+	enableGPUMonitoring := fs.Bool("monitor-gpu", true, "Enable GPU Monitoring (default: true, enabled by default)")
+	sriov := fs.Bool("sriov-enable", false, "sriov host mode (default: false, disabled by default)")
 	bindAddr := fs.String("bind", "0.0.0.0", "bind address for metrics server (default: 0.0.0.0)")
 
 	// Parse with error handling
@@ -116,6 +110,7 @@ func main() {
 		exporter.WithNICMonitoring(*enableNICMonitoring),
 		exporter.WithGPUMonitoring(*enableGPUMonitoring),
 		exporter.WithSRIOV(*sriov),
+		exporter.WithBindAddr(*bindAddr),
 	)
 
 	enableDebugAPI := true // default
