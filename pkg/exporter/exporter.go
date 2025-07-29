@@ -48,8 +48,8 @@ import (
 var (
 	mh                 *metricsutil.MetricsHandler
 	gpuclient          *gpuagent.GPUAgentClient
-	runConf            *config.ConfigHandler
 	nicAgent           *nicagent.NICAgentClient
+	runConf            *config.ConfigHandler
 	debounceDuration   = 3 * time.Second // debounce duration for file watcher
 	defaultBindAddress = "0.0.0.0"
 )
@@ -65,6 +65,7 @@ type Exporter struct {
 	enableNICMonitoring bool
 	enableGPUMonitoring bool
 	enableSriov         bool
+	bindAddr            string
 	k8sApiClient        *k8sclient.K8sClient
 	svcHandler          *metricsserver.SvcHandler
 	k8sScl              scheduler.SchedulerClient
@@ -145,8 +146,8 @@ func foreverWatcher(e *Exporter) {
 		if !serverRunning() {
 			mh.InitConfig()
 			serverPort := runConf.GetServerPort()
-			logger.Log.Printf("starting server on %v", serverPort)
-			srvHandler = startMetricsServer(runConf)
+			logger.Log.Printf("starting server on %s:%v", e.bindAddr, serverPort)
+			srvHandler = startMetricsServer(runConf, e.bindAddr)
 			go func() {
 				err := e.svcHandler.Run()
 				if err != nil {
