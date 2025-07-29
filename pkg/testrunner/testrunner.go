@@ -151,30 +151,11 @@ func NewTestRunner(rvsPath, rvsTestCaseDir, agfhcPath, agfhcTestCaseDir, amdSMIP
 		jobName:            jobName,
 		nodeName:           nodeName,
 	}
-
-	// init test runner
-	// testRunnerConfigPath file existence has been verified in main.go
-	runner.init(testRunnerConfigPath)
-
-	logger.Log.Printf("Test runner isKubernetes: %+v config: %+v", runner.isK8s, runner.globalTestRunnerConfig)
-
-	return runner
-}
-
-func (tr *TestRunner) init(cfgPath string) {
-	// init environment related stuff
-	// init logger, fetch hostname and init k8s client if running in k8s
-	tr.initLogger()
-	tr.getHostName()
-	tr.initK8sClientIfNeeded()
-
-	// read, validate and apply test runner config
-	tr.readCfg(cfgPath)
-	tr.validateCfg()
-	tr.initCfg()
-}
-
-func (tr *TestRunner) initK8sClientIfNeeded() {
+	// init test runner config
+	// testRunnerConfigPath file existence has been verified
+	runner.initLogger()
+	runner.readTestRunnerConfig(testRunnerConfigPath)
+	runner.getHostName()
 	if utils.IsKubernetes() {
 		runner.isK8s = true
 		k8sClient, err := k8sclient.NewClient(context.Background(), "", runner.hostName)
@@ -184,6 +165,10 @@ func (tr *TestRunner) initK8sClientIfNeeded() {
 		}
 		tr.k8sClient = k8sClient
 	}
+	runner.validateTestTrigger()
+	runner.initTestRunnerConfig()
+	logger.Log.Printf("Test runner isKubernetes: %+v config: %+v", runner.isK8s, runner.globalTestRunnerConfig)
+	return runner
 }
 
 // validateCfg validates the test category/location/trigger existence
@@ -261,7 +246,7 @@ func (tr *TestRunner) validateCfg() {
 
 	// 4. validate specific GPU model's test recipe
 	testParams := tr.getTestParameters(false)
-	switch testParams.TestCases[0].Framework {
+	switch strings.ToUpper(testParams.TestCases[0].Framework) {
 	case testrunnerGen.TestParameter_RVS.String():
 		gpuModelSubDir, err := getGPUModelTestRecipeDir(tr.amdSMIPath)
 		if err != nil {
@@ -302,12 +287,18 @@ func (tr *TestRunner) validateCfg() {
 		}
 		if _, err := os.Stat(testCfgPath); err != nil {
 			fmt.Printf("Trigger %+v cannot find corresponding test config file %+v, err: %+v\n", tr.testTrigger, testCfgPath, err)
+			tr.generateK8sEvent("", v1.EventTypeWarning,
+				testrunnerGen.TestEventReason_TestConfigError.String(), nil,
+				fmt.Sprintf("failed to find test recipe %+v", testCfgPath), []string{})
 			os.Exit(1)
 		}
 	case testrunnerGen.TestParameter_AGFHC.String():
 		gpuModelSubDir, err := getGPUModelTestRecipeDir(tr.amdSMIPath)
 		if err != nil || gpuModelSubDir == "" {
 			logger.Log.Printf("failed to get GPU model specific folder for agfhc test recipe err %+v", err)
+			tr.generateK8sEvent("", v1.EventTypeWarning,
+				testrunnerGen.TestEventReason_TestConfigError.String(), nil,
+				"failed to find AGFHC test recipes folder for current GPU model, please check test runner and AGFHC docs for supported GPU models", []string{})
 			os.Exit(1)
 		}
 
@@ -319,6 +310,9 @@ func (tr *TestRunner) validateCfg() {
 
 		if _, err := os.Stat(testCfgPath); err != nil {
 			fmt.Printf("Trigger %+v cannot find corresponding test config file %+v, err: %+v\n", tr.testTrigger, testCfgPath, err)
+			tr.generateK8sEvent("", v1.EventTypeWarning,
+				testrunnerGen.TestEventReason_TestConfigError.String(), nil,
+				fmt.Sprintf("failed to find test recipe %+v", testCfgPath), []string{})
 			os.Exit(1)
 		}
 	}
@@ -636,7 +630,7 @@ func (tr *TestRunner) setTestRunner() {
 
 	var runnerType types.TestRunnerType
 	var binPath string
-	switch testParams.TestCases[0].Framework {
+	switch strings.ToUpper(testParams.TestCases[0].Framework) {
 	case testrunnerGen.TestParameter_RVS.String():
 		runnerType = types.RVSRunner
 		binPath = tr.rvsPath
@@ -645,6 +639,9 @@ func (tr *TestRunner) setTestRunner() {
 		binPath = tr.agfhcPath
 	default:
 		logger.Log.Printf("unsupported test framework %v for category %v, location %v, trigger %v", testParams.TestCases[0].Framework, tr.testCategory, tr.testLocation, tr.testTrigger)
+		tr.generateK8sEvent("", v1.EventTypeWarning,
+			testrunnerGen.TestEventReason_TestConfigError.String(), nil,
+			fmt.Sprintf("cannot execute unsupported test framework %+v", testParams.TestCases[0].Framework), []string{})
 		os.Exit(1)
 	}
 
