@@ -17,7 +17,6 @@
 package utils
 
 import (
-	"fmt"
 	"math"
 	"os"
 	"reflect"
@@ -29,42 +28,8 @@ import (
 )
 
 const (
-	MaxGPUPerServer     = 16 // current max is 8, gpuagent mock has 16
-	NodeGPUHealthPrefix = "metricsexporter.amd.com.gpu.%v.state"
-	ServiceFile         = "/usr/lib/systemd/system/amd-metrics-exporter.service"
+	ServiceFile = "/usr/lib/systemd/system/amd-metrics-exporter.service"
 )
-
-// ParseNodeHealthLabel - converts k8s nod label to gpu,health map
-func ParseNodeHealthLabel(nodeLabels map[string]string) map[string]string {
-	healthMap := make(map[string]string)
-	for i := 0; i < MaxGPUPerServer; i++ {
-		labelKey := fmt.Sprintf(NodeGPUHealthPrefix, i)
-		gpuid := fmt.Sprintf("%v", i)
-		if state, ok := nodeLabels[labelKey]; ok {
-			healthMap[gpuid] = state
-		}
-	}
-	return healthMap
-}
-
-// delete all node health labels from nodelabel
-func RemoveNodeHealthLabel(nodeLabels map[string]string) {
-	for i := 0; i < MaxGPUPerServer; i++ {
-		labelKey := fmt.Sprintf(NodeGPUHealthPrefix, i)
-		delete(nodeLabels, labelKey)
-	}
-}
-
-// add all health labels to node label from map
-func AddNodeHealthLabel(nodeLabels map[string]string, healthMap map[string]string) {
-	for gpuid, state := range healthMap {
-		if state == "healthy" {
-			continue
-		}
-		labelKey := fmt.Sprintf(NodeGPUHealthPrefix, gpuid)
-		nodeLabels[labelKey] = state
-	}
-}
 
 func GetNodeName() string {
 	if os.Getenv("DS_NODE_NAME") != "" {

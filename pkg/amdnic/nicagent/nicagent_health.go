@@ -48,24 +48,30 @@ func (na *NICAgentClient) GetNICHealthStates() (map[string]interface{}, error) {
 	for _, nic := range na.nics {
 		for _, lif := range nic.Lifs {
 			// PCIeAddress can be empty for lifs that are not configiured on the host yet
-			if lif.PCIeAddress != "" {
-				nicState := &nicmetricssvc.NICState{}
-				adminState, err := na.getAdminStatus(lif.UUID)
-				if err != nil {
-					logger.Log.Printf("failed to get admin state for LIF %s, err: %+v", lif.UUID, err)
-					return nil, err
-				}
-				nicState.Device = lif.PCIeAddress
-				nicState.UUID = lif.UUID
-				switch adminState {
-				case strings.ToLower(nicmetricssvc.AdminState_UP.String()):
-					nicState.Health = strings.ToLower(nicmetricssvc.Health_HEALTHY.String())
-				case strings.ToLower(nicmetricssvc.AdminState_DOWN.String()):
-					nicState.Health = strings.ToLower(nicmetricssvc.Health_UNHEALTHY.String())
-				}
-				nicHealthMap[lif.PCIeAddress] = nicState
+			if lif.PCIeAddress == "" || (lif.IsPF && nic.sriovConfiguredOnHost) {
+				continue
 			}
+
+			nicState := &nicmetricssvc.NICState{}
+			adminState, err := na.getAdminStatus(lif.UUID)
+			if err != nil {
+				logger.Log.Printf("failed to get admin state for LIF %s, err: %+v", lif.UUID, err)
+				return nil, err
+			}
+			nicState.Device = lif.PCIeAddress
+			nicState.UUID = lif.UUID
+			switch adminState {
+			case strings.ToLower(nicmetricssvc.AdminState_UP.String()):
+				nicState.Health = strings.ToLower(nicmetricssvc.Health_HEALTHY.String())
+			case strings.ToLower(nicmetricssvc.AdminState_DOWN.String()):
+				nicState.Health = strings.ToLower(nicmetricssvc.Health_UNHEALTHY.String())
+			}
+			nicHealthMap[lif.PCIeAddress] = nicState
 		}
+	}
+
+	if err := na.sendNodeLabelUpdate(nicHealthMap); err != nil {
+		logger.Log.Printf("failed to send node label update for NIC health states, err: %+v", err)
 	}
 	return nicHealthMap, nil
 }

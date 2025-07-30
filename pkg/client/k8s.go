@@ -60,13 +60,14 @@ func (p *PodUniqueKey) String() string {
 
 type K8sClient struct {
 	sync.Mutex
-	ctx          context.Context
-	clientset    kubernetes.Interface
-	nodeName     string
-	stopCh       chan struct{}
-	started      bool
-	nodeInformer cache.SharedIndexInformer
-	podInformer  cache.SharedIndexInformer
+	ctx             context.Context
+	clientset       kubernetes.Interface
+	nodeName        string
+	stopCh          chan struct{}
+	started         bool
+	nodeInformer    cache.SharedIndexInformer
+	podInformer     cache.SharedIndexInformer
+	nodelabellerCfg utils.NodeHealthLabellerConfig
 }
 
 func NewClient(ctx context.Context, configPath, nodeName string) (*K8sClient, error) {
@@ -179,7 +180,11 @@ func (k *K8sClient) RemoveNodeLabel(nodeName string, keys []string) error {
 	return err
 }
 
-func (k *K8sClient) UpdateHealthLabel(nodeName string, newHealthMap map[string]string) error {
+func (k *K8sClient) UpdateHealthLabel(nodelabellerCfg *utils.NodeHealthLabellerConfig, nodeName string, newHealthMap map[string]string) error {
+	if nodelabellerCfg == nil {
+		return fmt.Errorf("nodelabeller config cannot be nil")
+	}
+
 	k.Lock()
 	defer k.Unlock()
 
@@ -192,15 +197,14 @@ func (k *K8sClient) UpdateHealthLabel(nodeName string, newHealthMap map[string]s
 		return err
 	}
 
-	oldHealthMap := utils.ParseNodeHealthLabel(node.Labels)
+	oldHealthMap := nodelabellerCfg.ParseNodeHealthLabel(node.Labels)
 
 	// check diff
 	if reflect.DeepEqual(oldHealthMap, newHealthMap) {
-		// logger.Log.Printf("ignoring update no change on label values")
 		return nil
 	}
-	utils.RemoveNodeHealthLabel(node.Labels)
-	utils.AddNodeHealthLabel(node.Labels, newHealthMap)
+	nodelabellerCfg.RemoveNodeHealthLabel(node.Labels)
+	nodelabellerCfg.AddNodeHealthLabel(node.Labels, newHealthMap)
 
 	// Update the node
 	_, err = k.clientset.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
