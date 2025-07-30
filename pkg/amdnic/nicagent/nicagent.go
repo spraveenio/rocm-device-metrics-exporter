@@ -20,6 +20,9 @@ import (
 	"context"
 	"sync"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/gen/nicmetricssvc"
+	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
@@ -28,15 +31,17 @@ import (
 
 type NICAgentClient struct {
 	sync.Mutex
-	nicClients       []NICInterface
-	mh               *metricsutil.MetricsHandler
-	m                *metrics // client specific metrics
-	isKubernetes     bool
-	nics             map[string]*NIC
-	k8sScheduler     scheduler.SchedulerClient
-	staticHostLabels map[string]string // static labels for the host
-	ctx              context.Context
-	cancel           context.CancelFunc
+	nicClients            []NICInterface
+	mh                    *metricsutil.MetricsHandler
+	m                     *metrics // client specific metrics
+	isKubernetes          bool
+	nics                  map[string]*NIC
+	k8sScheduler          scheduler.SchedulerClient
+	k8sApiClient          *k8sclient.K8sClient
+	staticHostLabels      map[string]string // static labels for the host
+	nodeHealthLabellerCfg *utils.NodeHealthLabellerConfig
+	ctx                   context.Context
+	cancel                context.CancelFunc
 }
 
 // NICAgentClientOptions defines the options for the NICAgentClient
@@ -53,7 +58,18 @@ func WithK8sSchedulerClient(k8sScheduler scheduler.SchedulerClient) NICAgentClie
 	}
 }
 
-func (na *NICAgentClient) initClients() (err error) {
+// WithK8sClient sets the Kubernetes API client for the NICAgentClient
+func WithK8sClient(k8sApiClient *k8sclient.K8sClient) NICAgentClientOptions {
+	return func(na *NICAgentClient) {
+		if utils.IsKubernetes() {
+			na.isKubernetes = true
+			logger.Log.Printf("K8sApiClient option set")
+			na.k8sApiClient = k8sApiClient
+		}
+	}
+}
+
+func (na *NICAgentClient) initClients() error {
 	logger.Log.Printf("Establishing connection to NIC clients")
 	for _, client := range na.nicClients {
 		if err = client.Init(); err != nil {
@@ -72,6 +88,9 @@ func NewAgent(mh *metricsutil.MetricsHandler, opts ...NICAgentClientOptions) *NI
 		mh:               mh,
 		nics:             make(map[string]*NIC),
 		staticHostLabels: make(map[string]string),
+		nodeHealthLabellerCfg: &utils.NodeHealthLabellerConfig{
+			LabelPrefix: globals.NICHealthLabelPrefix,
+		},
 	}
 
 	for _, o := range opts {
@@ -170,6 +189,33 @@ func (na *NICAgentClient) getMetricsAll() error {
 		}(client)
 	}
 	wg.Wait()
+	return nil
+}
+
+func (na *NICAgentClient) sendNodeLabelUpdate(healthState map[string]interface{}) error {
+	if !na.isKubernetes {
+		return nil
+	}
+
+	// send update to label , reconnect logic tbd
+	nodeName := utils.GetNodeName()
+	if nodeName == "" {
+		logger.Log.Printf("error getting node name on k8s deployment, skip label update")
+		return fmt.Errorf("node name not found")
+	}
+	nicHealthStates := make(map[string]string)
+	for nicPCIeAddr, h := range healthState {
+		hs := h.(*nicmetricssvc.NICState)
+		if hs.Health == strings.ToLower(nicmetricssvc.Health_HEALTHY.String()) {
+			logger.Log.Printf("NIC %s is healthy, skipping label update", nicPCIeAddr)
+			continue
+		}
+
+		nicPCIeAddr = strings.ReplaceAll(nicPCIeAddr, ":", "_") // replace ':' with '_' for label compatibility
+		nicPCIeAddr = strings.ReplaceAll(nicPCIeAddr, ".", "_")
+		nicHealthStates[nicPCIeAddr] = hs.Health
+	}
+	_ = na.k8sApiClient.UpdateHealthLabel(na.nodeHealthLabellerCfg, nodeName, nicHealthStates)
 	return nil
 }
 

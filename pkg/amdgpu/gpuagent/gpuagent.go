@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/fsysdevice"
@@ -68,6 +69,7 @@ type GPUAgentClient struct {
 	computeNodeHealthState bool
 	fsysDeviceHandler      *fsysdevice.FsysDevice
 	gCache                 *gpuCache
+	nodeHealthLabellerCfg  *utils.NodeHealthLabellerConfig
 }
 
 // Cache fields for GPUAgentClient
@@ -128,6 +130,9 @@ func NewAgent(mh *metricsutil.MetricsHandler, opts ...GPUAgentClientOptions) *GP
 	ga := &GPUAgentClient{
 		mh:                     mh,
 		computeNodeHealthState: true,
+		nodeHealthLabellerCfg: &utils.NodeHealthLabellerConfig{
+			LabelPrefix: globals.GPUHealthLabelPrefix,
+		},
 	}
 	for _, o := range opts {
 		o(ga)
@@ -232,10 +237,13 @@ func (ga *GPUAgentClient) sendNodeLabelUpdate() error {
 	gpuHealthStates := make(map[string]string)
 	ga.Lock()
 	for gpuid, hs := range ga.healthState {
+		if hs.Health == strings.ToLower(metricssvc.GPUHealth_HEALTHY.String()) {
+			continue // skip healthy state
+		}
 		gpuHealthStates[gpuid] = hs.Health
 	}
 	ga.Unlock()
-	_ = ga.k8sApiClient.UpdateHealthLabel(nodeName, gpuHealthStates)
+	_ = ga.k8sApiClient.UpdateHealthLabel(ga.nodeHealthLabellerCfg, nodeName, gpuHealthStates)
 	return nil
 }
 

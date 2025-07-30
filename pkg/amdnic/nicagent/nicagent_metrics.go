@@ -987,6 +987,8 @@ func (na *NICAgentClient) getNICs() (map[string]*NIC, error) {
 							nic.ID, lif.Status.Name, err)
 						continue
 					}
+					// VF, congiured on both NIC and host
+					nics[nic.ID].sriovConfiguredOnHost = true
 					nics[nic.ID].Lifs[lif.Spec.ID].PCIeAddress = pcieAddr
 				}
 			}

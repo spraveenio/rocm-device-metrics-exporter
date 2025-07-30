@@ -69,6 +69,12 @@ const (
 
 	// Path of amdgpuhealth utility
 	AMDGPUHealthContainerPath = "/home/amd/bin/amdgpuhealth"
+
+	// GPUHealthLabelPrefix - prefix for GPU health labels
+	GPUHealthLabelPrefix = "metricsexporter.amd.com.gpu"
+
+	// NICHealthLabelPrefix - prefix for NIC health labels
+	NICHealthLabelPrefix = "metricsexporter.amd.com.nic"
 )
 
 // Handling token authorization and TLS for device metrics exporter and prometheus endpoints

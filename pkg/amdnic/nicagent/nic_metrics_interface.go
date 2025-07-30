@@ -32,13 +32,14 @@ type NICInterface interface {
 // NIC represents the card data
 // NICToPort: currently it's a 1:1 mapping but this has to be changed if the ports are getting breaked down further
 type NIC struct {
-	Index        string
-	UUID         string           `json:"id"`
-	ProductName  string           `json:"product_name"`
-	SerialNumber string           `json:"serial_number"`
-	EthBDF       string           `json:"eth_bdf"`
-	Ports        map[string]*Port // NIC ports by Port ID
-	Lifs         map[string]*Lif  // NIC lifs by Lif ID
+	Index                 string
+	UUID                  string           `json:"id"`
+	ProductName           string           `json:"product_name"`
+	SerialNumber          string           `json:"serial_number"`
+	EthBDF                string           `json:"eth_bdf"`
+	Ports                 map[string]*Port // NIC ports by Port ID
+	Lifs                  map[string]*Lif  // NIC lifs by Lif ID
+	sriovConfiguredOnHost bool
 }
 
 // Port represents the network port data
