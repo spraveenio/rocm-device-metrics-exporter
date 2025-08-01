@@ -35,22 +35,36 @@ import (
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
-	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 )
 
+// AuthInfo contains the mount paths to the required authentication information
+// for the device metrics exporter and Prometheus server endpoints.
+type AuthInfo struct {
+	ExporterRootCAPath        string
+	ExporterBearerTokenPath   string
+	ClientCertPath            string
+	PrometheusBearerTokenPath string
+	PrometheusRootCAPath      string
+}
+
 type roundTripperWithAuth struct {
-	base    http.RoundTripper
-	authReq *http.Request
+	base     http.RoundTripper
+	authReq  *http.Request
+	authInfo AuthInfo
 }
 
 func (r roundTripperWithAuth) RoundTrip(req *http.Request) (*http.Response, error) {
 	// if Prometheus server has token based authorization, we need to pass the token in the request
 	// token is created as generic/opaque secret and volume mounted on below path in NPD pod
-	if _, err := os.Stat(globals.PrometheusServerBearerToken); err == nil {
-		token, err1 := os.ReadFile(globals.PrometheusServerBearerToken)
-		if err1 == nil {
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	if r.authInfo.ExporterBearerTokenPath != "" {
+		if _, err := os.Stat(r.authInfo.PrometheusBearerTokenPath); err == nil {
+			token, err1 := os.ReadFile(r.authInfo.PrometheusBearerTokenPath)
+			if err1 == nil {
+				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+			} else {
+				logger.Log.Printf("unable to read prometheus bearer token. error:%v", err1)
+			}
 		}
 	}
 	return r.base.RoundTrip(req)
@@ -58,19 +72,21 @@ func (r roundTripperWithAuth) RoundTrip(req *http.Request) (*http.Response, erro
 
 // if amd exporter metrics endpoint has TLS enabled, the corresponding
 // root ca must be stored as generic secret and mounted as volume in NPD pod
-func getTLSConfig() (*tls.Config, error) {
+func getTLSConfig(authInfo AuthInfo) (*tls.Config, error) {
 	tlsConf := &tls.Config{}
 	// if mTLS is configured, client should present it's certificate
-	if _, err := os.Stat(globals.NPDClientCertPath); err == nil {
-		cert, err1 := tls.LoadX509KeyPair(filepath.Join(globals.NPDClientCertPath, "tls.crt"),
-			filepath.Join(globals.NPDClientCertPath, "tls.key"))
+	if _, err := os.Stat(authInfo.ClientCertPath); err == nil {
+		cert, err1 := tls.LoadX509KeyPair(filepath.Join(authInfo.ClientCertPath, "tls.crt"),
+			filepath.Join(authInfo.ClientCertPath, "tls.key"))
 		if err1 == nil {
 			tlsConf.Certificates = []tls.Certificate{cert}
+		} else {
+			logger.Log.Printf("unable to load client certificate. error:%v", err1)
 		}
 	}
 	// for TLS, validate server side certificate using it's Root CA
-	if _, err := os.Stat(globals.AMDDeviceMetricsExporterRootCAPath); err == nil {
-		cacert, err1 := os.ReadFile(globals.AMDDeviceMetricsExporterRootCAPath)
+	if _, err := os.Stat(authInfo.ExporterRootCAPath); err == nil {
+		cacert, err1 := os.ReadFile(filepath.Join(authInfo.ExporterRootCAPath, "ca.crt"))
 		if err1 != nil {
 			logger.Log.Printf("unable to read metrics endpoint root ca certificate. error:%v", err1)
 			return nil, err1
@@ -82,9 +98,11 @@ func getTLSConfig() (*tls.Config, error) {
 	return tlsConf, nil
 }
 
-func QueryMetricsEndpoint(url string) (data string) {
+func QueryMetricsEndpoint(url string, authInfo AuthInfo) (data string) {
 	var resp *http.Response
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		logger.Log.Printf("unable to query metrics endpoint. error:%v", err)
@@ -92,7 +110,7 @@ func QueryMetricsEndpoint(url string) (data string) {
 	}
 
 	// if endpoint has TLS enabled, NPD needs to pass the certs in the http request
-	tlsConf, err := getTLSConfig()
+	tlsConf, err := getTLSConfig(authInfo)
 	if err == nil && tlsConf != nil {
 		client.Transport = &http.Transport{
 			TLSClientConfig: tlsConf,
@@ -100,8 +118,8 @@ func QueryMetricsEndpoint(url string) (data string) {
 	}
 	// if endpoint has token based authorization enabled, NPD needs to set the token in all requests
 	// token is created as generic/opaque secret and volume mounted on below path
-	if _, err := os.Stat(globals.AMDDeviceMetricsExporterBearerToken); err == nil {
-		token, err1 := os.ReadFile(globals.AMDDeviceMetricsExporterBearerToken)
+	if _, err := os.Stat(authInfo.ExporterBearerTokenPath); err == nil {
+		token, err1 := os.ReadFile(authInfo.ExporterBearerTokenPath)
 		if err1 == nil {
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 		}
@@ -121,13 +139,13 @@ func QueryMetricsEndpoint(url string) (data string) {
 	return
 }
 
-func getPrometheusTLSConfig() (*tls.Config, error) {
+func getPrometheusTLSConfig(authInfo AuthInfo) (*tls.Config, error) {
 	tlsConf := tls.Config{}
 	// if Prometheus server has HTTPS enabled, client needs the Prometheus Root CA to validate server's certificate
-	if _, err := os.Stat(globals.PrometheusServerRootCACertPath); err == nil {
-		cacert, err1 := os.ReadFile(globals.PrometheusServerRootCACertPath)
+	if _, err := os.Stat(authInfo.PrometheusRootCAPath); err == nil {
+		cacert, err1 := os.ReadFile(authInfo.PrometheusRootCAPath)
 		if err1 != nil {
-			logger.Log.Printf("unable to read metrics endpoint root ca certificate. error:%v", err1)
+			logger.Log.Printf("unable to read prometheus endpoint root ca certificate. error:%v", err1)
 			return nil, err1
 		}
 		caCerts := x509.NewCertPool()
@@ -135,27 +153,29 @@ func getPrometheusTLSConfig() (*tls.Config, error) {
 		tlsConf.RootCAs = caCerts
 	}
 	// if Prometheus has mTLS enabled, we need to present client certificate during authentication
-	if _, err := os.Stat(globals.NPDClientCertPath); err == nil {
-		cert, err1 := tls.LoadX509KeyPair(filepath.Join(globals.NPDClientCertPath, "tls.crt"),
-			filepath.Join(globals.NPDClientCertPath, "tls.key"))
+	if _, err := os.Stat(authInfo.ClientCertPath); err == nil {
+		cert, err1 := tls.LoadX509KeyPair(filepath.Join(authInfo.ClientCertPath, "tls.crt"),
+			filepath.Join(authInfo.ClientCertPath, "tls.key"))
 		if err1 == nil {
 			tlsConf.Certificates = []tls.Certificate{cert}
-			return &tlsConf, nil
+		} else {
+			logger.Log.Printf("unable to load client certificate. error:%v", err1)
 		}
 	}
-	return nil, nil
+	return &tlsConf, nil
 }
 
-func QueryPrometheusEndpoint(url, promQuery string) (*model.Value, error) {
+func QueryPrometheusEndpoint(url, promQuery string, authInfo AuthInfo) (*model.Value, error) {
 	conf := api.Config{
 		Address: url,
 	}
 	req, _ := http.NewRequest("GET", url, nil)
 	rt := roundTripperWithAuth{
-		base:    &http.Transport{},
-		authReq: req,
+		base:     &http.Transport{},
+		authReq:  req,
+		authInfo: authInfo,
 	}
-	tlsConf, err := getPrometheusTLSConfig()
+	tlsConf, err := getPrometheusTLSConfig(authInfo)
 	if err == nil {
 		rt.base = &http.Transport{
 			TLSClientConfig: tlsConf,

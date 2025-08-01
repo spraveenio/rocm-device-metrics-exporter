@@ -75,26 +75,9 @@ const (
 
 	// NICHealthLabelPrefix - prefix for NIC health labels
 	NICHealthLabelPrefix = "metricsexporter.amd.com.nic"
-)
 
-// Handling token authorization and TLS for device metrics exporter and prometheus endpoints
-// Token and certificates info is stored as Kubernetes Secrets and mounted as volumes in NPD pod
-// Below are the paths we use as mount paths for the tokens and certs
-const (
-	// AMD device metrics exporter root ca mount path
-	AMDDeviceMetricsExporterRootCAPath = "/etc/tls/amd-device-exporter-rootca/ca.crt"
-
-	// AMD device metrics exporter bearer token path
-	AMDDeviceMetricsExporterBearerToken = "/etc/tls/amd-device-exporter-bearertoken/token"
-
-	// NPD client certificate and private key mount path
-	NPDClientCertPath = "/etc/tls/npd-client-cert"
-
-	// Prometheus server root ca mount path
-	PrometheusServerRootCACertPath = "/etc/tls/prometheus-rootca/ca.crt"
-
-	// Prometheus authorization bearer token
-	PrometheusServerBearerToken = "/etc/tls/prometheus-bearertoken/token"
+	// Kube RBAC Proxy port name
+	KubeRBACProxyPortName = "exporter-port"
 )
 
 type DeviceType string
