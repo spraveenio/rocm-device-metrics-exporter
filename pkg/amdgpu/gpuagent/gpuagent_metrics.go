@@ -1490,9 +1490,7 @@ func (ga *GPUAgentClient) UpdateMetricsStats() error {
 func (ga *GPUAgentClient) QueryMetrics() (interface{}, error) {
 	var resp *amdgpu.GPUGetResponse
 	var err error
-	ga.Lock()
 	resp, _, err = ga.getGPUs()
-	ga.Unlock()
 	if err != nil {
 		logger.Log.Printf("querymetrics - get gpus returned error:%v", err)
 		return nil, err
