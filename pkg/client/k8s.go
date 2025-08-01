@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -398,7 +399,6 @@ func (k *K8sClient) GetMetricsExporterPodOnNode(nodeName string) (*v1.Pod, error
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pods, err := k.clientset.CoreV1().Pods("").List(ctx, listOptions)
-	fmt.Printf("pod len=%v\n", len(pods.Items))
 	if err != nil {
 		logger.Log.Printf("Error retrieving pods running on node. Error:%v", err)
 		return nil, err
@@ -411,22 +411,63 @@ func (k *K8sClient) GetMetricsExporterPodOnNode(nodeName string) (*v1.Pod, error
 	return nil, err
 }
 
-func (k *K8sClient) GetGPUMetricsEndpointURL(nodeName string) (url string) {
+func (k *K8sClient) GetMetricsExporterService(ns string) (*v1.Service, error) {
+	listOptions := metav1.ListOptions{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	svcs, err := k.clientset.CoreV1().Services(ns).List(ctx, listOptions)
+	if err != nil {
+		logger.Log.Printf("Error retrieving services. Error:%v", err)
+		return nil, err
+	}
+	for _, svc := range svcs.Items {
+		if strings.Contains(svc.Name, globals.DefaultExporterLabelValue) {
+			// return the service
+			return svc.DeepCopy(), nil
+		}
+	}
+	return nil, fmt.Errorf("metrics exporter service not found")
+}
+
+func (k *K8sClient) GetGPUMetricsEndpointURL(nodeName string, isTLS bool) (url string) {
 	podInfo, err := k.GetMetricsExporterPodOnNode(nodeName)
 	if err != nil || podInfo == nil {
 		return
 	}
+
+	// fetch port from service
+	// fetch endpoint ip based on service type
 	var endpointIP, port string
-	endpointIP = podInfo.Status.PodIP
-	// parse container env variables for the port info
-	for _, env := range podInfo.Spec.Containers[0].Env {
-		if env.Name == "METRICS_EXPORTER_PORT" {
-			port = env.Value
+	metricsSvc, err := k.GetMetricsExporterService(podInfo.Namespace)
+	if err != nil || metricsSvc == nil {
+		logger.Log.Printf("error retrieving metrics exporter service. Error:%v", err)
+		return
+	}
+	if metricsSvc.Spec.Type == v1.ServiceTypeNodePort {
+		// for NodePort service, we use the node/host IP
+		endpointIP = podInfo.Status.HostIP
+	} else if metricsSvc.Spec.Type == v1.ServiceTypeClusterIP {
+		// for ClusterIP service, we use the pod IP
+		endpointIP = podInfo.Status.PodIP
+	}
+	for _, portInfo := range metricsSvc.Spec.Ports {
+		// port names are different for standalone and operator deployments(kube-rbac-proxy and http respectively)
+		if portInfo.Name == globals.KubeRBACProxyPortName || portInfo.Name == "http" {
+			if metricsSvc.Spec.Type == v1.ServiceTypeNodePort && portInfo.NodePort > 0 {
+				// for NodePort service, we use the NodePort
+				port = fmt.Sprintf("%d", portInfo.NodePort)
+			} else {
+				port = fmt.Sprintf("%d", portInfo.Port)
+			}
 			break
 		}
 	}
 	if endpointIP != "" && port != "" {
-		url = fmt.Sprintf("http://%s:%s%s", endpointIP, port, globals.AMDGPUHandlerPrefix)
+		prefix := "http"
+		if isTLS {
+			prefix = "https"
+		}
+		url = fmt.Sprintf("%s://%s:%s%s", prefix, endpointIP, port, globals.AMDGPUHandlerPrefix)
 	}
 	return
 }
