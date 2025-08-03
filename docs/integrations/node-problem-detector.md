@@ -25,7 +25,7 @@ Example usage of amdgpuhealth CLI:
 ./amdgpuhealth query gauge-metric -m <metric_name> -d <duration> -t <threshold_value>
 ```
 
-In the above examples, the program queries either a counter or gauge metric. You can define a threshold for each query. If the reported AMD GPU metric value exceeds the threshold, `amdgpuhealth` prints an error message to standard output and exits with code 1. The NPD plugin uses this exit code and output to update the node condition, indicating problem with AMD GPU.
+In the above examples, the program queries either a counter or gauge metric. You can define a threshold for each metric. If the reported AMD GPU metric value exceeds the threshold, `amdgpuhealth` prints an error message to standard output and exits with code 1. The NPD plugin uses this exit code and output to update the node condition's status and message respectively, indicating problem with AMD GPU.
 
 Example custom plugin monitor config:
 ```json
@@ -56,8 +56,23 @@ Example custom plugin monitor config:
       "args": [
         "query",
         "counter-metric",
-        "-m gpu_ecc_uncorrect_bif",
-        "-t 1"
+        "-m=GPU_ECC_UNCORRECT_UMC",
+        "-t=1"
+      ],
+      "timeout": "10s"
+    },
+    {
+      "type": "permanent",
+      "condition": "AMDGPUProblem",
+      "reason": "AMDGPUIsDown",
+      "path": "./config/amdgpuhealth",
+      "args": [
+        "query",
+        "gauge-metric",
+        "-m=GPUMetricField_GPU_EDGE_TEMPERATURE",
+        "-t=100",
+	"-d=1h",
+	"--prometheus-endpoint=http://localhost:9090"
       ],
       "timeout": "10s"
     }
@@ -65,11 +80,15 @@ Example custom plugin monitor config:
 }
 ```
 
+The above NPD config rule #1 queries counter metric `GPU_ECC_UNCORRECT_UMC` value every 30 seconds. If the value crosses threshold(set to 1), then NPD marks the node condition as True.
+
+If you want to query average value of gauge metrics over a period of time, you need to setup Prometheus to scrape metrics from `amd-device-metrics-exporter` endpoint and store them. Rule #2 in above config queries gauge metric `GPUMetricField_GPU_EDGE_TEMPERATURE` value from Promethues server. It queries average temperature for the last 1 hour from the Prometheus endpoint mentioned in CLI argument.
+
 ## Handling Authorization Tokens
 
 If your AMD Device Metrics Exporter or Prometheus endpoints require token-based authorization, Node Problem Detector(NPD) must include the token as an HTTP header in its requests. Since authorization tokens are sensitive, they should be stored in secure way. We recommend using **Kubernetes Secrets** to store the token information and mount them as volumes in the NPD pod.
 
-1. **Creating a Secret for AMD Device Metrics Exporter endpoint:**
+1. **Creating a Authorization token Secret for AMD Device Metrics Exporter endpoint:**
 
 You can create a Kubernetes Secret to store the token for the AMD Device Metrics Exporter endpoint in two ways:
 
@@ -85,14 +104,31 @@ kubectl create secret generic -n <NPD_NAMESPACE> amd-exporter-auth-token --from-
 kubectl create secret genreic -n <NPD_NAMESPACE> amd-exporter-auth-token --from-literal=token=<your-auth-token>
 ```
 
-Mount this secret as a volume in your NPD deployment yaml at the path 
-```bash
-/etc/tls/amd-device-exporter/token
+Mount this secret as a volume in your NPD deployment yaml. The same path must be specified as CLI argument in the NPD custom plugin monitor config yaml.
+
+```json
+"rules": [
+    {
+      "type": "permanent",
+      "condition": "AMDGPUProblem",
+      "reason": "AMDGPUIsDown",
+      "path": "./config/amdgpuhealth",
+      "args": [
+        "query",
+        "counter-metric",
+        "-m=GPU_ECC_UNCORRECT_UMC",
+        "-t=1",
+	"--exporter-bearer-token=<token-mount-path>"
+      ],
+      "timeout": "10s"
+    }
+]
 ```
 
-2. **Creating a Secret for Prometheus endpoint:**
 
-Similarly create secret for Prometheus endpoint
+2. **Creating a Authorization token Secret for Prometheus endpoint:**
+
+Similarly create secret for Prometheus endpoint. This will be needed for gauge metrics
 
 **From a file**
 
@@ -106,9 +142,25 @@ kubectl create secret generic -n <NPD_NAMESPACE> prometheus-auth-token --from-fi
 kubectl create secret genreic -n <NPD_NAMESPACE> prometheus-auth-token --from-literal=token=<your-auth-token>
 ```
 
-Mount this secret as a volume in your NPD deployment yaml at path 
-```bash
-/etc/tls/prometheus-bearertoken
+Mount this secret as a volume in your NPD deployment yaml. Pass the mount path in NPD custom plgin monitor json as CLI argument.
+
+```json
+"rules": [
+    {
+      "type": "permanent",
+      "condition": "AMDGPUProblem",
+      "reason": "AMDGPUIsDown",
+      "path": "./config/amdgpuhealth",
+      "args": [
+        "query",
+        "gauge-metric",
+        "-m=GPUMetricField_GPU_EDGE_TEMPERATURE",
+        "-t=100",
+        "--prometheus-bearer-token=<token-mount-path>"
+      ],
+      "timeout": "10s"
+    }
+]
 ```
 
 ## Handling Mutual TLS (mTLS) Authentication
@@ -117,15 +169,32 @@ If your AMD Device Metrics Exporter or Prometheus endpoints require TLS/mTLS, No
 
 For TLS, NPD needs to have server endpoint's Root CA certificate to authenticate the server's certificate. Root CA certificate must be stored as Kubernetes Secrets and mounted as volumes in the NPD pod.
 
-1. **Creating Secret for AMD Device Metrics Exporter enpoint Root CA**
+1. **Creating Secret for AMD Device Metrics Exporter endpoint Root CA**
 
+Please make sure the key in the secret is set to `ca.crt`
 ```bash
 kubectl create secret generic -n <NPD_NAMESPACE> amd-exporter-rootca --from-file=ca.crt=<path-to-ca-cert>
 ```
 
-Mount this secret as a volume in your NPD deployment yaml at path:
-```bash
-/etc/tls/amd-device-exporter-rootca
+Mount this secret as a volume in your NPD deployment yaml. Same mount path needs to be passed as CLI argument. Example:
+
+```json
+"rules": [
+    {
+      "type": "permanent",
+      "condition": "AMDGPUProblem",
+      "reason": "AMDGPUIsDown",
+      "path": "./config/amdgpuhealth",
+      "args": [
+        "query",
+        "counter-metric",
+        "-m=GPU_ECC_UNCORRECT_UMC",
+        "-t=1",
+        "--exporter-root-ca=<rootca-mount-path>"
+      ],
+      "timeout": "10s"
+    }
+]
 ```
 
 2. **Creating Secret for Prometheus endpoint Root CA**
@@ -134,15 +203,70 @@ Mount this secret as a volume in your NPD deployment yaml at path:
 kubectl create secret generic -n <NPD_NAESPACE> prometheus-rootca --from-file=ca.crt=<path-to-ca-cert>
 ```
 
-Mount this secret as a volume in your NPD deployment yaml at path:
-```bash
-/etc/tls/prometheus-rootca
+Mount this secret as a volume in your NPD deployment yaml. Pass the mount path in CLI argument followed by the key `ca.crt`. Example below:
+
+```json
+"rules": [
+    {
+      "type": "permanent",
+      "condition": "AMDGPUProblem",
+      "reason": "AMDGPUIsDown",
+      "path": "./config/amdgpuhealth",
+      "args": [
+        "query",
+        "gauge-metric",
+        "-m=GPUMetricField_GPU_EDGE_TEMPERATURE",
+        "-t=100",
+        "--prometheus-root-ca=<rootca-mount-path>/ca.crt"
+      ],
+      "timeout": "10s"
+    }
+]
 ```
 
 For mTLS, NPD needs to have a certificate and it's corresponding private key. Certificate information can be stored as Kubernetes TLS Secret and mounted as colume in the NPD pod.
 
 1. **Creating Secret for NPD identity certificate**
 
+Please make sure you use the keys `tls.crt` and `tls.key` for certificate and key respectively
+
 ```bash
-kubectl create secret tls -n <NPD_NAMESPACE> npd-identity --cert=<path-to-your-certificate> --key=<path-to-your-private-key>
+kubectl create secret tls -n <NPD_NAMESPACE> npd-identity --tls.crt=<path-to-your-certificate> --tls.key=<path-to-your-private-key>
+```
+
+Mount the secret as a volume in your NPD deployment yaml. Pass the mount path as CLI argument. Example below:
+
+```json
+"rules": [
+    {
+      "type": "permanent",
+      "condition": "AMDGPUProblem",
+      "reason": "AMDGPUIsDown",
+      "path": "./config/amdgpuhealth",
+      "args": [
+        "query",
+        "counter-metric",
+        "-m=GPU_ECC_UNCORRECT_UMC",
+        "-t=1",
+        "--exporter-root-ca=<rootca-mount-path>",
+	"--client-cert=<client-cert-mount-path>"
+      ],
+      "timeout": "10s"
+    },
+    {
+      "type": "permanent",
+      "condition": "AMDGPUProblem",
+      "reason": "AMDGPUIsDown",
+      "path": "./config/amdgpuhealth",
+      "args": [
+        "query",
+        "gauge-metric",
+        "-m=GPUMetricField_GPU_EDGE_TEMPERATURE",
+        "-t=100",
+        "--prometheus-root-ca=<rootca-mount-path>/ca.crt",
+	"--client-cert=<client-cert-mount-path>"
+      ],
+      "timeout": "10s"
+    }
+]
 ```
