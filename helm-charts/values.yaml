@@ -6,6 +6,14 @@ nodeSelector: {}
 # -- Add tolerations for deploying metrics exporter on tainted nodes
 tolerations: []
 
+# -- kubelet configuration
+kubelet:
+  # -- host path for kubelet pod-resources directory (optional)
+  #    - vanilla k8s kubelet path: /var/lib/kubelet/pod-resources
+  #    - micro k8s kubelet path: /var/snap/microk8s/common/var/lib/kubelet/pod-resources/
+  #    - default to /var/lib/kubelet/pod-resources
+  podResourceAPISocketPath: /var/lib/kubelet/pod-resources
+
 image:
   # -- repository URL for the metrics exporter image
   repository: docker.io/rocm/device-metrics-exporter

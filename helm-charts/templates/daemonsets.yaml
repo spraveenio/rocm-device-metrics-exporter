@@ -92,7 +92,11 @@ spec:
           type: Directory
         name: sys-volume
       - hostPath:
+      {{- if .Values.kubelet.podResourceAPISocketPath }}
+          path: {{ .Values.kubelet.podResourceAPISocketPath}}
+      {{- else }}
           path: /var/lib/kubelet/pod-resources
+      {{- end }}
           type: Directory
         name: pod-resources
       - hostPath:
