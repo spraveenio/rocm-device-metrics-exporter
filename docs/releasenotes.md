@@ -2,6 +2,10 @@
 
 ## v1.3.1
 
+### Platform Support
+OpenShift 4.19 platform support has been added in this release as part of [GPU
+Operator v1.3.1 Release](https://github.com/ROCm/gpu-operator/pull/273).
+
 ### Release Highlights
 
 - **New Metric Fields**
