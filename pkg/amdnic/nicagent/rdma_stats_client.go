@@ -17,7 +17,6 @@
 package nicagent
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -40,47 +39,10 @@ func newRDMAStatsClient(na *NICAgentClient) *RDMAStatsClient {
 	return nc
 }
 
-func (rc *RDMAStatsClient) setupRDMAIfMap() error {
-	logger.Log.Printf("Updating rdma intf map")
-	res, err := exec.Command("show_gid").CombinedOutput()
-	if err != nil {
-		logger.Log.Printf("show_gid exec err :%v", err)
-		return err
-	}
-
-	scanner := bufio.NewScanner(strings.NewReader(string(res)))
-	for scanner.Scan() {
-		line := scanner.Text()
-		fields := strings.Fields(line)
-		if len(fields) > 0 {
-			for _, f := range fields {
-				if strings.HasPrefix(f, "roce") {
-					if _, ok := rc.rdmaIfMap[f]; !ok {
-						rc.rdmaIfMap[f] = fields[len(fields)-1]
-						logger.Log.Printf("Adding rdmaIFmap entry %s:%s", f, rc.rdmaIfMap[f])
-					}
-					break
-				}
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		logger.Log.Printf("show_gid parse err :%v", err)
-		return err
-	}
-	return nil
-
-}
-
 func (rc *RDMAStatsClient) Init() error {
 	rc.Lock()
 	defer rc.Unlock()
 	rc.rdmaIfMap = make(map[string]string)
-	err := rc.setupRDMAIfMap()
-	if err != nil {
-		return err
-	}
 	return nil
 }
 func (rc *RDMAStatsClient) IsActive() bool {
@@ -96,6 +58,23 @@ func (rc *RDMAStatsClient) GetClientName() string {
 	return RDMAClientName
 }
 
+func (rc *RDMAStatsClient) checkAndUpdateRdmaIfMap(rdmaIf string) error {
+	if _, ok := rc.rdmaIfMap[rdmaIf]; !ok {
+		cmd := fmt.Sprintf("cat /sys/class/infiniband/%s/device/uevent  | grep PCI_SLOT", rdmaIf)
+		out, err := ExecWithContext(cmd)
+		if err != nil {
+			return fmt.Errorf("could not find PCIe addr for %s: %s", rdmaIf, err)
+		}
+		parts := strings.Split(strings.TrimSpace(string(out)), "=")
+		if len(parts) < 2 || parts[1] == "" {
+			return fmt.Errorf("could not find PCIe addr for %s", rdmaIf)
+		}
+		rc.rdmaIfMap[rdmaIf] = parts[1]
+		logger.Log.Printf("adding rdmaIfmap entry %s:%s", rdmaIf, rc.rdmaIfMap[rdmaIf])
+	}
+	return nil
+}
+
 func (rc *RDMAStatsClient) UpdateNICStats(workloads map[string]scheduler.Workload) error {
 	rc.Lock()
 	defer rc.Unlock()
@@ -107,20 +86,9 @@ func (rc *RDMAStatsClient) UpdateNICStats(workloads map[string]scheduler.Workloa
 	var rdmaStats []nicmetrics.RDMAStats
 	err = json.Unmarshal(res, &rdmaStats)
 	if err != nil {
-		logger.Log.Printf("error unmarshaling port statistics data: %v", err)
+		logger.Log.Printf("error unmarshaling rdma statistics data: %v", err)
 		return err
 	}
-	if len(rdmaStats) != len(rc.rdmaIfMap) {
-		err := rc.setupRDMAIfMap()
-		if err != nil {
-			return err
-		}
-		if len(rdmaStats) != len(rc.rdmaIfMap) {
-			logger.Log.Printf("unmatched RDMA intf count, stats %d ifmap %d", len(rdmaStats), len(rc.rdmaIfMap))
-			return fmt.Errorf("unmatched RDMA intf(s)")
-		}
-	}
-
 	var nicID string
 	for _, nic := range rc.na.nics {
 		//TODO..Once lif code is committed, need to match rdma netdev and nic's lif name to find nicID
@@ -129,8 +97,17 @@ func (rc *RDMAStatsClient) UpdateNICStats(workloads map[string]scheduler.Workloa
 	}
 	labels := rc.na.populateLabelsFromNIC(nicID)
 	for i := range rdmaStats {
-		labels[LabelRdmaIfName] = rdmaStats[i].IFNAME
-		labels[LabelRdmaNetDev] = rc.rdmaIfMap[rdmaStats[i].IFNAME]
+		if err := rc.checkAndUpdateRdmaIfMap(rdmaStats[i].IFNAME); err != nil {
+			return err
+		}
+		rdmaIfName := rdmaStats[i].IFNAME
+		rdmaIfPcieAddr := rc.rdmaIfMap[rdmaIfName]
+		labels[LabelRdmaIfName] = rdmaIfName
+		labels[LabelRdmaIfPcieAddr] = rdmaIfPcieAddr
+		workloadLabels := rc.na.getAssociatedWorkloadLabelsForPcieAddr(rdmaIfPcieAddr, workloads)
+		for k, v := range workloadLabels {
+			labels[k] = v
+		}
 		rc.na.m.rdmaTxUcastPkts.With(labels).Set(float64(rdmaStats[i].RDMA_TX_UCAST_PKTS))
 		rc.na.m.rdmaTxCnpPkts.With(labels).Set(float64(rdmaStats[i].RDMA_TX_CNP_PKTS))
 		rc.na.m.rdmaRxUcastPkts.With(labels).Set(float64(rdmaStats[i].RDMA_RX_UCAST_PKTS))
