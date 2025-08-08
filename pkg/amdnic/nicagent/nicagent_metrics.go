@@ -521,182 +521,182 @@ func (na *NICAgentClient) initPrometheusMetrics() {
 		rdmaTxUcastPkts: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_TX_UCAST_PKTS.String()),
 			Help: "Tx RDMA Unicast Packets",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaTxCnpPkts: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_TX_CNP_PKTS.String()),
 			Help: "Tx RDMA Congestion Notification Packets",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRxUcastPkts: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RX_UCAST_PKTS.String()),
 			Help: "Rx RDMA Ucast Pkts ",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRxCnpPkts: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RX_CNP_PKTS.String()),
 			Help: "Rx RDMA Congestion Notification Packets",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRxEcnPkts: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RX_ECN_PKTS.String()),
 			Help: "Rx RDMA Explicit Congestion Notification Packets",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxPktSeqErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_PKT_SEQ_ERR.String()),
 			Help: "Request Rx packet sequence errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxRnrRetryErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_RNR_RETRY_ERR.String()),
 			Help: "Request Rx receiver not ready retry errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxRmtAccErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_RMT_ACC_ERR.String()),
 			Help: "Request Rx remote access errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxRmtReqErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_RMT_REQ_ERR.String()),
 			Help: "Request Rx remote request errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxOperErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_OPER_ERR.String()),
 			Help: "Request Rx remote oper errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxImplNakSeqErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_IMPL_NAK_SEQ_ERR.String()),
 			Help: "Request Rx implicit negative acknowledgment errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxCqeErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_CQE_ERR.String()),
 			Help: "Request Rx completion queue errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxCqeFlush: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_CQE_FLUSH.String()),
 			Help: "Request Rx completion queue flush count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxDupResp: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_DUP_RESP.String()),
 			Help: "Request Rx duplicate response errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqRxInvalidPkts: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_RX_INVALID_PKTS.String()),
 			Help: "Request Rx invalid pkts ",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqTxLocErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_TX_LOC_ERR.String()),
 			Help: "Request Tx local errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqTxLocOperErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_TX_LOC_OPER_ERR.String()),
 			Help: "Request Tx local operation errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqTxMemMgmtErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_TX_MEM_MGMT_ERR.String()),
 			Help: "Request Tx memory management errors ",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqTxRetryExcdErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_TX_RETRY_EXCD_ERR.String()),
 			Help: "Request Tx Retry exceeded errors ",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaReqTxLocSglInvErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_REQ_TX_LOC_SGL_INV_ERR.String()),
 			Help: "Request Tx local signal inversion errors ",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxDupRequest: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_DUP_REQUEST.String()),
 			Help: "Response Rx duplicate request count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxOutofBuf: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_OUTOF_BUF.String()),
 			Help: "Response Rx out of buffer count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxOutoufSeq: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_OUTOUF_SEQ.String()),
 			Help: "Response Rx out of sequence count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxCqeErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_CQE_ERR.String()),
 			Help: "Response Rx completion queue errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxCqeFlush: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_CQE_FLUSH.String()),
 			Help: "Response Rx completion queue flush",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxLocLenErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_LOC_LEN_ERR.String()),
 			Help: "Response Rx local length errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxInvalidRequest: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_INVALID_REQUEST.String()),
 			Help: "Response Rx invalid requests count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxLocOperErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_LOC_OPER_ERR.String()),
 			Help: "Response Rx local operation errors",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxOutofAtomic: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_OUTOF_ATOMIC.String()),
 			Help: "Response Rx without atomic guarantee count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespTxPktSeqErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_TX_PKT_SEQ_ERR.String()),
 			Help: "Response Tx packet sequence error count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespTxRmtInvalReqErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_TX_RMT_INVAL_REQ_ERR.String()),
 			Help: "Response Tx remote invalid request count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespTxRmtAccErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_TX_RMT_ACC_ERR.String()),
 			Help: "Response Tx remote access error count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespTxRmtOperErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_TX_RMT_OPER_ERR.String()),
 			Help: "Response Tx remote operation error count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespTxRnrRetryErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_TX_RNR_RETRY_ERR.String()),
 			Help: "Response Tx retry not required error count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespTxLocSglInvErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_TX_LOC_SGL_INV_ERR.String()),
 			Help: "Response Tx local signal inversion error count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		rdmaRespRxS0TableErr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: strings.ToLower(exportermetrics.NICMetricField_RDMA_RESP_RX_S0_TABLE_ERR.String()),
 			Help: "Response rx S0 Table error count",
-		}, append([]string{LabelRdmaIfName, LabelRdmaNetDev}, labels...)),
+		}, append(append([]string{LabelRdmaIfName, LabelRdmaIfPcieAddr}, labels...), workloadLabels...)),
 
 		/* Lif stats */
 		nicLifStatsRxUnicastPackets: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -845,6 +845,22 @@ func (na *NICAgentClient) populateLabelsFromNIC(UUID string) map[string]string {
 	return labels
 }
 
+func (na *NICAgentClient) getAssociatedWorkloadLabelsForPcieAddr(pcieAddr string, workloads map[string]scheduler.Workload) map[string]string {
+	labels := map[string]string{
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_POD.String()):       "",
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_NAMESPACE.String()): "",
+		strings.ToLower(exportermetrics.NICMetricLabel_NIC_CONTAINER.String()): "",
+	}
+
+	if wl, wlFound := workloads[pcieAddr]; wlFound {
+		podInfo := wl.Info.(scheduler.PodResourceInfo)
+		labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_POD.String())] = podInfo.Pod
+		labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_NAMESPACE.String())] = podInfo.Namespace
+		labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_CONTAINER.String())] = podInfo.Container
+	}
+	return labels
+}
+
 // getAssociatedWorkloadLabels returns the workload labels for a given NIC and LIF
 func (na *NICAgentClient) getAssociatedWorkloadLabels(nicID string, lifID string, workloads map[string]scheduler.Workload) map[string]string {
 	labels := map[string]string{
@@ -864,12 +880,7 @@ func (na *NICAgentClient) getAssociatedWorkloadLabels(nicID string, lifID string
 
 	lif, found := na.nics[nicID].Lifs[lifID]
 	if found && lif.PCIeAddress != "" {
-		if wl, wlFound := workloads[lif.PCIeAddress]; wlFound {
-			podInfo := wl.Info.(scheduler.PodResourceInfo)
-			labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_POD.String())] = podInfo.Pod
-			labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_NAMESPACE.String())] = podInfo.Namespace
-			labels[strings.ToLower(exportermetrics.NICMetricLabel_NIC_CONTAINER.String())] = podInfo.Container
-		}
+		return na.getAssociatedWorkloadLabelsForPcieAddr(lif.PCIeAddress, workloads)
 	}
 	return labels
 }
