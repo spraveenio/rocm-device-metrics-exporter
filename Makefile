@@ -98,7 +98,7 @@ HTML_DIR := $(BUILD_DIR)/html
 AMDSMI_BRANCH ?= amd-mainline
 AMDSMI_COMMIT ?= 0bcb2c9
 
-ROCM_VERSION ?= 7.0.0
+ROCM_VERSION ?= 7.0_rc1
 
 export ${GOROOT}
 export ${GOPATH}
@@ -432,16 +432,17 @@ build-dev-container:
 
 .PHONY: amdsmi-compile-all
 amdsmi-compile-all:
-	${MAKE} amdsmi-compile-azure
 	${MAKE} amdsmi-compile-ub24
 	${MAKE} amdsmi-compile-ub22
 	${MAKE} amdsmi-compile-rhel
+	#${MAKE} amdsmi-compile-azure
 
 # build all components
 .PHONY: build-all
 build-all: 
 	${MAKE} amdsmi-compile-all
-	${MAKE} rocprofiler-compile
+	# no need to run this everytime, we build and copy assets once
+	#${MAKE} rocprofiler-compile
 	${MAKE} gpuagent-compile
 	@echo "Docker image build is available under docker/ directory"
 	${MAKE} docker
