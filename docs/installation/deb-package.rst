@@ -21,7 +21,7 @@ Each Debian package release of the Standalone Metrics Exporter is dependent on a
    * - amdgpu-exporter-1.2.0
      - ROCm 6.3.x
      - 6.10.5
-   * - amdgpu-exporter-1.3.0
+   * - amdgpu-exporter-1.3.0, amdgpu-exporter-1.3.1
      - ROCm 6.4.x
      - 6.12.12
 
@@ -92,6 +92,23 @@ Step 3: Install the APT Prerequisites for Metrics Exporter
 2. Edit the sources list to add the Device Metrics Exporter repository:
 
   .. tab-set::
+
+    .. tab-item:: v1.3.1
+      :sync: v1.3.1-tab
+
+      .. tab-set::
+
+         .. tab-item:: ubuntu 22.04
+
+            .. code-block:: bash
+
+              deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.3.1 jammy main
+
+         .. tab-item:: ubuntu 24.04
+
+            .. code-block:: bash
+
+              deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.3.1 noble main
 
     .. tab-item:: v1.3.0
       :sync: v1.3.0-tab
