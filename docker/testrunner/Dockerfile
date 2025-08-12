@@ -10,7 +10,7 @@ RUN dnf clean all && \
     dnf update -y && \
     dnf install -y wget yum && \
     yum install -y https://artifactory-cdn.amd.com/artifactory/list/amdgpu-rpm/rhel/amdgpu-install-internal-7.0_9-1.noarch.rpm && \
-    amdgpu-repo --rocm-build=compute-rocm-dkms-no-npi-hipclang/16397 && \
+    amdgpu-repo --rocm-build=compute-rocm-rel-7.0/24 && \
     dnf install rocrand rocm-validation-suite -y && \
     ln /usr/lib64/libdrm_amdgpu.so.1 /usr/lib64/libdrm_amdgpu.so && \
     rm -rf /var/cache/yum /var/cache/dnf && \
