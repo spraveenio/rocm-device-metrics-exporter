@@ -1,45 +1,36 @@
 ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.6
-ARG AMD_HIPCLANG_BUILD_ID=16274
-ARG AMDGPU_BUILD=2182974
 
 FROM ${BASE_IMAGE}
 
 LABEL maintainer="AMD Inc"
 LABEL OS="registry.access.redhat.com/ubi9/ubi-minimal:9.6"
-LABEL BUILD="http://rocm-ci.amd.com/job/compute-rocm-dkms-no-npi-hipclang/16274/"
+LABEL ROCM_VERSION="7.0_rc1"
 
-ARG ROCM_VERSION=7.0.0
-ARG AMDGPU_VERSION=7.0.0
+
+ARG ROCM_VERSION=7.0_rc1
+ARG AMDGPU_VERSION=7.0_rc1
 ARG AMDGPU_REPO_URL=https://repo.radeon.com
 
-RUN microdnf install -y wget yum && microdnf update -y && \
-    yum install -y https://artifactory-cdn.amd.com/artifactory/list/amdgpu-rpm/rhel/amdgpu-install-internal-7.0_9-1.noarch.rpm && \
-    amdgpu-repo --amdgpu-build=2182974 --rocm-build=compute-rocm-dkms-no-npi-hipclang/16274 && \
-    microdnf install -y sudo findutils procps elfutils-libelf cmake kmod file \
-    libcap-devel amd-smi-lib libdrm-amdgpu vim net-tools numactl numactl-libs \
-    hsa-amd-aqlprofile rocprofiler-sdk hip-runtime-amd && \
-    rm -rf /var/cache/yum && rm -rf /var/cache/dnf && microdnf clean all
-
-#RUN microdnf clean all && \
-#    echo "[amdgpu]" > /etc/yum.repos.d/amdgpu.repo && \
-#    echo "name=AMDGPU repository" >> /etc/yum.repos.d/amdgpu.repo && \
-#    echo "baseurl=${AMDGPU_REPO_URL}/amdgpu/${AMDGPU_VERSION}/rhel/9.6/main/x86_64/" >> /etc/yum.repos.d/amdgpu.repo && \
-#    echo "enabled=1" >> /etc/yum.repos.d/amdgpu.repo && \
-#    echo "priority=50" >> /etc/yum.repos.d/amdgpu.repo && \
-#    echo "gpgcheck=1" >> /etc/yum.repos.d/amdgpu.repo && \
-#    echo "gpgkey=${AMDGPU_REPO_URL}/rocm/rocm.gpg.key" >> /etc/yum.repos.d/amdgpu.repo && \
-#    echo "[ROCm-${ROCM_VERSION}]" > /etc/yum.repos.d/rocm.repo && \
-#    echo "name=ROCm${ROCM_VERSION}" >> /etc/yum.repos.d/rocm.repo && \
-#    echo "baseurl=${AMDGPU_REPO_URL}/rocm/rhel9/${AMDGPU_VERSION}/main" >> /etc/yum.repos.d/rocm.repo && \
-#    echo "enabled=1" >> /etc/yum.repos.d/rocm.repo && \
-#    echo "priority=50" >> /etc/yum.repos.d/rocm.repo && \
-#    echo "gpgcheck=1" >> /etc/yum.repos.d/rocm.repo && \
-#    echo "gpgkey=${AMDGPU_REPO_URL}/rocm/rocm.gpg.key" >> /etc/yum.repos.d/rocm.repo && \
-#    microdnf update -y && \
-#    microdnf install -y sudo findutils procps elfutils-libelf cmake kmod file \
-#    libcap-devel amd-smi-lib libdrm-amdgpu vim net-tools numactl numactl-libs \
-#    hsa-amd-aqlprofile rocprofiler-sdk hip-runtime-amd && \
-#    rm -rf /var/cache/yum && rm -rf /var/cache/dnf && microdnf clean all
+RUN microdnf clean all && \
+   echo "[amdgpu]" > /etc/yum.repos.d/amdgpu.repo && \
+   echo "name=AMDGPU repository" >> /etc/yum.repos.d/amdgpu.repo && \
+   echo "baseurl=${AMDGPU_REPO_URL}/graphics/${AMDGPU_VERSION}/rhel/9.6/main/x86_64/" >> /etc/yum.repos.d/amdgpu.repo && \
+   echo "enabled=1" >> /etc/yum.repos.d/amdgpu.repo && \
+   echo "priority=50" >> /etc/yum.repos.d/amdgpu.repo && \
+   echo "gpgcheck=1" >> /etc/yum.repos.d/amdgpu.repo && \
+   echo "gpgkey=${AMDGPU_REPO_URL}/rocm/rocm.gpg.key" >> /etc/yum.repos.d/amdgpu.repo && \
+   echo "[ROCm-${ROCM_VERSION}]" > /etc/yum.repos.d/rocm.repo && \
+   echo "name=ROCm${ROCM_VERSION}" >> /etc/yum.repos.d/rocm.repo && \
+   echo "baseurl=${AMDGPU_REPO_URL}/rocm/rhel9/${AMDGPU_VERSION}/main" >> /etc/yum.repos.d/rocm.repo && \
+   echo "enabled=1" >> /etc/yum.repos.d/rocm.repo && \
+   echo "priority=50" >> /etc/yum.repos.d/rocm.repo && \
+   echo "gpgcheck=1" >> /etc/yum.repos.d/rocm.repo && \
+   echo "gpgkey=${AMDGPU_REPO_URL}/rocm/rocm.gpg.key" >> /etc/yum.repos.d/rocm.repo && \
+   microdnf update -y && \
+   microdnf install -y sudo findutils procps elfutils-libelf cmake kmod file \
+   libcap-devel amd-smi-lib libdrm-amdgpu vim net-tools numactl numactl-libs \
+   hsa-amd-aqlprofile rocprofiler-sdk hip-runtime-amd && \
+   rm -rf /var/cache/yum && rm -rf /var/cache/dnf && microdnf clean all
 
 
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/amd/bin/:/opt/rocm/bin/:/opt/nic/bin:/opt/nic/sbin
@@ -71,8 +62,8 @@ RUN chmod +x /home/amd/tools/entrypoint.sh
 LABEL name="amd-device-metrics-exporter" \ 
     maintainer="praveenkumar.shanmugam@amd.com,nitish.bhat@amd.com,yan.sun3@amd.com,shrey.ajmera@amd.com" \
     vendor="Advanced Micro Devices, Inc." \
-    version="v1.3.2" \
-    release="v1.3.2" \
+    version="v1.4.0" \
+    release="v1.4.0" \
     summary="AMD Device Metrics Exporter enables out-of-the-box metrics collection for AMD GPUs on Kubernetes." \
     description="AMD Device Metrics Exporter enables Prometheus-format metrics collection for AMD GPUs in HPC and AI environments. It provides detailed telemetry including temperature, utilization, memory usage, and power consumption."
 
