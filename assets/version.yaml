@@ -1,14 +1,14 @@
 assets:
   - name    : gpuagent_mock.bin.gz
-    version : 1.121.0-30+ (PR #101523)
+    version : 1.121.0-49
     branch  : master
 
   - name    : gpuagent_static.bin.gz
-    version : 1.121.0-30
+    version : 1.121.0-49
     branch  : master
 
   - name    : gpuctl.gobin
-    version : 1.121.0-30
+    version : 1.121.0-49
     branch  : master
 
   - name    : amd_smi_lib
@@ -20,10 +20,9 @@ assets:
     branch  : 2182974
 
   - name    : profiler_lib
-    version : 7.0.0
-    branch  : 2182974
+    version : 7.0_rc1
 
   - name    : gpuagent_sriov_static.bin.gz
-    version : 1.120.0-9
+    version : 1.120.0-49
     branch  : master
 

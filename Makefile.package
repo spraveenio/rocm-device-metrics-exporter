@@ -48,7 +48,7 @@ pkg: pkg-clean
 		exit 1;\
 	fi
 	@echo "Copying profiler dependent libraries form ${PROFILER_DEB_LIBS}"
-	@cp -vaf $(PROFILER_DEB_LIBS)/rocprofilerdeplib/lib* ${PKG_LIB_PATH}/lib/
+	@cp -vafL $(PROFILER_DEB_LIBS)/rocprofilerdeplib/lib* ${PKG_LIB_PATH}/lib/
 	ls -lart ${PKG_LIB_PATH}/lib
 	@echo "Copying rocprofiler client library and binary"
 	@cp -vf ${ROCPROFILER_ASSETS}/librocpclient* ${PKG_LIB_PATH}/lib/
