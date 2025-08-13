@@ -21,7 +21,7 @@ Each Debian package release of the Standalone Metrics Exporter is dependent on a
    * - amdgpu-exporter-1.2.0
      - ROCm 6.3.x
      - 6.10.5
-   * - amdgpu-exporter-1.3.0
+   * - amdgpu-exporter-1.3.1
      - ROCm 6.4.x
      - 6.12.12
 
@@ -31,7 +31,7 @@ Installation
 Step 1: Install System Prerequisites
 ------------------------------------
 
-1. Update the system:
+1. Install Linux headers and modules:
 
    .. code-block:: bash
 
@@ -48,13 +48,16 @@ Step 2: Install AMDGPU Driver
 ------------------------------
 
 .. note::
-   For the most up-to-date information on installing dkms drivers please see the `ROCm Install Quick Start <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/quick-start.html>`_ page. The below instructions are the most current instructions as of ROCm 6.4.1.
+   For the most up-to-date information on installing dkms drivers please see the `ROCm Install Quick Start <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/quick-start.html>`_ page. The below instructions are the most current instructions as of ROCm 7.0.rc1.
 
-1. Download the driver from the Radeon repository (`repo.radeon.com <https://repo.radeon.com/amdgpu-install>`_) for your operating system. For example if you want to get the latest ROCm 6.4.1 drivers for Ubuntu 22.04 you would run the following command:
+1. Download the driver from the Radeon repository (`repo.radeon.com <https://repo.radeon.com/amdgpu-install>`_) for your operating system. For example if you want to get the latest ROCm 7.0.rc1 drivers for Ubuntu 22.04 you would run the following command:
 
    .. code-block:: bash
 
-      wget https://repo.radeon.com/amdgpu-install/6.4.1/ubuntu/jammy/amdgpu-install_6.4.60401-1_all.deb
+      sudo mkdir --parents --mode=0755 /etc/apt/keyrings
+      wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/rocm.gpg > /dev/null
+      echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amdgpu/30.10_rc1/ubuntu jammy main" sudo tee /etc/apt/sources.list.d/amdgpu.list
+      sudo apt update
 
    Please note that the above url will be different depending on what version of the drivers you will be installing and type of Operating System you are using.
 
@@ -62,9 +65,8 @@ Step 2: Install AMDGPU Driver
 
    .. code-block:: bash
 
-      sudo apt install ./amdgpu-install_6.4.60401-1_all.deb
-      sudo apt update 
-      amdgpu-install --usecase=dkms 
+      sudo apt install amdgpu-dkms
+      sudo reboot
 
 3. Load the driver module:
 
@@ -91,41 +93,20 @@ Step 3: Install the APT Prerequisites for Metrics Exporter
 
 2. Edit the sources list to add the Device Metrics Exporter repository:
 
-  .. tab-set::
+   .. tab-set::
 
-    .. tab-item:: v1.3.0
-      :sync: v1.3.0-tab
+      .. tab-item:: ubuntu 22.04
 
-      .. tab-set::
+         .. code-block:: bash
 
-         .. tab-item:: ubuntu 22.04
+            deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.4.0 jammy main
 
-            .. code-block:: bash
+      .. tab-item:: ubuntu 24.04
 
-              deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.3.0 jammy main
+         .. code-block:: bash
 
-         .. tab-item:: ubuntu 24.04
+            deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.4.0 noble main
 
-            .. code-block:: bash
-
-              deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.3.0 noble main
-
-    .. tab-item:: v1.2.0
-      :sync: v1.2.0-tab
-
-      .. tab-set::
-
-         .. tab-item:: ubuntu 22.04
-
-            .. code-block:: bash
-
-              deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.2.0 jammy main
-
-         .. tab-item:: ubuntu 24.04
-
-            .. code-block:: bash
-
-              deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.2.0 noble main
 
 3. Update the package list again:
 
@@ -133,7 +114,7 @@ Step 3: Install the APT Prerequisites for Metrics Exporter
 
       sudo apt update
 
-Step 4: Install the Prerequisites for Metrics Exporter
+Step 4: Install Metrics Exporter
 ------------------------------------------------------
 
 1. Install the Device Metrics Exporter:
@@ -167,43 +148,25 @@ The Exporter HTTP port is configurable via the `ServerPort` field in the configu
 Metrics Exporter Custom Configuration
 ======================================
 
-Make changes to config.json
----------------------------
+Changing configuration config.json
+----------------------------------
 
 If you need to customize ports or settings:
 
-1. Installation creates a default configuration under `/etc/metrics/config.json`. Note that you can change the path to save the config.json file into a different direct. Just be sure to also update the path in the server ExecStart command in step 3.
 
-   .. code-block:: bash
-
-      wget -O /etc/metrics/config.json https://raw.githubusercontent.com/ROCm/device-metrics-exporter/refs/heads/main/example/config.json
-
-2. Make any required changes to your config.json file and ensure the port number you want to use is correct. Example of the first few lines of the config.json shown below:
-
-   .. code-block:: bash
-
-      {
-      "ServerPort": 5000,
-      "GPUConfig": {
-          "Fields": [
-          "GPU_NODES_TOTAL",
-          "GPU_PACKAGE_POWER",
-      ...
-      ...
-
-3. Edit the amd-metrics-exporter service file:
+1. Edit the amd-metrics-exporter service file:
 
    .. code-block:: bash
 
       sudo vi /lib/systemd/system/amd-metrics-exporter.service
 
-4. Update the `ExecStart` line to read in the config.json file:
+2. Update the `ExecStart` line to read in the config.json file:
 
    .. code-block:: bash
 
       ExecStart=/usr/local/bin/amd-metrics-exporter -amd-metrics-config /etc/metrics/config.json
 
-5. Reload systemd:
+3. Reload systemd:
 
    .. code-block:: bash
 
@@ -234,6 +197,25 @@ Change Metrics Exporter Port
       sudo vi /etc/metrics/config.json
 
 2. Update `ServerPort` to your desired port.
+
+Stop Metrics Exporter
+---------------------
+To stop the Metrics Exporter service, run:
+   .. code-block:: bash
+
+      sudo systemctl stop amd-metrics-exporter.service
+      sudo systemctl stop gpuagent.service 
+
+Confirm Metrics Exporter is Running
+------------------------------------
+
+To confirm that the Metrics Exporter is running and accessible, you can use the following command:
+
+   .. code-block:: bash
+
+      systemctl status amd-metrics-exporter.service
+      systemctl status gpuagent.service
+
 
 Removing Metrics Exporter and other components
 ------------------------------------------------
