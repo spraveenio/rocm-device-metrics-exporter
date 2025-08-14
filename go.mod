@@ -217,3 +217,5 @@ require (
 replace golang.org/x/net v0.29.0 => golang.org/x/net v0.36.0
 
 replace github.com/golang-jwt/jwt/v5 v5.2.1 => github.com/golang-jwt/jwt/v5 v5.2.2
+
+replace github.com/go-viper/mapstructure/v2 v2.2.1 => github.com/go-viper/mapstructure/v2 v2.3.0

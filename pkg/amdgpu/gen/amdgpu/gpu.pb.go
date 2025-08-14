@@ -1726,13 +1726,13 @@ type GPUStatus struct {
 	// NOTE:
 	// only valid for GPU partitions (child GPUs)
 	PhysicalGPU []byte `protobuf:"bytes,24,opt,name=PhysicalGPU,proto3" json:"PhysicalGPU,omitempty"`
-	// GPU Kernel FD Id
+	// GPU KFD id
 	KFDId uint64 `protobuf:"varint,25,opt,name=KFDId,proto3" json:"KFDId,omitempty"`
-	// GPU Kernel Node Id
+	// GPU node id
 	NodeId uint32 `protobuf:"varint,26,opt,name=NodeId,proto3" json:"NodeId,omitempty"`
-	// GPU device driver render Id
+	// GPU device DRM render Id
 	DRMRenderId uint32 `protobuf:"varint,27,opt,name=DRMRenderId,proto3" json:"DRMRenderId,omitempty"`
-	// GPU device driver card Id
+	// GPU device DRM  card Id
 	DRMCardId uint32 `protobuf:"varint,28,opt,name=DRMCardId,proto3" json:"DRMCardId,omitempty"`
 }
 

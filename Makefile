@@ -97,8 +97,8 @@ BUILD_DIR := $(DOCS_DIR)/_build
 HTML_DIR := $(BUILD_DIR)/html
 
 # library branch to build amdsmi libraries for gpuagent
-AMDSMI_BRANCH ?= amd-mainline
-AMDSMI_COMMIT ?= 0bcb2c9
+AMDSMI_BRANCH ?= release/rocm-rel-7.0
+AMDSMI_COMMIT ?= ff168a2
 
 ROCM_VERSION ?= 7.0_rc1
 
@@ -369,6 +369,8 @@ mod:
 	@go mod edit -replace golang.org/x/net@v0.29.0=golang.org/x/net@v0.36.0
 	#CVE-2025-30204 - amd-test-runner
 	@go mod edit -replace github.com/golang-jwt/jwt/v5@v5.2.1=github.com/golang-jwt/jwt/v5@v5.2.2
+	#CVE GHSA-fv92-fjc5-jj9h - amdgpuhealth
+	@go mod edit -replace github.com/go-viper/mapstructure/v2@v2.2.1=github.com/go-viper/mapstructure/v2@v2.3.0
 	@go mod vendor
 	@rm ${TOP_DIR}/gpuagent/go.mod
 	@rm ${TOP_DIR}/libamdsmi/go.mod
