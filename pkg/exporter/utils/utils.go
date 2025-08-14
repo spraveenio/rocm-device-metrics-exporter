@@ -26,6 +26,7 @@ import (
 
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -223,11 +224,24 @@ func StringToUint64(str string) uint64 {
 	return val
 }
 
-// IsValueApplicable - return false if any of the value is all 0xf for max
-//
-//					       datatype size, this represents NA (not applicable from the metrics field)
-//	                  - return true otherwise
-func IsValueApplicable(x interface{}) bool {
+func convertFloatToUint(val interface{}) interface{} {
+	switch v := val.(type) {
+	case float64:
+		return uint64(v)
+	case float32:
+		return uint32(v)
+	default:
+		return val
+	}
+}
+
+// IsValueApplicable checks if the value is applicable for metrics export.
+// It checks if the value is not equal to the maximum value for its type, which indicates NA (not applicable).
+// The function returns true if the value is applicable and false if it is NA.
+func IsValueApplicable(val interface{}) bool {
+
+	x := convertFloatToUint(val)
+
 	switch x := x.(type) {
 	case uint64:
 		if x == math.MaxUint64 || x == math.MaxUint32 || x == math.MaxUint16 || x == math.MaxUint8 {
@@ -254,7 +268,10 @@ func IsValueApplicable(x interface{}) bool {
 //
 //	  per the max data size
 //	- return x as is otherwise
-func NormalizeUint64(x interface{}) float64 {
+func NormalizeUint64(val interface{}) float64 {
+
+	x := convertFloatToUint(val)
+
 	switch x := x.(type) {
 	case uint64:
 		if x == math.MaxUint64 || x == math.MaxUint32 || x == math.MaxUint16 || x == math.MaxUint8 {
@@ -279,4 +296,19 @@ func NormalizeUint64(x interface{}) float64 {
 	}
 	logger.Log.Fatalf("only uint64, uint32, uint16, uint8 are expected but got %v", reflect.TypeOf(x))
 	return 0
+}
+
+// ValidateAndExporte sets the value of a Prometheus GaugeVec metric with the provided labels if data is valid
+func ValidateAndExport(metric prometheus.GaugeVec, fieldName string,
+	labels map[string]string, value interface{}) ErrorCode {
+	if labels == nil || value == nil {
+		return ErrorInvalidArgument
+	}
+
+	if !IsValueApplicable(value) {
+		return ErrorNotApplicable
+	}
+	floatVal := NormalizeUint64(value)
+	metric.With(labels).Set(floatVal)
+	return ErrorNone
 }
