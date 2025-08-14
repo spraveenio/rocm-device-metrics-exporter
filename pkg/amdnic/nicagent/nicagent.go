@@ -27,6 +27,7 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
+	_ "github.com/alta/protopatch/patch" // nolint: gosec
 )
 
 type NICAgentClient struct {
