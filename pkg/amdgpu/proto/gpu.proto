@@ -406,13 +406,13 @@ message GPUStatus {
   // NOTE:
   // only valid for GPU partitions (child GPUs)
   bytes                         PhysicalGPU       = 24;
-  // GPU Kernel FD Id
+  // GPU KFD id
   uint64                        KFDId             = 25;
-  // GPU Kernel Node Id
+  // GPU node id
   uint32                        NodeId            = 26;
-  // GPU device driver render Id
+  // GPU device DRM render Id
   uint32                        DRMRenderId       = 27;
-  // GPU device driver card Id
+  // GPU device DRM  card Id
   uint32                        DRMCardId         = 28;
 
 }
