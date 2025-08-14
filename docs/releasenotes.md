@@ -4,7 +4,11 @@
 
 - **MI35x Platfform Support**
   - Exporter now supports MI35x platform with parity with latest supported
-  	fields.
+    fields.
+
+- **Mask Unsupported Fields**
+  - Platform specific depricated (NA) fields, will not be exporter, logs will
+    have which fields are supported by platform
 
 ### Platform Support
 ROCm 7.0.rc1 MI2xx, MI3xx

@@ -19,6 +19,9 @@ package utils
 import (
 	"math"
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func TestGetPCIeBaseAddress(t *testing.T) {
@@ -185,6 +188,99 @@ func TestNormalize(t *testing.T) {
 			got := NormalizeUint64(tt.input)
 			if got != tt.expected {
 				t.Errorf("IsApplicable(%v) = %v; want %v", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+func TestValidateAndExport(t *testing.T) {
+	type labelSet map[string]string
+
+	tests := []struct {
+		name         string
+		fieldName    string
+		labels       labelSet
+		value        interface{}
+		expected     float64
+		expectExport bool
+	}{
+		{
+			name:         "Valid uint64 value",
+			fieldName:    "test_field",
+			labels:       labelSet{"gpu": "0"},
+			value:        uint64(123),
+			expected:     123,
+			expectExport: true,
+		},
+		{
+			name:         "NA uint64 value",
+			fieldName:    "test_field",
+			labels:       labelSet{"gpu": "1"},
+			value:        uint64(math.MaxUint64),
+			expected:     0,
+			expectExport: false,
+		},
+		{
+			name:         "Valid uint32 value",
+			fieldName:    "test_field",
+			labels:       labelSet{"gpu": "2"},
+			value:        uint32(456),
+			expected:     456,
+			expectExport: true,
+		},
+		{
+			name:         "NA uint32 value",
+			fieldName:    "test_field",
+			labels:       labelSet{"gpu": "3"},
+			value:        uint32(math.MaxUint32),
+			expected:     0,
+			expectExport: false,
+		},
+		{
+			name:         "Nil labels",
+			fieldName:    "test_field",
+			labels:       nil,
+			value:        uint64(789),
+			expected:     0,
+			expectExport: false,
+		},
+		{
+			name:         "Nil value",
+			fieldName:    "test_field",
+			labels:       labelSet{"gpu": "4"},
+			value:        nil,
+			expected:     0,
+			expectExport: false,
+		},
+	}
+
+	for _, tt := range tests {
+		metric := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "test_metric",
+			Help: "Test metric for ValidateAndExport",
+		}, []string{"gpu"})
+
+		t.Run(tt.name, func(t *testing.T) {
+
+			ValidateAndExport(*metric, tt.fieldName, tt.labels, tt.value)
+			labels := prometheus.Labels(tt.labels)
+			if labels != nil && tt.expectExport {
+				// Actually get the value from the metric
+				// Use prometheus/testutil to get the value
+				val := testutil.ToFloat64(metric.With(labels))
+				if val != tt.expected {
+					t.Errorf("ValidateAndExport set value %v; want %v", val, tt.expected)
+				}
+				t.Logf("ValidateAndExport fieldName %v set value %v; want %v", tt.fieldName, val, tt.expected)
+			} else {
+				// Should not export, value should be zero
+				if tt.labels != nil {
+					val := testutil.ToFloat64(metric.With(labels))
+					if val != 0 {
+						t.Errorf("ValidateAndExport should not export, got %v", val)
+					} else {
+						t.Logf("ValidateAndExport should not export, got %v", val)
+					}
+				}
 			}
 		})
 	}
