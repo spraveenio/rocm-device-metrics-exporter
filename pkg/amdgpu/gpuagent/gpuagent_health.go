@@ -252,7 +252,10 @@ func (ga *GPUAgentClient) SetError(gpuid string, fields []string, values []uint3
 	}
 	for i, field := range fields {
 		if values[i] == 0 {
-			delete(ga.mockEccField[gpuid], field)
+			// nolint : gosimple
+			if _, ok := ga.mockEccField[gpuid][field]; ok {
+				delete(ga.mockEccField[gpuid], field)
+			}
 			if len(ga.mockEccField[gpuid]) == 0 {
 				delete(ga.mockEccField, gpuid)
 			}
