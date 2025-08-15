@@ -1502,7 +1502,29 @@ func (ga *GPUAgentClient) GetDeviceType() globals.DeviceType {
 	return globals.GPUDevice
 }
 
-func (ga *GPUAgentClient) getWorkloadInfo(wls map[string]scheduler.Workload, gpu *amdgpu.GPU) *scheduler.Workload {
+// getWorkloadsString returns the list of workloads associated with the given GPU in following
+// formats
+// kubernetes job  - "pod:pod_name, namespace: pod_namespace,container: container_name"
+// slurm job       - "id: job_id, user: job_user, partition: job_partition", cluster: job_cluster
+
+func (ga *GPUAgentClient) getWorkloadsListString(wls map[string]scheduler.Workload, gpu *amdgpu.GPU) []string {
+	associatedWorkloads := []string{}
+	if gpu == nil || gpu.Status == nil {
+		return nil
+	}
+
+	schedulerJobs := ga.getWorkloadInfo(wls, gpu)
+	for _, wl := range schedulerJobs {
+		if wl == nil {
+			continue
+		}
+		associatedWorkloads = append(associatedWorkloads, wl.String())
+	}
+	return associatedWorkloads
+}
+
+func (ga *GPUAgentClient) getWorkloadInfo(wls map[string]scheduler.Workload, gpu *amdgpu.GPU) []*scheduler.Workload {
+	associatedWorkloads := []*scheduler.Workload{}
 	if gpu == nil || gpu.Status == nil {
 		return nil
 	}
@@ -1512,21 +1534,21 @@ func (ga *GPUAgentClient) getWorkloadInfo(wls map[string]scheduler.Workload, gpu
 	// populate with workload info
 	if gpu.Status.PCIeStatus != nil {
 		if workload, ok := wls[strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)]; ok {
-			return &workload
+			associatedWorkloads = append(associatedWorkloads, &workload)
 		}
 	}
 	if workload, ok := wls[deviceName]; ok {
-		return &workload
+		associatedWorkloads = append(associatedWorkloads, &workload)
 	}
 	// ignore errors as we always expect slurm deployment as default
 	if workload, ok := wls[gpuRenderId]; ok {
-		return &workload
+		associatedWorkloads = append(associatedWorkloads, &workload)
 	}
 
 	if workload, ok := wls[gpuId]; ok {
-		return &workload
+		associatedWorkloads = append(associatedWorkloads, &workload)
 	}
-	return nil
+	return associatedWorkloads
 }
 
 func (ga *GPUAgentClient) populateLabelsFromGPU(
@@ -1536,13 +1558,20 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(
 	var podInfo scheduler.PodResourceInfo
 	var jobInfo scheduler.JobInfo
 
-	if wl := ga.getWorkloadInfo(wls, gpu); wl != nil {
-		if wl.Type == scheduler.Kubernetes {
-			podInfo = wl.Info.(scheduler.PodResourceInfo)
-		} else {
-			jobInfo = wl.Info.(scheduler.JobInfo)
+	if jobInfos := ga.getWorkloadInfo(wls, gpu); jobInfos != nil {
+		for _, wl := range jobInfos {
+			if wl == nil {
+				continue
+			}
+			switch wl.Type {
+			case scheduler.Kubernetes:
+				podInfo = wl.Info.(scheduler.PodResourceInfo)
+			case scheduler.Slurm:
+				jobInfo = wl.Info.(scheduler.JobInfo)
+			}
 		}
 	}
+
 	labels := make(map[string]string)
 	var parentPartition *amdgpu.GPU
 

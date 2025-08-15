@@ -170,6 +170,9 @@ func (cl *client) processSlurm(op fsnotify.Op, name string, buff []byte) {
 	}
 }
 
+// ListWorkloads - returns the list of workloads
+// for slurm it returns the list of jobs running on the gpus
+// the key is the gpu id/render id (integer) and the value is the job info
 func (cl *client) ListWorkloads() (map[string]Workload, error) {
 	jobs := make(map[string]Workload)
 	cl.Lock()

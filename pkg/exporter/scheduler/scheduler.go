@@ -16,6 +16,8 @@ limitations under the License.
 
 package scheduler
 
+import "fmt"
+
 type SchedulerType int
 
 const (
@@ -52,6 +54,26 @@ type JobInfo struct {
 func (s SchedulerType) String() string {
 	return [...]string{"Kubernetes", "Slurm"}[s-1]
 }
+
+// returns String representation of Workload
+// k8s: Pod: <pod-name>, Namespace: <namespace>, Container: <container-name>
+// slurm: Job: <job-id>, User: <user>, Partition: <partition>, Cluster: <cluster>
+func (w Workload) String() string {
+	switch w.Type {
+	case Kubernetes:
+		if podInfo, ok := w.Info.(PodResourceInfo); ok {
+			return fmt.Sprintf("Pod: %s, Namespace: %s, Container: %s",
+				podInfo.Pod, podInfo.Namespace, podInfo.Container)
+		}
+	case Slurm:
+		if jobInfo, ok := w.Info.(JobInfo); ok {
+			return fmt.Sprintf("Job: %s, User: %s, Partition: %s, Cluster: %s",
+				jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster)
+		}
+	}
+	return fmt.Sprintf("Workload Type: %s", w.Type.String())
+}
+
 func GetExportLabels(t SchedulerType) map[string]bool {
 	switch t {
 	case Kubernetes:
