@@ -503,7 +503,7 @@ func (s *E2ESuite) Test017SlurmWorkloadSim(c *C) {
 		"SLURM_JOB_GPUS":       "0,1,2,3,4,5,6,7",
 		"SLURM_JOB_ID":         "742",
 		"SLURM_JOB_PARTITION":  "256C8G1H_MI325X_Ubuntu22",
-		"SLURM_JOB_USER":       "yaoming_mu_7kq",
+		"SLURM_JOB_USER":       "user_7kq",
 		"SLURM_SCRIPT_CONTEXT": "prolog_slurmd",
 	}
 	// Convert map to JSON
@@ -535,7 +535,7 @@ func (s *E2ESuite) Test017SlurmWorkloadSim(c *C) {
 		expectedJobLabels := map[string]string{
 			"job_id":        "\"742\"",
 			"job_partition": "\"256C8G1H_MI325X_Ubuntu22\"",
-			"job_user":      "\"yaoming_mu_7kq\"",
+			"job_user":      "\"user_7kq\"",
 		}
 
 		// Verify job labels are present for all GPU IDs "0" through "7"

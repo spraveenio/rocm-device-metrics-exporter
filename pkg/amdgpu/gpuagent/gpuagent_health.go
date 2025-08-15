@@ -73,19 +73,7 @@ func (ga *GPUAgentClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[str
 		if gpu.Status.PCIeStatus != nil {
 			deviceid = strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)
 		}
-		workloadInfo := []string{} // only one per gpu
-
-		if wl := ga.getWorkloadInfo(wls, gpu); wl != nil {
-			if wl.Type == scheduler.Kubernetes {
-				podInfo := wl.Info.(scheduler.PodResourceInfo)
-				workloadInfo = append(workloadInfo, fmt.Sprintf("pod : %v, namespace : %v, container: %v",
-					podInfo.Pod, podInfo.Namespace, podInfo.Container))
-			} else {
-				jobInfo := wl.Info.(scheduler.JobInfo)
-				workloadInfo = append(workloadInfo, fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
-					jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster))
-			}
-		}
+		workloadInfo := ga.getWorkloadsListString(wls, gpu)
 		// default is healthy
 		gpuHealthMap[gpuid] = &metricssvc.GPUState{
 			ID:                 gpuid,
@@ -130,16 +118,12 @@ func (ga *GPUAgentClient) setUnhealthyGPU(wls map[string]scheduler.Workload) err
 	ga.Lock()
 	defer ga.Unlock()
 
+	var workloadInfo []string
+	// lookup based on device id is limited to k8s case we'll have only k8s job info
+	// this is good enough for reporting the GPU as unhealthy for slinky case as well
 	for _, gpustate := range ga.healthState {
-		workloadInfo := []string{} // one per gpu
 		if wl, ok := wls[gpustate.Device]; ok {
-			if wl.Type == scheduler.Kubernetes {
-				if podInfo, ok := wl.Info.(scheduler.PodResourceInfo); ok {
-					workloadInfo = append(workloadInfo, fmt.Sprintf("pod : %v, namespace : %v, container: %v",
-						podInfo.Pod, podInfo.Namespace, podInfo.Container))
-				}
-			}
-
+			workloadInfo = append(workloadInfo, wl.String())
 		}
 		gpustate.Health = strings.ToLower(metricssvc.GPUHealth_UNHEALTHY.String())
 		gpustate.AssociatedWorkload = workloadInfo
@@ -342,18 +326,8 @@ func (ga *GPUAgentClient) updateAllGPUsHealthState(healthStr string) {
 			deviceid = strings.ToLower(gpu.Status.PCIeStatus.PCIeBusId)
 		}
 
-		workloadInfo := []string{} // only one per gpu
-		if wl := ga.getWorkloadInfo(wls, gpu); wl != nil {
-			if wl.Type == scheduler.Kubernetes {
-				podInfo := wl.Info.(scheduler.PodResourceInfo)
-				workloadInfo = append(workloadInfo, fmt.Sprintf("pod : %v, namespace : %v, container: %v",
-					podInfo.Pod, podInfo.Namespace, podInfo.Container))
-			} else {
-				jobInfo := wl.Info.(scheduler.JobInfo)
-				workloadInfo = append(workloadInfo, fmt.Sprintf("id: %v, user : %v, partition: %v, cluster: %v",
-					jobInfo.Id, jobInfo.User, jobInfo.Partition, jobInfo.Cluster))
-			}
-		}
+		workloadInfo := ga.getWorkloadsListString(wls, gpu)
+
 		ga.healthState[gpuid] = &metricssvc.GPUState{
 			ID:                 gpuid,
 			UUID:               gpuuid,

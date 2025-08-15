@@ -58,6 +58,9 @@ func NewKubernetesClient(ctx context.Context) (SchedulerClient, error) {
 	return &podResourcesClient{clientConn: client, ctx: ctx}, nil
 }
 
+// ListWorkloads - list all the workloads
+// This function will return a map of device id to workload
+// The device id is the device id (pcie id or partition xcd string) of the GPU
 func (cl *podResourcesClient) ListWorkloads() (map[string]Workload, error) {
 	prCl := kube.NewPodResourcesListerClient(cl.clientConn)
 	ctx, cancel := context.WithTimeout(cl.ctx, time.Second*10)

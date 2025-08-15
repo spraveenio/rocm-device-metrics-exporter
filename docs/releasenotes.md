@@ -1,5 +1,21 @@
 # Release Notes
 
+## v1.5.0
+
+- **Kubevirt**
+  - Exporter now supports Kubevirt deployments
+    - New exporter with SR-IOV support for hypervisor environments is now available
+      - Legacy exporter remains applicable for existing deployments:
+        1. Baremetal passthrough
+        2. Guest VM
+
+- **Slinky**
+  - **Slinky**
+    - Slinky job reporting is now supported, with labels providing both Kubernetes and Slurm job information
+
+### Platform Support
+ROCm 7.0.rc1 MI2xx, MI3xx
+
 ## v1.4.0
 
 - **MI35x Platfform Support**
