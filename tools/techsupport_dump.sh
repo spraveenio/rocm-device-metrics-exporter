@@ -136,12 +136,27 @@ for node in ${NODES}; do
 	for l in ${GPUAGENT_LOGS}; do
 		for expod in ${EXPORTER_PODS}; do
 			pod=$(basename ${expod})
-			${KUBECTL} cp ${EXPORTER_NS}/${pod}:"/run/$l" ${TECH_SUPPORT_FILE}/${node}/gpu-agent/$l >/dev/null || true
+			${KNS} exec -it ${EXPORTER_PODS} -- sh -c "cat /var/log/$l" > ${TECH_SUPPORT_FILE}/${node}/gpu-agent/$l || true
 		done
 	done
 	#exporter version 
 	log "   exporter version"
-	${KUBECTL} exec -it ${EXPORTER_PODS} -- sh -c "/home/amd/bin/server -version" >${TECH_SUPPORT_FILE}/${node}/exporterversion.txt
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "server -version" >${TECH_SUPPORT_FILE}/${node}/exporterversion.txt || true
+	log "   exporter health"
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "metricsclient" >${TECH_SUPPORT_FILE}/${node}/exporterhealth.txt || true
+	log "   exporter config"
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "cat /etc/metrics/config.json" >${TECH_SUPPORT_FILE}/${node}/exporterconfig.json || true
+	log "   exporter pod details"
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "metricsclient -pod -json" >${TECH_SUPPORT_FILE}/${node}/exporterpod.json || true
+	log "   exporter node details"
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "metricsclient -npod" >${TECH_SUPPORT_FILE}/${node}/exporternode.txt || true
+	log "   amd-smi output"
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "amd-smi list" >${TECH_SUPPORT_FILE}/${node}/amd-smi-list.txt || true
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "amd-smi metric" >${TECH_SUPPORT_FILE}/${node}/amd-smi-metric.txt || true
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "amd-smi static " >${TECH_SUPPORT_FILE}/${node}/amd-smi-static.txt || true
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "amd-smi firmware" >${TECH_SUPPORT_FILE}/${node}/amd-smi-firmware.txt || true
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "amd-smi partition" >${TECH_SUPPORT_FILE}/${node}/amd-smi-partition.txt || true
+	${KNS} exec -it ${EXPORTER_PODS} -- sh -c "amd-smi xgmi" >${TECH_SUPPORT_FILE}/${node}/amd-smi-xgmi.txt || true
 
 	${KUBECTL} get nodes -l "node-role.kubernetes.io/control-plane=NoSchedule" 2>/dev/null | grep ${node} && continue # skip master nodes
 done
