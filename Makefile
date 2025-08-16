@@ -86,7 +86,9 @@ GOINSECURE='github.com, google.golang.org, golang.org'
 GOFLAGS ='-buildvcs=false'
 BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
 GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
-VERSION ?=$(RELEASE)
+GIT_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
+VERSION ?= $(if $(RELEASE),$(RELEASE),$(GIT_BRANCH))
+
 KUBECONFIG ?= ~/.kube/config
 
 # docs build settings
