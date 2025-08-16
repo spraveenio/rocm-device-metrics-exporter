@@ -70,6 +70,7 @@ type GPUAgentClient struct {
 	fsysDeviceHandler      *fsysdevice.FsysDevice
 	gCache                 *gpuCache
 	nodeHealthLabellerCfg  *utils.NodeHealthLabellerConfig
+	fl                     *fieldLogger
 }
 
 // Cache fields for GPUAgentClient
@@ -140,6 +141,7 @@ func NewAgent(mh *metricsutil.MetricsHandler, opts ...GPUAgentClientOptions) *GP
 
 	ga.healthState = make(map[string]*metricssvc.GPUState)
 	ga.mockEccField = make(map[string]map[string]uint32)
+	ga.fl = NewFieldLogger()
 	ga.rocpclient = rocprofiler.NewRocProfilerClient("rocpclient")
 	if ga.enableSriov {
 		logger.Log.Printf("profiler is disabled on sriov deployment")

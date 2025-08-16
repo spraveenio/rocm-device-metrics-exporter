@@ -7,8 +7,8 @@
     fields.
 
 - **Mask Unsupported Fields**
-  - Platform specific depricated (NA) fields, will not be exporter, logs will
-    have which fields are supported by platform
+  - Platform-specific unsupported fields (amd-smi marked as N/A) will not be exported.
+    Boot logs will indicate which fields are supported by the platform (logged once during startup).
 
 ### Platform Support
 ROCm 7.0.rc1 MI2xx, MI3xx
