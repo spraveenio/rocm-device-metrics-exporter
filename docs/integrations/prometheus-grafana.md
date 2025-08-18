@@ -1,16 +1,24 @@
 # Prometheus and Grafana integration
 
-Grafana dashboards provided visualize GPU metrics collected from AMD Device Metrics Exporter via Prometheus. Dashboard files are located in the grafana directory:
+Grafana dashboards provided visualize GPU metrics collected from AMD Device Metrics Exporter via Prometheus.
+Pre-built Grafana dashboards are available in the [`grafana`](https://github.com/ROCm/device-metrics-exporter/tree/main/grafana) directory of the repository:
 
-- `dashboard_overview.json`: High-level GPU cluster overview.
+- [High-level GPU cluster overview](https://raw.githubusercontent.com/ROCm/device-metrics-exporter/refs/heads/main/grafana/dashboard_overview.json)
+- [Detailed per-GPU metrics](https://raw.githubusercontent.com/ROCm/device-metrics-exporter/refs/heads/main/grafana/dashboard_gpu.json)
+- [Host-level GPU usage](https://raw.githubusercontent.com/ROCm/device-metrics-exporter/refs/heads/main/grafana/dashboard_node.json)
+- [GPU usage by job (Slurm and Kubernetes)](https://raw.githubusercontent.com/ROCm/device-metrics-exporter/refs/heads/main/grafana/dashboard_job.json)
 
-- `dashboard_gpu.json`: Detailed per-GPU metrics.
+Import these dashboards through the Grafana interface for immediate visualization of your GPU metrics.
 
-- `dashboard_job.json`: GPU usage by job (Slurm and Kubernetes).
+## Grafana Dashboard Setup
 
-- `dashboard_node.json`: Host-level GPU usage.
+- Variables can be configured at any time in each dashboard's **Settings > Variables** section.
 
-To ingest metrics into Prometheus, you can use one of the following methods:
+  **g_metrics_prefix**: string to prefix names of metrics queries (e.g. gpu_gfx_activity -> amd_gpu_gfx_activity)
+
+- Prefix can be set using the dropdown menu in the top left corner of each dashboard.
+
+## Methods to Ingest metrics into Prometheus
 
 ### Method 1: Direct Prometheus Configuration
 
@@ -63,18 +71,10 @@ helm install prometheus prometheus-community/kube-prometheus-stack \
 3. Deploy Device Metrics Exporter with ServiceMonitor enabled:
 ```bash
 helm install metrics-exporter \
-  https://github.com/ROCm/device-metrics-exporter/releases/download/v1.3.1/device-metrics-exporter-charts-v1.3.1.tgz \
+  https://github.com/ROCm/device-metrics-exporter/releases/download/v1.4.0/device-metrics-exporter-charts-v1.4.0.tgz \
   --set serviceMonitor.enabled=true \
   --set serviceMonitor.interval=15s \
   -n mynamespace --create-namespace
 ```
 
 For detailed ServiceMonitor configuration options and troubleshooting, please refer to the [Prometheus ServiceMonitor Integration](./prometheus-servicemonitor.md) documentation.
-
-Pre-built Grafana dashboards are available in the `grafana/` directory of the repository:
-
-- [GPU Overview Dashboard](https://raw.githubusercontent.com/ROCm/gpu-operator/refs/heads/main/grafana/dashboard_overview.json)
-- [Per-Node Dashboard](https://raw.githubusercontent.com/ROCm/gpu-operator/refs/heads/main/grafana/dashboard_node.json)
-- [Job-specific Dashboard](https://raw.githubusercontent.com/ROCm/gpu-operator/refs/heads/main/grafana/dashboard_job.json)
-
-Import these dashboards through the Grafana interface for immediate visualization of your GPU metrics.
