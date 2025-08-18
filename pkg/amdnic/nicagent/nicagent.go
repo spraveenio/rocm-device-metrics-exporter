@@ -18,7 +18,11 @@ package nicagent
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
+
+	_ "github.com/alta/protopatch/patch" // nolint: gosec
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdnic/gen/nicmetricssvc"
 	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
@@ -27,7 +31,6 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
-	_ "github.com/alta/protopatch/patch" // nolint: gosec
 )
 
 type NICAgentClient struct {
@@ -72,10 +75,12 @@ func WithK8sClient(k8sApiClient *k8sclient.K8sClient) NICAgentClientOptions {
 
 func (na *NICAgentClient) initClients() error {
 	logger.Log.Printf("Establishing connection to NIC clients")
+	var errStr []string
 	for _, client := range na.nicClients {
-		if err = client.Init(); err != nil {
-			logger.Log.Printf("%s init err :%+v", client.GetClientName(), err)
-			return err
+		if err := client.Init(); err != nil {
+			errStr = append(errStr, fmt.Sprintf("%s err: %s", client.GetClientName(), err.Error()))
+		} else {
+			logger.Log.Printf("%s init success", client.GetClientName())
 		}
 	}
 	if len(errStr) != 0 {
