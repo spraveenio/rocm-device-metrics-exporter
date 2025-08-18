@@ -10,8 +10,7 @@
         2. Guest VM
 
 - **Slinky**
-  - **Slinky**
-    - Slinky job reporting is now supported, with labels providing both Kubernetes and Slurm job information
+  - Slinky job reporting is now supported, with labels providing both Kubernetes and Slurm job information
 
 ### Platform Support
 ROCm 7.0.rc1 MI2xx, MI3xx
