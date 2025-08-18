@@ -34,7 +34,6 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
-	"google.golang.org/grpc"
 )
 
 // SvcHandler is a struct that manages the gRPC server and metrics services.
