@@ -25,6 +25,9 @@ ROCm 7.0.rc1 MI2xx, MI3xx
   - Platform-specific unsupported fields (amd-smi marked as N/A) will not be exported.
     Boot logs will indicate which fields are supported by the platform (logged once during startup).
 
+- **New Profiler Fields**
+  - New fields are added for better understanding of the application
+
 ### Platform Support
 ROCm 7.0.rc1 MI2xx, MI3xx
 

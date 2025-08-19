@@ -200,6 +200,10 @@ enum GPUMetricField {
     GPU_PROF_OCCUPANCY_ELAPSED                               = 1010;
     // MeanOccupancyPerActiveCU
     GPU_PROF_OCCUPANCY_PER_ACTIVE_CU                         = 1011;
+    // MeanOccupancyPerCU
+    GPU_PROF_OCCUPANCY_PER_CU                                = 1012;
+    // SIMD_UTILIZATION
+    GPU_PROF_SIMD_UTILIZATION                                = 1013;
 }
 message GPUHealthThresholds {
     uint32 GPU_ECC_UNCORRECT_SDMA = 1;
