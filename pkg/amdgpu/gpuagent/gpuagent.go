@@ -282,7 +282,8 @@ func (ga *GPUAgentClient) getProfilerMetrics() (map[string]map[string]float64, e
 		for _, m := range gpu.Metrics {
 			gpuMetric[m.Field] = strDoubleToFloat(m.Value)
 		}
-		gpuMetrics[gpu.GpuId] = gpuMetric
+		// associate using logical node id
+		gpuMetrics[gpu.LogicalNodeId] = gpuMetric
 	}
 	return gpuMetrics, nil
 }
@@ -313,7 +314,7 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 		var gpuProfMetrics map[string]float64
 		// if available use the data
 		if pmetrics != nil {
-			gpuid := fmt.Sprintf("%v", getGPUInstanceID(gpu))
+			gpuid := getGPUNodeID(gpu)
 			//nolint
 			gpuProfMetrics, _ = pmetrics[gpuid]
 		}

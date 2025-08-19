@@ -31,8 +31,14 @@ message MetricValue {
 }
 
 message GpuMetric {
+    // KFD id
     string GpuId                 = 1;
     repeated MetricValue Metrics = 2;
+    // DRM render device minor device number
+    string DrmRenderId           = 3;
+    // Logical sequence number.
+    // This will always be [0..N) where N is the total number of agents
+    string LogicalNodeId         = 4;
 }
 
 message GpuProfiler {
