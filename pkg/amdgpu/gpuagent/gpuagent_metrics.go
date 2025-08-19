@@ -243,6 +243,8 @@ type metrics struct {
 	gpuSMActive            prometheus.GaugeVec
 	gpuOccElapsed          prometheus.GaugeVec
 	gpuOccPerActiveCU      prometheus.GaugeVec
+	gpuMeanOccPerCU        prometheus.GaugeVec
+	gpuSimdActive          prometheus.GaugeVec
 }
 
 func (ga *GPUAgentClient) ResetMetrics() error {
@@ -612,6 +614,8 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		exportermetrics.GPUMetricField_GPU_PROF_SM_ACTIVE.String():                          FieldMeta{Metric: ga.m.gpuSMActive, Alias: "VALUBusy"},
 		exportermetrics.GPUMetricField_GPU_PROF_OCCUPANCY_ELAPSED.String():                  FieldMeta{Metric: ga.m.gpuOccElapsed, Alias: "GRBM_GUI_ACTIVE"},
 		exportermetrics.GPUMetricField_GPU_PROF_OCCUPANCY_PER_ACTIVE_CU.String():            FieldMeta{Metric: ga.m.gpuOccPerActiveCU, Alias: "MeanOccupancyPerActiveCU"},
+		exportermetrics.GPUMetricField_GPU_PROF_OCCUPANCY_PER_CU.String():                   FieldMeta{Metric: ga.m.gpuMeanOccPerCU, Alias: "MeanOccupancyPerCU"},
+		exportermetrics.GPUMetricField_GPU_PROF_SIMD_UTILIZATION.String():                   FieldMeta{Metric: ga.m.gpuSimdActive, Alias: "SIMD_UTILIZATION"},
 	}
 	logger.Log.Printf("Total GPU fields supported : %+v", len(fieldMetricsMap))
 
@@ -1406,6 +1410,16 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Help: "Mean occupancy per active compute unit",
 		},
 			labels),
+		gpuMeanOccPerCU: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_prof_occupancy_per_cu",
+			Help: "Mean occupancy per compute unit",
+		},
+			labels),
+		gpuSimdActive: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_prof_simd_utilization",
+			Help: "Fraction of time the SIMDs are being utilized [0,1]",
+		},
+			labels),
 	}
 	ga.initFieldMetricsMap()
 
@@ -1452,6 +1466,13 @@ func getGPURenderId(gpu *amdgpu.GPU) string {
 
 func getGPUInstanceID(gpu *amdgpu.GPU) int {
 	return int(gpu.Status.Index)
+}
+
+func getGPUNodeID(gpu *amdgpu.GPU) string {
+	if gpu != nil && gpu.Status != nil {
+		return fmt.Sprintf("%v", gpu.Status.NodeId)
+	}
+	return ""
 }
 
 func (ga *GPUAgentClient) UpdateStaticMetrics() error {
@@ -2152,6 +2173,10 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 			ga.m.gpuSMActive.With(labels).Set(value)
 		case "MeanOccupancyPerActiveCU":
 			ga.m.gpuOccPerActiveCU.With(labels).Set(value)
+		case "MeanOccupancyPerCU":
+			ga.m.gpuMeanOccPerCU.With(labels).Set(value)
+		case "SIMD_UTILIZATION":
+			ga.m.gpuSimdActive.With(labels).Set(value)
 		}
 	}
 }

@@ -9,13 +9,7 @@ cd "$dir"
 # Prefer hipcc; fall back to amdclang++ if needed
 HIPCC_BIN="${CMAKE_HIP_COMPILER:-}"
 if [[ -z "${HIPCC_BIN}" ]]; then
-    if command -v hipcc >/dev/null 2>&1; then
-        HIPCC_BIN="$(command -v hipcc)"
-    elif [[ -x "/opt/rocm/bin/hipcc" ]]; then
-        HIPCC_BIN="/opt/rocm/bin/hipcc"
-    elif [[ -x "/opt/rocm/hip/bin/hipcc" ]]; then
-        HIPCC_BIN="/opt/rocm/hip/bin/hipcc"
-    elif [[ -x "/opt/rocm/llvm/bin/amdclang++" ]]; then
+    if [[ -x "/opt/rocm/llvm/bin/amdclang++" ]]; then
         HIPCC_BIN="/opt/rocm/llvm/bin/amdclang++"
     else
         echo "ERROR: Could not find hipcc or amdclang++ in expected locations." >&2

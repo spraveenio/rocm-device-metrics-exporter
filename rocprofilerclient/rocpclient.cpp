@@ -253,8 +253,14 @@ int CounterSampler::runSample(std::vector<std::string> &metric_fields)
 	// find intersection of supported and requested fields
 	std::cout << "{\n\"GpuMetrics\": \[\n\t";
 	for (uint32_t gpu_index = 0; gpu_index < agents.size(); gpu_index++) {
+		auto& agent = agents[gpu_index];
+		auto gpu_id = agent.gpu_id;
+		auto drm_render_minor = agent.drm_render_minor;
+		auto logical_node_id = agent.logical_node_id;
 		auto& cs = *samplers[gpu_index];
-		std::cout << "{\"GpuId\" : " << "\"" << gpu_index << "\",\n";
+		std::cout << "{\"GpuId\" : " << "\"" << gpu_id << "\",\n";
+		std::cout << "\t\"DrmRenderId\" : " << "\"" << drm_render_minor << "\",\n";
+		std::cout << "\t\"LogicalNodeId\" : " << "\"" << logical_node_id << "\",\n";
 		std::cout << "\t\"Metrics\" : \[\n";
 		uint32_t count = 0;
 		for (uint32_t mindex = 0; mindex < metrics.size(); mindex++) {
