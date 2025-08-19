@@ -17,14 +17,12 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	exputils "github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
 	"github.com/ROCm/device-metrics-exporter/tools/amd-gpu-health/cli/utils"
@@ -93,19 +91,12 @@ func counterMetricCmdHandler(cmd *cobra.Command, args []string) {
 		logger.Log.Printf("unable to fetch node name. error:%v", err)
 		os.Exit(2)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	k8sc, err := k8sclient.NewClient(ctx, configPath, nodeName)
-	if err != nil {
-		logger.Log.Printf("unable to instantiate k8s client. error:%v", err)
-		os.Exit(2)
-	}
 
 	//fetch auth info
 	authInfo := fetchAuthInfo(cmd)
 
 	isTLS := authInfo.ExporterRootCAPath != ""
-	metricsEndpoint := k8sc.GetGPUMetricsEndpointURL(nodeName, isTLS)
+	metricsEndpoint := utils.GetGPUMetricsEndpointURL(configPath, nodeName, isTLS)
 	// if endpoint is not found, we should not exit with error code 1.
 	if metricsEndpoint == "" {
 		os.Exit(2)
@@ -117,8 +108,12 @@ func counterMetricCmdHandler(cmd *cobra.Command, args []string) {
 	}
 
 	// query metrics endpoint
-	response := utils.QueryMetricsEndpoint(metricsEndpoint, authInfo)
-
+	response, err := utils.QueryMetricsEndpoint(metricsEndpoint, authInfo)
+	if err != nil {
+		logger.Log.Printf("unable to query metrics endpoint. error:%v", err)
+		utils.InvalidateURLCache()
+		os.Exit(2)
+	}
 	logger.Log.Printf("counter metrics response=%s", response)
 	metrics := utils.ParseGPUMetricsResponse(response, metricName)
 	if len(metrics) == 0 {
@@ -173,20 +168,18 @@ func gaugeMetricCmdHandler(cmd *cobra.Command, args []string) {
 		logger.Log.Printf("gauge metrics prometheus endpoint response=%v", response)
 		metrics = utils.ParsePromethuesResponse(*response)
 	} else {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		k8sc, err := k8sclient.NewClient(ctx, configPath, nodeName)
-		if err != nil {
-			logger.Log.Printf("unable to instantiate k8s client. error:%v", err)
-			os.Exit(2)
-		}
 		isTLS := authInfo.ExporterRootCAPath != ""
-		metricsEndpoint := k8sc.GetGPUMetricsEndpointURL(nodeName, isTLS)
+		metricsEndpoint := utils.GetGPUMetricsEndpointURL(configPath, nodeName, isTLS)
 		// if endpoint is not found, we should not exit with error code 1.
 		if metricsEndpoint == "" {
 			os.Exit(2)
 		}
-		response := utils.QueryMetricsEndpoint(metricsEndpoint, authInfo)
+		response, err := utils.QueryMetricsEndpoint(metricsEndpoint, authInfo)
+		if err != nil {
+			logger.Log.Printf("unable to query metrics endpoint. error:%v", err)
+			utils.InvalidateURLCache()
+			os.Exit(2)
+		}
 
 		logger.Log.Printf("gauge metrics exporter endpoint response=%s", response)
 		metrics = utils.ParseGPUMetricsResponse(response, metricName)
