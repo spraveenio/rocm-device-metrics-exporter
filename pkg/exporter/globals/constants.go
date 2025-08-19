@@ -78,6 +78,9 @@ const (
 
 	// Kube RBAC Proxy port name
 	KubeRBACProxyPortName = "exporter-port"
+
+	// MetricsEndpointURLCachePath - path to the cache file that stores metrics endpoint URL in NPD
+	MetricsEndpointURLCachePath = "/tmp/gpu_metrics_endpoint_cache.txt"
 )
 
 type DeviceType string

@@ -34,7 +34,9 @@ import (
 	"github.com/prometheus/common/model"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
+	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
+	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 )
 
@@ -52,6 +54,11 @@ type roundTripperWithAuth struct {
 	base     http.RoundTripper
 	authReq  *http.Request
 	authInfo AuthInfo
+}
+
+type UrlCache struct {
+	Timestamp time.Time `json:"timestamp"`
+	URL       string    `json:"url"`
 }
 
 func (r roundTripperWithAuth) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -98,14 +105,14 @@ func getTLSConfig(authInfo AuthInfo) (*tls.Config, error) {
 	return tlsConf, nil
 }
 
-func QueryMetricsEndpoint(url string, authInfo AuthInfo) (data string) {
+func QueryMetricsEndpoint(url string, authInfo AuthInfo) (data string, err error) {
 	var resp *http.Response
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		logger.Log.Printf("unable to query metrics endpoint. error:%v", err)
+		logger.Log.Printf("unable to create new http request. error:%v", err)
 		return
 	}
 
@@ -541,4 +548,62 @@ func FetchMetricFromGPU(gpu *amdgpu.GPU, metricName string) []float64 {
 		}
 	}
 	return []float64{res}
+}
+
+func readFromCache(cacheFilePath string) (UrlCache, error) {
+	data, err := os.ReadFile(cacheFilePath)
+	if err != nil {
+		logger.Log.Printf("unable to read cache file %s. error:%v", cacheFilePath, err)
+		return UrlCache{}, err
+	}
+	var cache UrlCache
+	err = json.Unmarshal(data, &cache)
+	if err != nil {
+		logger.Log.Printf("unable to unmarshal cache data. error:%v", err)
+		return UrlCache{}, err
+	}
+	return cache, nil
+}
+
+func writeToCache(cacheFilePath string, cache UrlCache) error {
+	dataBytes, err := json.Marshal(cache)
+	if err != nil {
+		logger.Log.Printf("unable to marshal cache data. error:%v", err)
+		return err
+	}
+	err = os.WriteFile(cacheFilePath, dataBytes, 0644)
+	if err != nil {
+		logger.Log.Printf("unable to write to cache file %s. error:%v", cacheFilePath, err)
+		return err
+	}
+	return nil
+}
+
+func InvalidateURLCache() {
+	os.Remove(globals.MetricsEndpointURLCachePath)
+}
+
+// GetGPUMetricsEndpointURL returns the URL for the GPU metrics endpoint.
+// We try to fetch metrics from cache first. If not found, we query K8s API server
+func GetGPUMetricsEndpointURL(configPath, nodeName string, isTLS bool) string {
+	cacheData, err := readFromCache(globals.MetricsEndpointURLCachePath)
+	if err == nil && cacheData.URL != "" {
+		logger.Log.Printf("returning cached metrics endpoint URL: %s", cacheData.URL)
+		return cacheData.URL
+	}
+	logger.Log.Printf("cache not found or stale. Querying K8s API server for metrics endpoint URL")
+	//cache not found, or the cache is stale. Query K8s API server for metrics endpoint URL
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	k8sc, err := k8sclient.NewClient(ctx, configPath, nodeName)
+	if err != nil {
+		logger.Log.Printf("unable to instantiate k8s client. error:%v", err)
+		return ""
+	}
+	metricsEndpoint := k8sc.GetGPUMetricsEndpointURL(nodeName, isTLS)
+	// cache the metrics endpoint URL
+	if metricsEndpoint != "" {
+		_ = writeToCache(globals.MetricsEndpointURLCachePath, UrlCache{Timestamp: time.Now().UTC(), URL: metricsEndpoint})
+	}
+	return metricsEndpoint
 }
