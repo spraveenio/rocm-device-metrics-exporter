@@ -1,6 +1,6 @@
 # Release Notes
 
-## v1.4.0
+## v1.4.0 (active development)
 
 - **MI35x Platfform Support**
   - Exporter now supports MI35x platform with parity with latest supported
