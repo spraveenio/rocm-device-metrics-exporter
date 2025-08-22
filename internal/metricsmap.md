@@ -1,3 +1,38 @@
+# Critical Metrics
+- The below list of metrics are critical to evaluate the workload is running as expected on the GPU, these metric values change as per the workload exercised on the GPU
+
+> **Note:** few metrics are applicable for unpartitioned GPU, some fields are platform specific, please refer [link](../docs/configuration/metricslist.md) for more details
+
+  - Temperature Metrics
+    1. GPU_EDGE_TEMPERATURE
+    2. GPU_JUNCTION_TEMPERATURE
+    3. GPU_MEMORY_TEMPERATURE
+    4. GPU_HBM_TEMPERATURE
+
+  - Power Metrics
+    1. GPU_PACKAGE_POWER
+    2. GPU_AVERAGE_PACKAGE_POWER
+
+  - Activity Metrics
+    1. GPU_GFX_ACTIVITY
+    2. GPU_UMC_ACTIVITY
+    3. GPU_GFX_BUSY_INSTANTANEOUS
+    4. GPU_VCN_BUSY_INSTANTANEOUS
+
+  - VRAM Metrics
+    1. GPU_TOTAL_VRAM
+    2. GPU_USED_VRAM
+    3. GPU_FREE_VRAM
+
+   - Profiler Metrics
+    1. GPU_PROF_SM_ACTIVE
+    2. GPU_PROF_TENSOR_ACTIVE_PERCENT
+    3. GPU_PROF_OCCUPANCY_PER_CU
+    4. GPU_PROF_OCCUPANCY_PER_ACTIVE_CU
+    5. GPU_PROF_SIMD_UTILIZATION
+    6. GPU_PROF_GUI_UTIL_PERCENT
+
+
 # Internal Mapping of Field on each service
 
 Platform if specified only applies to that specific model, else applies to all
@@ -28,6 +63,8 @@ Platform if specified only applies to that specific model, else applies to all
 | PCIE_REPLAY_ROLLOVER_COUNT                          | stats->pcie_stats.replay_rollover_count                     | pcie_info.pcie_metric.pcie_replay_roll_over_count | MI3xx                      |
 | PCIE_NACK_SENT_COUNT                                | stats->pcie_stats.nack_sent_count                           | pcie_info.pcie_metric.pcie_nak_sent_count         | MI3xx                      |
 | PCIE_NAC_RECEIVED_COUNT                             | stats->pcie_stats.nack_received_count                       | pcie_info.pcie_metric.pcie_nak_received_count     | MI3xx                      |
+| PCIE_RX                                             | stats->pcie_stats.rx_bytes                                  | pcie_info.pcie_metric.CURRENT_BANDWIDTH_SENT      | (upcoming feature)         |
+| PCIE_TX                                             | stats->pcie_stats.tx_bytes                                  | pcie_info.pcie_metric.CURRENT_BANDWIDTH_RECEIVED  | (upcoming feature)         |
 | GPU_CLOCK                                           | status.clock_status[i] SYSTEM                               | metrics_info->current_gfxclks[i]                  |                            |
 |                                                     | status.clock_status[i] MEMORY                               | metrics_info->current_uclk                        |                            |
 |                                                     | status.clock_status[i] VIDEO                                | metrics_info->current_vclk0s[i]                   |                            |
