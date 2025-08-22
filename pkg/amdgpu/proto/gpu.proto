@@ -473,6 +473,10 @@ message GPUPCIeStats {
   uint64 NACKSentCount       = 4;
   // total number of NACKs issued on the PCIe link by the receiver
   uint64 NACKReceivedCount   = 5;
+  // accumulated bytes received from the PCIe link
+  uint64       RxBytes       = 6;
+  // accumulated bytes transmitted to the PCIe link
+  uint64       TxBytes       = 7;
 }
 
 // voltage statistics
