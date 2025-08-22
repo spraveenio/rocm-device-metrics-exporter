@@ -167,7 +167,9 @@ data:
           "GPU_PROF_OCCUPANCY_ELAPSED",
           "GPU_PROF_OCCUPANCY_PER_ACTIVE_CU",
           "GPU_PROF_OCCUPANCY_PER_CU",
-          "GPU_PROF_SIMD_UTILIZATION"
+          "GPU_PROF_SIMD_UTILIZATION",
+          "PCIE_RX",
+          "PCIE_TX"
         ],
         "Labels": [
           "GPU_UUID",

@@ -18,6 +18,7 @@ package gpuagent
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
@@ -189,6 +190,9 @@ type metrics struct {
 	gpuGfxBusyInst  prometheus.GaugeVec
 	gpuVcnBusyInst  prometheus.GaugeVec
 	gpuJpegBusyInst prometheus.GaugeVec
+
+	gpuPcieRx prometheus.GaugeVec
+	gpuPcieTx prometheus.GaugeVec
 
 	// profiler metrics
 	gpuGrbmGuiActivity               prometheus.GaugeVec
@@ -549,6 +553,8 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		exportermetrics.GPUMetricField_GPU_GFX_BUSY_INSTANTANEOUS.String():                         FieldMeta{Metric: ga.m.gpuGfxBusyInst},
 		exportermetrics.GPUMetricField_GPU_VCN_BUSY_INSTANTANEOUS.String():                         FieldMeta{Metric: ga.m.gpuVcnBusyInst},
 		exportermetrics.GPUMetricField_GPU_JPEG_BUSY_INSTANTANEOUS.String():                        FieldMeta{Metric: ga.m.gpuJpegBusyInst},
+		exportermetrics.GPUMetricField_PCIE_RX.String():                                            FieldMeta{Metric: ga.m.gpuPcieRx},
+		exportermetrics.GPUMetricField_PCIE_TX.String():                                            FieldMeta{Metric: ga.m.gpuPcieTx},
 		// profiler entries
 		exportermetrics.GPUMetricField_GPU_PROF_GRBM_GUI_ACTIVE.String():                    FieldMeta{Metric: ga.m.gpuGrbmGuiActivity, Alias: "GRBM_GUI_ACTIVE"},
 		exportermetrics.GPUMetricField_GPU_PROF_SQ_WAVES.String():                           FieldMeta{Metric: ga.m.gpuSqWaves, Alias: "SQ_WAVES"},
@@ -1406,6 +1412,16 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Help: "Fraction of time the SIMDs are being utilized [0,1]",
 		},
 			labels),
+		gpuPcieRx: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pcie_rx",
+			Help: "accumulated bytes received from the PCIe link",
+		},
+			labels),
+		gpuPcieTx: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pcie_tx",
+			Help: "accumulated bytes transmitted to the PCIe link",
+		},
+			labels),
 	}
 	ga.initFieldMetricsMap()
 
@@ -1677,7 +1693,11 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(
 			labels[key] = ga.staticHostLabels[exportermetrics.GPUMetricLabel_HOSTNAME.String()]
 		case exportermetrics.GPUMetricLabel_GPU_PARTITION_ID.String():
 			if gpu != nil {
-				labels[key] = fmt.Sprintf("%v", gpu.Status.PartitionId)
+				if gpu.Status.PartitionId == math.MaxUint32 {
+					labels[key] = "NA"
+				} else {
+					labels[key] = fmt.Sprintf("%v", gpu.Status.PartitionId)
+				}
 			}
 		case exportermetrics.GPUMetricLabel_GPU_COMPUTE_PARTITION_TYPE.String():
 			if gpu != nil {
@@ -1853,6 +1873,10 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 			labels, pcieStats.NACKSentCount)
 		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeNACKReceivedCount, exportermetrics.GPUMetricField_PCIE_NAC_RECEIVED_COUNT.String(),
 			labels, pcieStats.NACKReceivedCount)
+		ga.fl.logWithValidateAndExport(ga.m.gpuPcieRx, exportermetrics.GPUMetricField_PCIE_RX.String(),
+			labels, pcieStats.RxBytes)
+		ga.fl.logWithValidateAndExport(ga.m.gpuPcieTx, exportermetrics.GPUMetricField_PCIE_TX.String(),
+			labels, pcieStats.TxBytes)
 	}
 
 	ga.fl.logWithValidateAndExport(ga.m.gpuEnergyConsumed, exportermetrics.GPUMetricField_GPU_ENERGY_CONSUMED.String(),
