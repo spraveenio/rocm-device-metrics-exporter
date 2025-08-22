@@ -18,13 +18,16 @@ package nicagent
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
+
+	_ "github.com/alta/protopatch/patch" // nolint: gosec
 
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
-	_ "github.com/alta/protopatch/patch" // nolint: gosec
 )
 
 type NICAgentClient struct {
@@ -56,6 +59,7 @@ func WithK8sSchedulerClient(k8sScheduler scheduler.SchedulerClient) NICAgentClie
 
 func (na *NICAgentClient) initClients() (err error) {
 	logger.Log.Printf("Establishing connection to NIC clients")
+	var errStr []string
 	for _, client := range na.nicClients {
 		if err = client.Init(); err != nil {
 			logger.Log.Printf("%s init err :%+v", client.GetClientName(), err)
