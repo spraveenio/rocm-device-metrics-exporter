@@ -43,7 +43,7 @@ Platform if specified only applies to that specific model, else applies to all
 | GPU_PACKAGE_POWER                                   | stats.PackagePower                                          | power_info.current_socket_power                   | MI3xx                      |
 | GPU_AVERAGE_PACKAGE_POWER                           | stats.AvgPackagePower                                       | power_info.average_socket_power                   | MI2xx                      |
 | GPU_EDGE_TEMPERATURE                                | stats.temperature.edge_temperature                          | temp.edge                                         | MI2xx                      |
-| GPU_JUNCTION_TEMPERATURE                            | stats.temperature.junction_temperature                      | temp.junction/hostspot                            | MI3xx                      |
+| GPU_JUNCTION_TEMPERATURE                            | stats.temperature.junction_temperature                      | temp.junction/hotspot                             | MI3xx                      |
 | GPU_MEMORY_TEMPERATURE                              | stats.temperature.memory_temperature                        | temp.memory                                       |                            |
 | GPU_HBM_TEMPERATURE                                 | stats.temperature.hbm_temperature[i]                        | temp.hbm[i]                                       |                            |
 | GPU_GFX_ACTIVITY (Applicable for unpartitioned GPU) | stats.usage.gfx_activity                                    | usage.gfx_activity                                |                            |
@@ -65,6 +65,7 @@ Platform if specified only applies to that specific model, else applies to all
 | PCIE_NAC_RECEIVED_COUNT                             | stats->pcie_stats.nack_received_count                       | pcie_info.pcie_metric.pcie_nak_received_count     | MI3xx                      |
 | PCIE_RX                                             | stats->pcie_stats.rx_bytes                                  | pcie_info.pcie_metric.CURRENT_BANDWIDTH_SENT      | (upcoming feature)         |
 | PCIE_TX                                             | stats->pcie_stats.tx_bytes                                  | pcie_info.pcie_metric.CURRENT_BANDWIDTH_RECEIVED  | (upcoming feature)         |
+| PCIE_BIDIRECTIONAL_BANDWIDTH                        | stats->pcie_stats.bidir_bandwidth                           | pcie_info.pcie_metric.pcie_bandwidth_acc          |  MI3xx api only (grep for pcie_bandwidth_acc in  `rocm-smi --showmetrics`)                           |
 | GPU_CLOCK                                           | status.clock_status[i] SYSTEM                               | metrics_info->current_gfxclks[i]                  |                            |
 |                                                     | status.clock_status[i] MEMORY                               | metrics_info->current_uclk                        |                            |
 |                                                     | status.clock_status[i] VIDEO                                | metrics_info->current_vclk0s[i]                   |                            |
