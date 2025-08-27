@@ -1115,12 +1115,12 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			labels),
 		gpuXgmiLinkStatsRx: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_xgmi_link_rx",
-			Help: "XGMI Link Data Read in KB",
+			Help: "Accumulated XGMI Link Data Read in KB",
 		},
 			append([]string{"link_index"}, labels...)),
 		gpuXgmiLinkStatsTx: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_xgmi_link_tx",
-			Help: "XGMI Link Data Write in KB",
+			Help: "Accumulated XGMI Link Data Write in KB",
 		},
 			append([]string{"link_index"}, labels...)),
 		gpuCurrAccCtr: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -1155,17 +1155,17 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			labels),
 		gpuGfxBusyInst: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_gfx_busy_instantaneous",
-			Help: "gfx busy instantaneous per accelerated compute processor(xcp) per compute core (xcc), as per partitioning of the system",
+			Help: "Gfx busy instantaneous per accelerated compute processor(xcp) per compute core (xcc), as per partitioning of the system",
 		},
 			append([]string{"xcc_index"}, labels...)),
 		gpuVcnBusyInst: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_vcn_busy_instantaneous",
-			Help: "vcn busy instantaneous per accelerated compute processor(xcp) per compute core (xcc), as per partitioning of the system",
+			Help: "Vcn busy instantaneous per accelerated compute processor(xcp) per compute core (xcc), as per partitioning of the system",
 		},
 			append([]string{"xcc_index"}, labels...)),
 		gpuJpegBusyInst: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_jpeg_busy_instantaneous",
-			Help: "jpeg busy instantaneous per accelerated compute processor(xcp) per compute core (xcc), as per partitioning of the system",
+			Help: "Jpeg busy instantaneous per accelerated compute processor(xcp) per compute core (xcc), as per partitioning of the system",
 		},
 			append([]string{"xcc_index"}, labels...)),
 		gpuGrbmGuiActivity: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -1430,17 +1430,17 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			labels),
 		gpuPcieRx: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_rx",
-			Help: "accumulated bytes received from the PCIe link",
+			Help: "Accumulated bytes received from the PCIe link",
 		},
 			labels),
 		gpuPcieTx: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "pcie_tx",
-			Help: "accumulated bytes transmitted to the PCIe link",
+			Help: "Accumulated bytes transmitted to the PCIe link",
 		},
 			labels),
 		gpuPcieBidirBandwidth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_pcie_bidirectional_bandwidth",
-			Help: "accumulated bandwidth on PCIe link in GB/sec",
+			Help: "Accumulated bandwidth on PCIe link in GB/sec",
 		},
 			labels),
 	}
