@@ -192,8 +192,9 @@ type metrics struct {
 	gpuVcnBusyInst  prometheus.GaugeVec
 	gpuJpegBusyInst prometheus.GaugeVec
 
-	gpuPcieRx prometheus.GaugeVec
-	gpuPcieTx prometheus.GaugeVec
+	gpuPcieRx             prometheus.GaugeVec
+	gpuPcieTx             prometheus.GaugeVec
+	gpuPcieBidirBandwidth prometheus.GaugeVec
 
 	// profiler metrics
 	gpuGrbmGuiActivity               prometheus.GaugeVec
@@ -569,6 +570,7 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		exportermetrics.GPUMetricField_GPU_JPEG_BUSY_INSTANTANEOUS.String():                        FieldMeta{Metric: ga.m.gpuJpegBusyInst},
 		exportermetrics.GPUMetricField_PCIE_RX.String():                                            FieldMeta{Metric: ga.m.gpuPcieRx},
 		exportermetrics.GPUMetricField_PCIE_TX.String():                                            FieldMeta{Metric: ga.m.gpuPcieTx},
+		exportermetrics.GPUMetricField_PCIE_BIDIRECTIONAL_BANDWIDTH.String():                       FieldMeta{Metric: ga.m.gpuPcieBidirBandwidth},
 		// profiler entries
 		exportermetrics.GPUMetricField_GPU_PROF_GRBM_GUI_ACTIVE.String():                    FieldMeta{Metric: ga.m.gpuGrbmGuiActivity, Alias: "GRBM_GUI_ACTIVE"},
 		exportermetrics.GPUMetricField_GPU_PROF_SQ_WAVES.String():                           FieldMeta{Metric: ga.m.gpuSqWaves, Alias: "SQ_WAVES"},
@@ -1436,6 +1438,11 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Help: "accumulated bytes transmitted to the PCIe link",
 		},
 			labels),
+		gpuPcieBidirBandwidth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_pcie_bidirectional_bandwidth",
+			Help: "accumulated bandwidth on PCIe link in GB/sec",
+		},
+			labels),
 	}
 	ga.initFieldMetricsMap()
 
@@ -1890,6 +1897,8 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 			labels, pcieStats.RxBytes)
 		ga.fl.logWithValidateAndExport(ga.m.gpuPcieTx, exportermetrics.GPUMetricField_PCIE_TX.String(),
 			labels, pcieStats.TxBytes)
+		ga.fl.logWithValidateAndExport(ga.m.gpuPcieBidirBandwidth, exportermetrics.GPUMetricField_PCIE_BIDIRECTIONAL_BANDWIDTH.String(),
+			labels, pcieStats.BiDirBandwidth)
 	}
 
 	ga.fl.logWithValidateAndExport(ga.m.gpuEnergyConsumed, exportermetrics.GPUMetricField_GPU_ENERGY_CONSUMED.String(),

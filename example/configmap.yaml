@@ -169,7 +169,8 @@ data:
           "GPU_PROF_OCCUPANCY_PER_CU",
           "GPU_PROF_SIMD_UTILIZATION",
           "PCIE_RX",
-          "PCIE_TX"
+          "PCIE_TX",
+          "PCIE_BIDIRECTIONAL_BANDWIDTH"
         ],
         "Labels": [
           "GPU_UUID",

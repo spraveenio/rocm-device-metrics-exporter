@@ -142,8 +142,9 @@ enum GPUMetricField {
     GPU_VCN_BUSY_INSTANTANEOUS   = 99;
     GPU_JPEG_BUSY_INSTANTANEOUS  = 100;
 
-    PCIE_RX                     = 101;
-    PCIE_TX                     = 102;
+    PCIE_RX                      = 101;
+    PCIE_TX                      = 102;
+    PCIE_BIDIRECTIONAL_BANDWIDTH = 103;
 
     // Profiler Metrics (reserving 801 to 1200)
     GPU_PROF_GRBM_GUI_ACTIVE                                 = 801;
