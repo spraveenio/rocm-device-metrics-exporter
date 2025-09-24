@@ -21,6 +21,9 @@ import (
 	"math"
 	"strings"
 
+	"github.com/gofrs/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
 	k8sclient "github.com/ROCm/device-metrics-exporter/pkg/client"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/gen/exportermetrics"
@@ -30,8 +33,6 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/parserutil"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
-	"github.com/gofrs/uuid"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type FieldMeta struct {
@@ -490,7 +491,7 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		exportermetrics.GPUMetricField_PCIE_RECOVERY_COUNT.String():                                FieldMeta{Metric: ga.m.gpuPCIeRecoveryCount},
 		exportermetrics.GPUMetricField_PCIE_REPLAY_ROLLOVER_COUNT.String():                         FieldMeta{Metric: ga.m.gpuPCIeReplayRolloverCount},
 		exportermetrics.GPUMetricField_PCIE_NACK_SENT_COUNT.String():                               FieldMeta{Metric: ga.m.gpuPCIeNACKSentCount},
-		exportermetrics.GPUMetricField_PCIE_NAC_RECEIVED_COUNT.String():                            FieldMeta{Metric: ga.m.gpuPCIeNACKReceivedCount},
+		exportermetrics.GPUMetricField_PCIE_NACK_RECEIVED_COUNT.String():                           FieldMeta{Metric: ga.m.gpuPCIeNACKReceivedCount},
 		exportermetrics.GPUMetricField_GPU_CLOCK.String():                                          FieldMeta{Metric: ga.m.gpuClock},
 		exportermetrics.GPUMetricField_GPU_POWER_USAGE.String():                                    FieldMeta{Metric: ga.m.gpuPowerUsage},
 		exportermetrics.GPUMetricField_GPU_TOTAL_VRAM.String():                                     FieldMeta{Metric: ga.m.gpuTotalVram},
@@ -1129,7 +1130,7 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 		},
 			labels),
 		gpuProcHRA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_violation_proc_hot_residency_accumulated",
+			Name: "gpu_violation_processor_hot_residency_accumulated",
 			Help: "process hot residency accumulated violation counter",
 		},
 			labels),
@@ -1139,12 +1140,12 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 		},
 			labels),
 		gpuSTRA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_violation_soc_thermal_residency_accumulated",
+			Name: "gpu_violation_socket_thermal_residency_accumulated",
 			Help: "socket thermal accumulated violation counter",
 		},
 			labels),
 		gpuVRTRA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_violation_vr_thermal_tracking_accumulated",
+			Name: "gpu_violation_vr_thermal_residency_accumulated",
 			Help: "voltage rail accumulated violation counter",
 		},
 			labels),
@@ -1439,7 +1440,7 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 		},
 			labels),
 		gpuPcieBidirBandwidth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "gpu_pcie_bidirectional_bandwidth",
+			Name: "pcie_bidirectional_bandwidth",
 			Help: "Accumulated bandwidth on PCIe link in GB/sec",
 		},
 			labels),
@@ -1891,7 +1892,7 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 			labels, pcieStats.ReplayRolloverCount)
 		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeNACKSentCount, exportermetrics.GPUMetricField_PCIE_NACK_SENT_COUNT.String(),
 			labels, pcieStats.NACKSentCount)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeNACKReceivedCount, exportermetrics.GPUMetricField_PCIE_NAC_RECEIVED_COUNT.String(),
+		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeNACKReceivedCount, exportermetrics.GPUMetricField_PCIE_NACK_RECEIVED_COUNT.String(),
 			labels, pcieStats.NACKReceivedCount)
 		ga.fl.logWithValidateAndExport(ga.m.gpuPcieRx, exportermetrics.GPUMetricField_PCIE_RX.String(),
 			labels, pcieStats.RxBytes)

@@ -314,7 +314,7 @@ func FetchMetricFromGPU(gpu *amdgpu.GPU, metricName string) []float64 {
 		if stats.PCIeStats != nil {
 			res = float64(stats.PCIeStats.NACKSentCount)
 		}
-	case exportermetrics.GPUMetricField_PCIE_NAC_RECEIVED_COUNT.String():
+	case exportermetrics.GPUMetricField_PCIE_NACK_RECEIVED_COUNT.String():
 		if stats.PCIeStats != nil {
 			res = float64(stats.PCIeStats.NACKReceivedCount)
 		}
