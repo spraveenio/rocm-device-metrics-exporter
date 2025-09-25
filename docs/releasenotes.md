@@ -33,9 +33,9 @@ ROCm 7.0.rc1 MI2xx, MI3xx
 
 - **New Profiler Fields**
   - New fields are added for better understanding of the application
-
+ 
 ### Platform Support
-ROCm 7.0.rc1 MI2xx, MI3xx
+ROCm 7.0 MI2xx, MI3xx
 
 
 ### Issues Fixed

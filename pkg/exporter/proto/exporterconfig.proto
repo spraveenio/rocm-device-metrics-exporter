@@ -51,7 +51,7 @@ enum GPUMetricField {
     PCIE_RECOVERY_COUNT         = 20;
     PCIE_REPLAY_ROLLOVER_COUNT  = 21;
     PCIE_NACK_SENT_COUNT        = 22;
-    PCIE_NAC_RECEIVED_COUNT     = 23;
+    PCIE_NACK_RECEIVED_COUNT    = 23;
     GPU_CLOCK                   = 24;
     GPU_POWER_USAGE             = 25;
     GPU_TOTAL_VRAM              = 26;

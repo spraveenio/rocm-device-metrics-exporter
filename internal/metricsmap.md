@@ -45,7 +45,7 @@ Platform if specified only applies to that specific model, else applies to all
 | GPU_EDGE_TEMPERATURE                                | stats.temperature.edge_temperature                          | temp.edge                                         | MI2xx                      |
 | GPU_JUNCTION_TEMPERATURE                            | stats.temperature.junction_temperature                      | temp.junction/hotspot                             | MI3xx                      |
 | GPU_MEMORY_TEMPERATURE                              | stats.temperature.memory_temperature                        | temp.memory                                       |                            |
-| GPU_HBM_TEMPERATURE                                 | stats.temperature.hbm_temperature[i]                        | temp.hbm[i]                                       |                            |
+| GPU_HBM_TEMPERATURE                                 | stats.temperature.hbm_temperature[i]                        | temp.hbm[i]                                       |             Depricated from 6.14.14 driver |
 | GPU_GFX_ACTIVITY (Applicable for unpartitioned GPU) | stats.usage.gfx_activity                                    | usage.gfx_activity                                |                            |
 | GPU_UMC_ACTIVITY                                    | stats.usage.umc_activity                                    | usage.umc_activity                                |                            |
 | GPU_MMA_ACTIVITY                                    | stats.usage.mm_activity                                     | usage.mm_activity                                 | depricated on all platform |
