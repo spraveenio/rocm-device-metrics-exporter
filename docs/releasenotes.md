@@ -54,6 +54,18 @@ ROCm 7.0 MI2xx, MI3xx
   | 16   | gpu_violation_proc_hot_residency_accumulated    | gpu_violation_processor_hot_residency_accumulated  |
   | 17   | gpu_violation_soc_thermal_residency_accumulated | gpu_violation_socket_thermal_residency_accumulated |
 
+
+### Known Issues
+ - violation metrics are broken on rocm 7.0.0 api change, they are not being exported. This is a known issue and will be fixed in the next release.
+
+  - [Issue 245/246]  enabling exporter profiling metrics can cause the exporter over time to consume more memory and cpu. This is a known issue and will be fixed in the next release.
+    - https://github.com/ROCm/device-metrics-exporter/issues/245
+    - https://github.com/ROCm/device-metrics-exporter/issues/246
+
+  _Workaround_ is to disable the profiling metrics in the exporter configmap or restart the pod or service at regular intervals.
+
+ [Issues] (https://github.com/ROCm/device-metrics-exporter/issues)
+
 ## v1.3.1
 
 ### Release Highlights
