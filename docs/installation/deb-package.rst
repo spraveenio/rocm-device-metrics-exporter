@@ -8,7 +8,6 @@ System Requirements
 Before installing the AMD GPU Metrics Exporter, you need to install the following:
 
 - **Operating System**: Ubuntu 22.04 or Ubuntu 24.04
-- **ROCm Version**: 6.4.1 (specific to each .deb pkg)
 
 Each Debian package release of the Standalone Metrics Exporter is dependent on a specific version of the ROCm amdgpu driver. Please see table below for more information:
 
