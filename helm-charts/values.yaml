@@ -7,6 +7,9 @@ nodeSelector: {}
 # -- Add tolerations for deploying metrics exporter on tainted nodes
 tolerations: []
 
+# -- Add annotations to the pods
+podAnnotations: {}
+
 # -- kubelet configuration
 kubelet:
   # -- host path for kubelet pod-resources directory (optional)
@@ -44,6 +47,8 @@ resources:
 service:
   # -- metrics exporter service type, could be ClusterIP or NodePort
   type: ClusterIP
+  # -- Add annotations to the service
+  annotations: {}
   ClusterIP:
     # -- set port for ClusterIP type service
     port: 5000
