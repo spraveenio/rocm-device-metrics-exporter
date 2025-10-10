@@ -4,6 +4,10 @@ metadata:
   name: {{ .Release.Name }}-amd-metrics-exporter-svc
   labels:
     app: {{ .Release.Name }}-amdgpu-metrics-exporter
+  {{- if .Values.service.annotations }}
+  annotations:
+    {{- toYaml .Values.service.annotations | nindent 4 }}
+  {{- end }}
 spec:
   selector:
     app: {{ .Release.Name }}-amdgpu-metrics-exporter
