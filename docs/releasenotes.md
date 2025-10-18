@@ -7,6 +7,15 @@
   - Default limits are set if not specified in the Helm chart
   - Debian systemd service file is now set with default resource limits
 
+- **Profiler Failure Handling**
+  - **Profiler Failure Handling**
+    - Profiler is hardware sensitive for failures. To better handle potential system disruption from coredumps or profiler failures, the exporter will automatically disable profiler metrics to maintain critical exporter functionality and server stability:
+      - **Coredump**: Profiler will be disabled immediately upon detection
+      - **Non-crash errors**: If the profiler encounters 3 consecutive non-crash errors, it will be automatically disabled
+    - **Re-enabling**: Profiler can be re-enabled by restarting/deleting the exporter pod on that node/server
+
+- **_Note_** Profiler metrics are prefixed by `gpu_prof_` in [metrics list](./configuration/metricslist.md)
+
 ### Platform Support
 ROCm 7.0 MI2xx, MI3xx
 
