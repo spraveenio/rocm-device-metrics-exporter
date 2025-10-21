@@ -138,31 +138,25 @@ else
 DEBIAN_VERSION := "1.4.1"
 endif
 REL_IMAGE_TAG := $(subst $\",,v$(PACKAGE_VERSION))
-HELM_VERSION := $(REL_IMAGE_TAG)
-
-DOCS_DIR := $(TOP_DIR)/docs
-DOCS_CONFIG_DIR := $(DOCS_DIR)/configuration/
-DOCS_INSTALLATION_DIR := $(DOCS_DIR)/installation/
-DOCS_INTEGRATION_DIR := $(DOCS_DIR)/integrations/
-
-UPDATE_VERSION_TARGET_DIRS := $(DOCS_DIR)/configuration/ $(DOCS_DIR)/installation/ $(DOCS_DIR)/integrations/
 
 .PHONY: update-version
 update-version:
 	@echo "Replacing versions with $(PACKAGE_VERSION)..."
-	@sed -i -e 's|version = .*|version = ${PACKAGE_VERSION}|' docs/conf.py
-	@sed -i -e 's|tag:.*|tag: ${REL_IMAGE_TAG}|' helm-charts/values.yaml
-	@sed -i -e 's|version:.*|version: ${HELM_VERSION}|' helm-charts/Chart.yaml
-	@sed -i -e 's|appVersion:.*|appVersion: ${HELM_VERSION}|' helm-charts/Chart.yaml
-	@sed -i -e 's|debian_version = .*|debian_version = ${DEBIAN_VERSION}|' docs/conf.py
-	@for dir in $(UPDATE_VERSION_TARGET_DIRS); do \
-		if [ -d $$dir ]; then \
-			find $$dir -type f -exec sed -i -E "/Kubernetes/!s/v1+\.[0-9]+\.[0-9]+/v$(PACKAGE_VERSION)/g" {} +; \
-			find $$dir -type f -exec sed -i -E "/Kubernetes/!s/1+\.[0-9]+\.[0-9]+/$(PACKAGE_VERSION)/g" {} +; \
-		fi \
+	sed -i -e 's|version = .*|version = ${PACKAGE_VERSION}|' docs/conf.py
+	for file in docs/installation/kubernetes-helm.md \
+	    helm-charts/values.yaml; do \
+	    sed -i -e 's|tag:.*|tag: ${REL_IMAGE_TAG}|' $$file; \
 	done
-
-
+	sed -i -e 's|debian_version = .*|debian_version = ${DEBIAN_VERSION}|' docs/conf.py
+	sed -i -e 's|version="[^"]*"|version="${REL_IMAGE_TAG}"|' docker/Dockerfile.exporter-release
+	sed -i -e 's|release="[^"]*"|release="${REL_IMAGE_TAG}"|' docker/Dockerfile.exporter-release
+	for file in docs/installation/docker.md \
+		docs/installation/singularity.md \
+		docs/configuration/configmap.md \
+		docs/configuration/docker.md \
+		docs/integrations/prometheus-grafana.md; do \
+		sed -i 's#v[0-9]\+\.[0-9]\+\.[0-9]\+#${REL_IMAGE_TAG}#g' $$file; \
+	done
 
 
 TO_GEN_TESTRUNNER := pkg/testrunner/proto
