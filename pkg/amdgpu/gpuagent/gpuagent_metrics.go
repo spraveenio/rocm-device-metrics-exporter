@@ -198,6 +198,7 @@ type metrics struct {
 	gpuPcieRx             prometheus.GaugeVec
 	gpuPcieTx             prometheus.GaugeVec
 	gpuPcieBidirBandwidth prometheus.GaugeVec
+	gpuAfidErrors         prometheus.GaugeVec
 
 	// profiler metrics
 	gpuGrbmGuiActivity               prometheus.GaugeVec
@@ -343,6 +344,15 @@ func (ga *GPUAgentClient) initLabelConfigs(config *exportermetrics.GPUMetricConf
 	logger.Log.Printf("export-labels updated to %v", exportLabels)
 }
 
+func (ga *GPUAgentClient) initAfidMetrics(config *exportermetrics.GPUMetricConfig) {
+	afidField := exportermetrics.GPUMetricField_GPU_AFID_ERRORS.String()
+	ga.enableAfidMetrics = true
+	if !getExporterFieldState(afidField) {
+		ga.enableAfidMetrics = false
+	}
+	logger.Log.Printf("AFID metric state set to %v", ga.enableAfidMetrics)
+}
+
 func (ga *GPUAgentClient) initProfilerMetrics(config *exportermetrics.GPUMetricConfig) {
 	curNodeName, _ := utils.GetHostName()
 	// perf metrics are disabled by default as it has a cost associated
@@ -429,6 +439,16 @@ func initGPUSelectorConfig(config *exportermetrics.GPUMetricConfig) {
 			gpuSelectorMap[ins] = true
 		}
 	}
+}
+
+// getExporterFieldState returns true if field is enabled for export
+// should be called after initFieldConfig
+func getExporterFieldState(field string) bool {
+	enabled, ok := exportFieldMap[strings.ToUpper(field)]
+	if !ok {
+		return false
+	}
+	return enabled
 }
 
 func initFieldConfig(config *exportermetrics.GPUMetricConfig) {
@@ -566,6 +586,7 @@ func (ga *GPUAgentClient) initFieldMetricsMap() {
 		exportermetrics.GPUMetricField_PCIE_RX.String():                                            FieldMeta{Metric: ga.m.gpuPcieRx},
 		exportermetrics.GPUMetricField_PCIE_TX.String():                                            FieldMeta{Metric: ga.m.gpuPcieTx},
 		exportermetrics.GPUMetricField_PCIE_BIDIRECTIONAL_BANDWIDTH.String():                       FieldMeta{Metric: ga.m.gpuPcieBidirBandwidth},
+		exportermetrics.GPUMetricField_GPU_AFID_ERRORS.String():                                    FieldMeta{Metric: ga.m.gpuAfidErrors},
 		// profiler entries
 		exportermetrics.GPUMetricField_GPU_PROF_GRBM_GUI_ACTIVE.String():                    FieldMeta{Metric: ga.m.gpuGrbmGuiActivity, Alias: "GRBM_GUI_ACTIVE"},
 		exportermetrics.GPUMetricField_GPU_PROF_SQ_WAVES.String():                           FieldMeta{Metric: ga.m.gpuSqWaves, Alias: "SQ_WAVES"},
@@ -1438,6 +1459,11 @@ func (ga *GPUAgentClient) initPrometheusMetrics() {
 			Help: "Accumulated bandwidth on PCIe link in GB/sec",
 		},
 			labels),
+		gpuAfidErrors: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_afid_errors",
+			Help: "Last Occured RAS Event associated AMD Field Identifier list",
+		},
+			append([]string{"severity", "afid_index"}, labels...)),
 	}
 	ga.initFieldMetricsMap()
 
@@ -1469,6 +1495,7 @@ func (ga *GPUAgentClient) InitConfigs() error {
 	ga.initLabelConfigs(filedConfigs)
 	initFieldConfig(filedConfigs)
 	ga.initProfilerMetrics(filedConfigs)
+	ga.initAfidMetrics(filedConfigs)
 	initGPUSelectorConfig(filedConfigs)
 	ga.initPrometheusMetrics()
 	ga.initProfilerMetricsField()
@@ -1484,6 +1511,14 @@ func getGPURenderId(gpu *amdgpu.GPU) string {
 
 func getGPUInstanceID(gpu *amdgpu.GPU) int {
 	return int(gpu.Status.Index)
+}
+
+func getGPUUUID(gpu *amdgpu.GPU) string {
+	if gpu != nil && gpu.Spec != nil {
+		guuid, _ := uuid.FromBytes(gpu.Spec.Id)
+		return guuid.String()
+	}
+	return ""
 }
 
 func getGPUNodeID(gpu *amdgpu.GPU) string {
@@ -1517,7 +1552,7 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	newGPUState := ga.processEccErrorMetrics(resp.Response, wls)
 	_ = ga.updateNewHealthState(newGPUState)
 	for _, gpu := range resp.Response {
-		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, nil)
+		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, nil, nil)
 	}
 	return nil
 }
@@ -1630,8 +1665,7 @@ func (ga *GPUAgentClient) populateLabelsFromGPU(
 		switch ckey {
 		case exportermetrics.GPUMetricLabel_GPU_UUID.String():
 			if gpu != nil {
-				guuid, _ := uuid.FromBytes(gpu.Spec.Id)
-				labels[key] = guuid.String()
+				labels[key] = getGPUUUID(gpu)
 			}
 		case exportermetrics.GPUMetricLabel_GPU_ID.String():
 			if gpu != nil {
@@ -1789,6 +1823,7 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 	gpu *amdgpu.GPU,
 	partitionMap map[string]*amdgpu.GPU,
 	profMetrics map[string]float64,
+	cperEntryMap map[string]*amdgpu.CPEREntry,
 ) {
 	if !ga.exporterEnabledGPU(getGPUInstanceID(gpu)) {
 		return
@@ -1813,6 +1848,7 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 			ga.m.gpuHealth.With(labels).Set(0)
 		}
 	}
+	gpuuuid := getGPUUUID(gpu)
 
 	// gpu temp stats
 	tempStats := stats.Temperature
@@ -2113,6 +2149,20 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 			labels, violationStats.VRThermalResidencyAccumulated)
 		ga.fl.logWithValidateAndExport(ga.m.gpuHBMTRA, exportermetrics.GPUMetricField_GPU_VIOLATION_HBM_THERMAL_RESIDENCY_ACCUMULATED.String(),
 			labels, violationStats.HBMThermalResidencyAccumulated)
+	}
+
+	// populate cper afid errors if available
+	if len(cperEntryMap) > 0 {
+		if c, ok := cperEntryMap[gpuuuid]; ok {
+			normalizedValue := strings.TrimPrefix(c.Severity.String(), "CPER_SEVERITY_")
+			labelsWithIndex["severity"] = strings.ToLower(normalizedValue)
+			for i, afid := range c.AFId {
+				labelsWithIndex["afid_index"] = fmt.Sprintf("%v", i)
+				ga.m.gpuAfidErrors.With(labelsWithIndex).Set(float64(afid))
+			}
+			delete(labelsWithIndex, "afid_index")
+			delete(labelsWithIndex, "severity")
+		}
 	}
 
 	// populate prof metrics if available

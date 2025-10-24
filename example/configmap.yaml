@@ -170,7 +170,8 @@ data:
           "GPU_PROF_SIMD_UTILIZATION",
           "PCIE_RX",
           "PCIE_TX",
-          "PCIE_BIDIRECTIONAL_BANDWIDTH"
+          "PCIE_BIDIRECTIONAL_BANDWIDTH",
+          "GPU_AFID_ERRORS"
         ],
         "Labels": [
           "GPU_UUID",
@@ -458,5 +459,3 @@ data:
         }
       }
     }
-
-

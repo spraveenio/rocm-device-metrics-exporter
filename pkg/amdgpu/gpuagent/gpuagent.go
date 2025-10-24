@@ -24,8 +24,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/globals"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/scheduler"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/fsysdevice"
 	"github.com/ROCm/device-metrics-exporter/pkg/amdgpu/gen/amdgpu"
@@ -35,8 +40,6 @@ import (
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/metricsutil"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -61,6 +64,7 @@ type GPUAgentClient struct {
 	enabledK8sApi          bool
 	enableZmq              bool
 	enableProfileMetrics   bool
+	enableAfidMetrics      bool
 	enableSriov            bool
 	staticHostLabels       map[string]string
 	ctx                    context.Context
@@ -77,8 +81,16 @@ type GPUAgentClient struct {
 // Cache fields for GPUAgentClient
 type gpuCache struct {
 	sync.RWMutex
-	lastResponse  *amdgpu.GPUGetResponse
-	lastTimestamp time.Time
+	lastResponse      *amdgpu.GPUGetResponse
+	lastCperResponse  *amdgpu.GPUCPERGetResponse
+	lastTimestamp     time.Time
+	lastCperTimestamp time.Time
+}
+
+// cper cache entry
+type cperCacheEntry struct {
+	entry     *amdgpu.CPEREntry
+	timestamp time.Time
 }
 
 // GPUAgentClientOptions set desired options
@@ -305,6 +317,11 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 		logger.Log.Printf("resp status :%v", resp.ApiStatus)
 		return fmt.Errorf("%v", resp.ApiStatus)
 	}
+	cper, err := ga.getLatestCPER()
+	if err != nil {
+		logger.Log.Printf("getLatestCPER failed with err : %v", err)
+		cper = nil
+	}
 	wls, _ := ga.ListWorkloads()
 	pmetrics, err := ga.getProfilerMetrics()
 	if err != nil {
@@ -325,7 +342,7 @@ func (ga *GPUAgentClient) getMetricsAll() error {
 			//nolint
 			gpuProfMetrics, _ = pmetrics[gpuid]
 		}
-		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, gpuProfMetrics)
+		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, gpuProfMetrics, cper)
 	}
 
 	return nil
@@ -370,6 +387,100 @@ func (ga *GPUAgentClient) cacheRead() (*amdgpu.GPUGetResponse, error) {
 		ga.gCache.lastResponse = nil
 	}
 	return res, err
+}
+
+func (ga *GPUAgentClient) cacheCperRead() (*amdgpu.GPUCPERGetResponse, error) {
+	now := time.Now()
+
+	// First try fast path with RLock
+	ga.gCache.RLock()
+	if ga.gCache.lastCperResponse != nil && now.Sub(ga.gCache.lastCperTimestamp) < cacheTimer {
+		res := ga.gCache.lastCperResponse
+		ga.gCache.RUnlock()
+		logger.Log.Printf("returning CPER metrics from cache")
+		return res, nil
+	}
+	ga.gCache.RUnlock()
+
+	// Acquire full Lock to update cache
+	ga.gCache.Lock()
+	defer ga.gCache.Unlock()
+
+	// Check again after acquiring Lock to handle the case where another goroutine has already updated the cache
+	if ga.gCache.lastCperResponse != nil && time.Since(ga.gCache.lastCperTimestamp) < cacheTimer {
+		logger.Log.Printf("returning CPER metrics from cache (after double-check)")
+		return ga.gCache.lastCperResponse, nil
+	}
+
+	// Perform query and update cache
+	ctx, cancel := context.WithTimeout(ga.ctx, queryTimeout)
+	defer cancel()
+
+	res, err := ga.gpuclient.GPUCPERGet(ctx, &amdgpu.GPUCPERGetRequest{})
+	ga.gCache.lastCperTimestamp = time.Now()
+	if err == nil {
+		ga.gCache.lastCperResponse = res
+	} else {
+		ga.gCache.lastCperResponse = nil
+	}
+	return res, err
+}
+
+// getLatestCPER fetches the latest CPER entry per GPU from the cached CPER data
+func (ga *GPUAgentClient) getLatestCPER() (map[string]*amdgpu.CPEREntry, error) {
+	// skip if afid metrics are disabled - saves time on fetching CPER data
+	if !ga.enableAfidMetrics {
+		return nil, nil
+	}
+	gpuCpers, err := ga.cacheCperRead()
+	if err != nil {
+		return nil, err
+	}
+	if gpuCpers != nil && gpuCpers.ApiStatus != 0 {
+		logger.Log.Printf("CPER resp status :%v", gpuCpers.ApiStatus)
+		return nil, fmt.Errorf("%v", gpuCpers.ApiStatus)
+	}
+
+	latestCPER := make(map[string]*cperCacheEntry)
+
+	for _, c := range gpuCpers.CPER {
+		uuid, _ := uuid.FromBytes(c.GPU)
+		gpuuid := uuid.String()
+
+		for _, record := range c.CPEREntry {
+			ts := record.GetTimestamp() // this is of format Timestamp:"2025-09-12 15:00:27"
+			// Parse current timestamp
+			currentTS, err := time.Parse("2006-01-02 15:04:05", ts)
+			if err != nil {
+				logger.Log.Printf("Failed to parse current timestamp: %v", err)
+				continue
+			}
+
+			if existingCPER, exists := latestCPER[gpuuid]; !exists {
+				latestCPER[gpuuid] = &cperCacheEntry{
+					entry:     record,
+					timestamp: currentTS,
+				}
+			} else {
+				// Update if current is more recent
+				if currentTS.After(existingCPER.timestamp) {
+					latestCPER[gpuuid] = &cperCacheEntry{
+						entry:     record,
+						timestamp: currentTS,
+					}
+				}
+			}
+		}
+	}
+
+	// Convert to return type and log summary
+	result := make(map[string]*amdgpu.CPEREntry)
+	for gpuuid, cacheEntry := range latestCPER {
+		entry := cacheEntry.entry
+		result[gpuuid] = entry
+	}
+
+	return result, nil
 }
 
 func (ga *GPUAgentClient) getGPUs() (*amdgpu.GPUGetResponse, map[string]*amdgpu.GPU, error) {

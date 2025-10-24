@@ -11,6 +11,8 @@ AMD Device Metrics Exporter integrates with Slurm workload manager to track GPU 
 ## Installation
 
 - Copy the integration script:
+  - [exporter-epilog.sh](../../debian/usr/local/etc/metrics/slurm/slurm-epilog.sh)
+  - [exporter-prolog.sh](../../debian/usr/local/etc/metrics/slurm/slurm-prolog.sh)
 
 ```bash
 cp ${TOP_DIR}/example/slurm/exporter-prolog.sh /etc/slurm/epilog.d/exporter-prolog.sh
@@ -33,7 +35,7 @@ Epilog="/etc/slurm/epilog.d/*"
 - Restart Slurm services to apply changes:
 
 ```bash
-sudo systemctl restart slurmd     # On compute nodes
+sudo systemctl restart slurmd     # On compute nodes if slurm.conf is updated
 ```
 
 ## Exporter Container Deployment

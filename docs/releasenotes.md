@@ -22,6 +22,10 @@
   	respective GPU. This enables baremetal debian deployments to have job
   	information where no scheduler is used.
   - `DEPLOYMENT_MODE` label to specify the GPU operating environment
+  
+- **New Field**
+  - `GPU_AFID_ERRORS` field added to report RAS events associated AMD Field Identifier (AFID) list, More details can be found [here](configuration/metricslist.md#afid-error-metrics)
+    - More Info on AMD Field ID and next steps are https://docs.amd.com/r/en-US/AMD_Field_ID_70122_v1.0/AFID-Event-List
 
 ### Platform Support
 ROCm 7.0.rc1 MI2xx, MI3xx

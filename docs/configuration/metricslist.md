@@ -109,6 +109,7 @@ The following table contains a full list of GPU Metrics that are available using
 | &cross;    | &check;   | GPU_GFX_BUSY_INSTANTANEOUS                            | GFX Busy Instantaneous Activity Per Accelerator Compute Processor Per Compute Core                                                            |
 | &cross;    | &check;   | GPU_VC_BUSY_INSTANTANEOUS                             | VCN Busy Instantaneous Activity Per Accelerator Compute Processor Per Compute Core                                                            |
 | &cross;    | &check;   | GPU_JPEG_BUSY_INSTANTANEOUS                           | JPEG Busy Instantaneous Activity Per Accelerator Compute Processor Per Compute Core                                                           |
+| &cross; | &check | GPU_AFID_ERRORS | Last Occured RAS Event associated AMD Field Identifier list, More Info in https://docs.amd.com/r/en-US/AMD_Field_ID_70122_v1.0/AFID-Event-List |
 
 ## Performance Metrics Focused For Application Development
 
@@ -246,3 +247,17 @@ gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",g
 gpu_xgmi_link_tx{card_model="xxxx",gpu_compute_partition_type="spx",gpu_id="0",gpu_partition_id="0",hostname="xxxx",link_index="7",serial_number="xxxx"} 3.545990503e+0
 ```
 
+### AFID Error metrics
+The Device Metrics Exporter `gpu_afid_errors` metric consists of an array field used for exporting the AFID list each indexed with label `afid_index`. This metric has a `severity` label added to the metric to differentiate the different severity levels:
+
+`severity` label can have one of the following values
+  - fatal
+  - non_fatal_uncorrected
+  - non_fatal_corrected
+
+```json
+# HELP gpu_afid_errors Last Occured RAS Event associated AMD Field Identifier list
+# TYPE gpu_afid_errors gauge
+gpu_afid_errors{afid_index="0", severity="fatal", gpu_id="0", ...} 30
+gpu_afid_errors{afid_index="1", severity="fatal", gpu_id="0", ...} 25
+```

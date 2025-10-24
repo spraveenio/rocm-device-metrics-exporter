@@ -24,7 +24,7 @@
     2. GPU_USED_VRAM
     3. GPU_FREE_VRAM
 
-   - Profiler Metrics
+  - Profiler Metrics
     1. GPU_PROF_SM_ACTIVE
     2. GPU_PROF_TENSOR_ACTIVE_PERCENT
     3. GPU_PROF_OCCUPANCY_PER_CU
@@ -316,4 +316,15 @@ RESOURCE_INDEX  RESOURCE_TYPE  RESOURCE_INSTANCES  RESOURCES_SHARED
 Legend:
   * = Current mode
 
-``` 
+```
+
+### GPU CPER Read
+
+```bash
+$ sudo amd-smi ras --cper
+WARNING:No CPER files will be dumped unless --folder=<folder_name> is specified and cper entries exist.
+timestamp            gpu_id  severity
+2025/10/07 09:58:04  0       FATAL
+2025/10/09 05:09:13  0       FATAL
+```
+

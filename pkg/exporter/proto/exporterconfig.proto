@@ -176,6 +176,8 @@ enum GPUMetricField {
     PCIE_RX                      = 101;
     PCIE_TX                      = 102;
     PCIE_BIDIRECTIONAL_BANDWIDTH = 103;
+    // Last occured list of AFID errors in a single RAS event
+    GPU_AFID_ERRORS              = 104;
 
     // Profiler Metrics (reserving 801 to 1200)
     GPU_PROF_GRBM_GUI_ACTIVE                                 = 801;

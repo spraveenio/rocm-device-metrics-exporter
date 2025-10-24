@@ -734,6 +734,78 @@ func (s *E2ESuite) Test019ECCErrorInjection(c *C) {
 	}, 10*time.Second, 1*time.Second)
 }
 
+func (s *E2ESuite) Test020ProfilerFailureHandling(c *C) {
+	log.Print("Testing profiler failure handling")
+
+	// First, ensure profiler fields are included in the metrics
+	fields := []string{
+		"gpu_prof_sm_active",
+	}
+	s.SetProfilerState(true)
+	err := s.SetFields(fields)
+	assert.Nil(c, err)
+	time.Sleep(5 * time.Second) // Wait for config update to take effect
+
+	// Verify that profiler fields are present in the metrics
+	assert.Eventually(c, func() bool {
+		response, err := s.getExporterResponse()
+		if err != nil || response == "" {
+			return false
+		}
+
+		// profiler fields should not be present in the metrics,
+		// since we have only profiler field configured, the gpu metrics parsing will fail
+		// which is expected in this state
+		_, err = testutils.ParsePrometheusMetrics(response)
+		if err == nil {
+			return false
+		}
+
+		return true
+	}, 10*time.Second, 1*time.Second)
+
+	// Simulate core dump to disable profiler
+	s.SetProfilerState(false)
+	time.Sleep(5 * time.Second) // Wait for config update to take effect
+
+	// check logs for profiler disabled message
+	assert.Eventually(c, func() bool {
+		return s.CheckExporterLogForString("rocpclient has been disabled after system failure")
+	}, 10*time.Second, 1*time.Second)
+
+}
+
+func (s *E2ESuite) Test021EnableGpuAfidErrorsField(c *C) {
+	log.Print("Testing enabling gpu_afid_errors field in config")
+
+	// Add "gpu_afid_errors" to the list of fields
+	fields := []string{
+		"gpu_afid_errors",
+	}
+	err := s.SetFields(fields)
+	assert.Nil(c, err)
+	time.Sleep(5 * time.Second) // Wait for config update to take effect
+
+	var response string
+	assert.Eventually(c, func() bool {
+		response, _ = s.getExporterResponse()
+		return response != ""
+	}, 5*time.Second, 1*time.Second)
+
+	allgpus, err := testutils.ParsePrometheusMetrics(response)
+	assert.Nil(c, err)
+
+	// Check that "gpu_afid_errors" is present for each GPU
+	for id, gpu := range allgpus {
+		entry, ok := gpu.Fields["gpu_afid_errors"]
+		assert.Equal(c, true, ok, fmt.Sprintf("gpu_afid_errors field not found for GPU[%v]", id))
+		_, ok = entry.Labels["severity"]
+		assert.Equal(c, true, ok, fmt.Sprintf("severity label not found for GPU[%v]", id))
+		_, ok = entry.Labels["afid_index"]
+		assert.Equal(c, true, ok, fmt.Sprintf("afid_index label not found for GPU[%v]", id))
+	}
+}
+
 func verifyMetricsLablesFields(allgpus map[string]*testutils.GPUMetric, labels []string, fields []string) error {
 	if len(allgpus) == 0 {
 		return fmt.Errorf("invalid input, expecting non empty payload")
