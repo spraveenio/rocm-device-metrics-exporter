@@ -14,6 +14,10 @@ subtrees:
     entries:
       - file: releasenotes
         title: Release Notes
+  - caption: Known Issues
+    entries:
+    - file: knownissues
+      title: Known Issues
   - caption: Configuration
     entries:
       - file: configuration/configuration-settings   
