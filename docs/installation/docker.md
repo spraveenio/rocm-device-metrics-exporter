@@ -12,12 +12,15 @@ This page explains how to install AMD Device Metrics Exporter using Docker.
 
 The Device Metrics Exporter container is hosted on Docker Hub at [rocm/device-metrics-exporter](https://hub.docker.com/r/rocm/device-metrics-exporter).
 
+**_NOTE:_** : `/sys` mount is required for inband-ras
+
 - Start the container:
 
 ```bash
 docker run -d \
   --device=/dev/dri \
   --device=/dev/kfd \
+  -v /sys:/sys:ro \
   -p 5000:5000 \
   --name device-metrics-exporter \
   rocm/device-metrics-exporter:v1.5.0
