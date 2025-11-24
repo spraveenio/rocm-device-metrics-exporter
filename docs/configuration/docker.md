@@ -6,10 +6,13 @@ To use a custom configuration with the AMD Device Metrics Exporter container:
 2. Save `config.json` in the `config/` folder
 3. Mount the `config/` folder when starting the container:
 
+**_NOTE:_** : `/sys` mount is required for inband-ras
+
 ```bash
 docker run -d \
   --device=/dev/dri \
   --device=/dev/kfd \
+  -v /sys:/sys:ro \
   -p 5000:5000 \
   -v ./config:/etc/metrics \
   --name device-metrics-exporter \
