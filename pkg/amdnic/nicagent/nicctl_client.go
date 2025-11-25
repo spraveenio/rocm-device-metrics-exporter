@@ -17,6 +17,7 @@
 package nicagent
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -232,11 +233,14 @@ func (nc *NICCtlClient) UpdateQPStats(workloads map[string]scheduler.Workload) e
 				defer wg.Done()
 
 				cmd := fmt.Sprintf("nicctl show rdma queue-pair statistics --lif %s -j", lif.UUID)
-				qpLifStatsOut, err := ExecWithContextTimeout(cmd, 20*time.Second)
+				qpLifStatsOut, err := ExecWithContextTimeout(cmd, longCmdTimeout)
 				if err != nil {
 					logger.Log.Printf("error getting QP stats for %s, %s, err: %+v", lif.UUID, lif.Name, err)
 					return
 				}
+
+				// Replace empty string with empty array for proper unmarshalling
+				qpLifStatsOut = bytes.ReplaceAll(qpLifStatsOut, []byte(`"queue_pair": ""`), []byte(`"queue_pair": []`))
 
 				var rdmaQPStats nicmetrics.RdmaQPStats
 				err = json.Unmarshal(qpLifStatsOut, &rdmaQPStats)
