@@ -209,69 +209,6 @@ func (ga *GPUAgentIFOEClient) listDevice() (*amdgpu.UALDeviceGetResponse, error)
 	return resp, nil
 }
 
-func (ga *GPUAgentIFOEClient) updateMockMetrics() error {
-	ualPort := &amdgpu.UALNetworkPort{
-		Spec: &amdgpu.UALNetworkPortSpec{},
-		Status: &amdgpu.UALNetworkPortStatus{
-			Name: "eth0",
-		},
-		Stats: &amdgpu.UALNetworkPortStats{
-			NumFailedoverStreams:      3,
-			NumPausedStreams:          4,
-			BitErrorRate:              100,
-			FECCodeWordSymbolErrors0:  1000,
-			FECCodeWordSymbolErrors1:  900,
-			FECCodeWordSymbolErrors2:  800,
-			FECCodeWordSymbolErrors3:  700,
-			FECCodeWordSymbolErrors4:  600,
-			FECCodeWordSymbolErrors5:  500,
-			FECCodeWordSymbolErrors6:  400,
-			FECCodeWordSymbolErrors7:  300,
-			FECCodeWordSymbolErrors8:  200,
-			FECCodeWordSymbolErrors9:  100,
-			FECCodeWordSymbolErrors10: 90,
-			FECCodeWordSymbolErrors11: 80,
-			FECCodeWordSymbolErrors12: 70,
-			FECCodeWordSymbolErrors13: 60,
-			FECCodeWordSymbolErrors14: 50,
-			FECCodeWordSymbolErrors15: 40,
-		},
-	}
-
-	labels := ga.populateLabelsFromObject(nil, nil, nil)
-
-	ga.metrics.totalDevices.With(labels).Set(float64(1))
-	ga.metrics.totalStations.With(labels).Set(float64(1))
-
-	ifoeLabels := ga.populateLabelsFromObject(nil, nil, ualPort)
-	ifoeLabels["station_uuid"] = "stationUuid"
-	ifoeLabels["port_name"] = "portName"
-	ifoeLabels["device_uuid"] = "devUuid"
-	ga.metrics.totalNetworkPorts.With(labels).Set(float64(16))
-
-	ga.metrics.numFailedoverStreams.With(ifoeLabels).Set(float64(3))
-	ga.metrics.numPausedStreams.With(ifoeLabels).Set(float64(4))
-	ga.metrics.bitErrorRate.With(ifoeLabels).Set(float64(100))
-	ga.metrics.fecCodeWordSymbolErrors0.With(ifoeLabels).Set(float64(1000))
-	ga.metrics.fecCodeWordSymbolErrors1.With(ifoeLabels).Set(float64(900))
-	ga.metrics.fecCodeWordSymbolErrors2.With(ifoeLabels).Set(float64(800))
-	ga.metrics.fecCodeWordSymbolErrors3.With(ifoeLabels).Set(float64(700))
-	ga.metrics.fecCodeWordSymbolErrors4.With(ifoeLabels).Set(float64(600))
-	ga.metrics.fecCodeWordSymbolErrors5.With(ifoeLabels).Set(float64(500))
-	ga.metrics.fecCodeWordSymbolErrors6.With(ifoeLabels).Set(float64(400))
-	ga.metrics.fecCodeWordSymbolErrors7.With(ifoeLabels).Set(float64(300))
-	ga.metrics.fecCodeWordSymbolErrors8.With(ifoeLabels).Set(float64(200))
-	ga.metrics.fecCodeWordSymbolErrors9.With(ifoeLabels).Set(float64(100))
-	ga.metrics.fecCodeWordSymbolErrors10.With(ifoeLabels).Set(float64(90))
-	ga.metrics.fecCodeWordSymbolErrors11.With(ifoeLabels).Set(float64(80))
-	ga.metrics.fecCodeWordSymbolErrors12.With(ifoeLabels).Set(float64(70))
-	ga.metrics.fecCodeWordSymbolErrors13.With(ifoeLabels).Set(float64(60))
-	ga.metrics.fecCodeWordSymbolErrors14.With(ifoeLabels).Set(float64(50))
-	ga.metrics.fecCodeWordSymbolErrors15.With(ifoeLabels).Set(float64(40))
-
-	return nil
-}
-
 func (ga *GPUAgentIFOEClient) updateMetrics() error {
 	labels := ga.populateLabelsFromObject(nil, nil, nil)
 

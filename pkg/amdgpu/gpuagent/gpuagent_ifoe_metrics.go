@@ -506,16 +506,10 @@ func (ga *GPUAgentIFOEClient) ResetMetrics() error {
 }
 
 func (ga *GPUAgentIFOEClient) UpdateStaticMetrics() error {
-	if utils.IsSimEnabled() {
-		return ga.updateMockMetrics()
-	}
 	return ga.updateMetrics()
 }
 
 func (ga *GPUAgentIFOEClient) UpdateMetricsStats() error {
-	if utils.IsSimEnabled() {
-		return ga.updateMockMetrics()
-	}
 	return ga.updateMetrics()
 }
 
