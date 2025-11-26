@@ -38,7 +38,7 @@ pkg: pkg-clean
 	@if [ -d ${BUILT_LIB_PATH} ]; then \
 		echo "Copying newly built amdsmi and dependent libraries";\
 		mkdir -p ${PKG_LIB_PATH}/lib/;\
-		cp -rvf ${BUILT_LIB_PATH}/ ${PKG_LIB_PATH}/lib/;\
+		cp -rvf ${BUILT_LIB_PATH}/* ${PKG_LIB_PATH}/lib/;\
 	else \
 		echo "Copy prebuilt libraries"; \
 		cp -rvf ${GPUAGENT_LIBS}/ ${PKG_LIB_PATH}; \
