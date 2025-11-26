@@ -4,11 +4,11 @@ FROM ${BASE_IMAGE}
 
 LABEL maintainer="AMD Inc"
 LABEL OS="registry.access.redhat.com/ubi9/ubi-minimal:9.6"
-LABEL ROCM_VERSION="7.0_rc1"
+LABEL ROCM_VERSION="7.1.1"
 
 
-ARG ROCM_VERSION=7.0
-ARG AMDGPU_VERSION=7.0
+ARG ROCM_VERSION=7.1.1
+ARG AMDGPU_VERSION=7.1.1
 ARG AMDGPU_REPO_URL=https://repo.radeon.com
 
 RUN microdnf clean all && \
@@ -29,7 +29,7 @@ RUN microdnf clean all && \
    microdnf update -y && \
    microdnf install -y sudo findutils procps elfutils-libelf cmake kmod file \
    libcap-devel amd-smi-lib libdrm-amdgpu vim net-tools numactl numactl-libs \
-   hsa-amd-aqlprofile rocprofiler-sdk hip-runtime-amd && \
+   hsa-amd-aqlprofile rocprofiler-sdk hip-runtime-amd libatomic && \
    rm -rf /var/cache/yum && rm -rf /var/cache/dnf && microdnf clean all
 
 
@@ -39,17 +39,10 @@ RUN mkdir -p /home/amd/bin/
 RUN mkdir -p /home/amd/lib/
 RUN mkdir -p /home/amd/tools/
 
-# Clean up existing AMD SMI libraries and add custom ones
-RUN rm -f /opt/rocm/lib/libamd_smi.so*
-ADD ./libamd_smi.so.25.4 /opt/rocm/lib/libamd_smi.so.25.4
-RUN cd /opt/rocm/lib && \
-    ln -sf libamd_smi.so.25.4 libamd_smi.so.25 && \
-    ln -sf libamd_smi.so.25 libamd_smi.so
-
 # override built libraries
 ADD ./librocpclient.so /opt/rocm/lib/librocpclient.so
-ADD ./libamd_smi.so.25.4 /home/amd/lib/libamd_smi.so.25.4
-RUN cd /home/amd/lib/ && ln -sf libamd_smi.so.25.4 libamd_smi.so.25
+ADD ./libamd_smi.so.26.2.0 /home/amd/lib/libamd_smi.so.26.2.0
+RUN cd /home/amd/lib/ && ln -sf libamd_smi.so.26.2.0 libamd_smi.so.26
 
 ADD ./rocpctl /home/amd/bin/rocpctl
 ADD ./gpuctl /home/amd/bin/gpuctl
