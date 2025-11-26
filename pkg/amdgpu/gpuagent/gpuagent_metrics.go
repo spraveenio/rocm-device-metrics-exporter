@@ -1469,7 +1469,8 @@ func (ga *GPUAgentClient) initFieldRegistration() error {
 
 func (ga *GPUAgentClient) InitConfigs() error {
 	filedConfigs := ga.mh.GetMetricsConfig()
-
+	// reset unsupported field map
+	ga.fl.Reset()
 	initPodExtraLabels(filedConfigs)
 	initCustomLabels(filedConfigs)
 	ga.initLabelConfigs(filedConfigs)
@@ -1800,11 +1801,6 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 	status := gpu.Status
 	stats := gpu.Stats
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuPackagePower, exportermetrics.GPUMetricField_GPU_PACKAGE_POWER.String(),
-		labels, stats.PackagePower)
-	ga.fl.logWithValidateAndExport(ga.m.gpuAvgPkgPower, exportermetrics.GPUMetricField_GPU_AVERAGE_PACKAGE_POWER.String(),
-		labels, stats.AvgPackagePower)
-
 	// export health state only if available
 	gpuid := fmt.Sprintf("%v", getGPUInstanceID(gpu))
 	if hstate, ok := ga.healthState[gpuid]; ok {
@@ -1815,18 +1811,32 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 		}
 	}
 
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPackagePower, exportermetrics.GPUMetricField_GPU_PACKAGE_POWER.String(),
+		labels, stats.PackagePower)
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuAvgPkgPower, exportermetrics.GPUMetricField_GPU_AVERAGE_PACKAGE_POWER.String(),
+		labels, stats.AvgPackagePower)
+
 	// gpu temp stats
 	tempStats := stats.Temperature
 	if tempStats != nil {
-		ga.fl.logWithValidateAndExport(ga.m.gpuEdgeTemp, exportermetrics.GPUMetricField_GPU_EDGE_TEMPERATURE.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEdgeTemp, exportermetrics.GPUMetricField_GPU_EDGE_TEMPERATURE.String(),
 			labels, tempStats.EdgeTemperature)
-		ga.fl.logWithValidateAndExport(ga.m.gpuJunctionTemp, exportermetrics.GPUMetricField_GPU_JUNCTION_TEMPERATURE.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuJunctionTemp, exportermetrics.GPUMetricField_GPU_JUNCTION_TEMPERATURE.String(),
 			labels, tempStats.JunctionTemperature)
-		ga.fl.logWithValidateAndExport(ga.m.gpuMemoryTemp, exportermetrics.GPUMetricField_GPU_MEMORY_TEMPERATURE.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuMemoryTemp, exportermetrics.GPUMetricField_GPU_MEMORY_TEMPERATURE.String(),
 			labels, tempStats.MemoryTemperature)
+
+		if len(tempStats.HBMTemperature) == 0 {
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuMemoryTemp, exportermetrics.GPUMetricField_GPU_HBM_TEMPERATURE.String(),
+				labels, float64(math.MaxUint32))
+		}
 		for j, temp := range tempStats.HBMTemperature {
 			labelsWithIndex["hbm_index"] = fmt.Sprintf("%v", j)
-			if utils.IsValueApplicable(temp) {
+			if j == 0 && !utils.IsValueApplicable(temp) {
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuMemoryTemp, exportermetrics.GPUMetricField_GPU_HBM_TEMPERATURE.String(),
+					labelsWithIndex, float64(math.MaxUint32))
+				break
+			} else if utils.IsValueApplicable(temp) {
 				ga.m.gpuHBMTemp.With(labelsWithIndex).Set(float64(temp))
 			}
 		}
@@ -1836,41 +1846,85 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 	// gpu usage
 	gpuUsage := stats.Usage
 	if gpuUsage != nil {
-		ga.fl.logWithValidateAndExport(ga.m.gpuGFXActivity, exportermetrics.GPUMetricField_GPU_GFX_ACTIVITY.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuGFXActivity, exportermetrics.GPUMetricField_GPU_GFX_ACTIVITY.String(),
 			labels, gpuUsage.GFXActivity)
-		ga.fl.logWithValidateAndExport(ga.m.gpuUMCActivity, exportermetrics.GPUMetricField_GPU_UMC_ACTIVITY.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuUMCActivity, exportermetrics.GPUMetricField_GPU_UMC_ACTIVITY.String(),
 			labels, gpuUsage.UMCActivity)
-		ga.fl.logWithValidateAndExport(ga.m.gpuMMAActivity, exportermetrics.GPUMetricField_GPU_MMA_ACTIVITY.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuMMAActivity, exportermetrics.GPUMetricField_GPU_MMA_ACTIVITY.String(),
 			labels, gpuUsage.MMActivity)
+		if len(gpuUsage.VCNActivity) == 0 {
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVCNActivity, exportermetrics.GPUMetricField_GPU_VCN_ACTIVITY.String(),
+				labels, float64(math.MaxUint32))
+		}
 		for j, act := range gpuUsage.VCNActivity {
 			labelsWithIndex["vcn_index"] = fmt.Sprintf("%v", j)
-			if utils.IsValueApplicable(act) {
+			if j == 0 && !utils.IsValueApplicable(act) {
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVCNActivity, exportermetrics.GPUMetricField_GPU_VCN_ACTIVITY.String(),
+					labelsWithIndex, float64(math.MaxUint32))
+				break
+			} else if utils.IsValueApplicable(act) {
 				ga.m.gpuVCNActivity.With(labelsWithIndex).Set(float64(act))
 			}
 		}
 		delete(labelsWithIndex, "vcn_index")
+
+		if len(gpuUsage.JPEGActivity) == 0 {
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuJPEGActivity, exportermetrics.GPUMetricField_GPU_JPEG_ACTIVITY.String(),
+				labels, float64(math.MaxUint32))
+		}
 		for j, act := range gpuUsage.JPEGActivity {
 			labelsWithIndex["jpeg_index"] = fmt.Sprintf("%v", j)
-			if utils.IsValueApplicable(act) {
+			if j == 0 && !utils.IsValueApplicable(act) {
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuJPEGActivity, exportermetrics.GPUMetricField_GPU_JPEG_ACTIVITY.String(),
+					labelsWithIndex, float64(math.MaxUint32))
+				break
+			} else if utils.IsValueApplicable(act) {
 				ga.m.gpuJPEGActivity.With(labelsWithIndex).Set(float64(act))
 			}
 		}
 		delete(labelsWithIndex, "jpeg_index")
+
+		if len(gpuUsage.GFXBusyInst) == 0 {
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuGfxBusyInst, exportermetrics.GPUMetricField_GPU_GFX_ACTIVITY.String(),
+				labels, float64(math.MaxUint32))
+		}
 		for j, act := range gpuUsage.GFXBusyInst {
 			labelsWithIndex["xcc_index"] = fmt.Sprintf("%v", j)
-			if utils.IsValueApplicable(act) {
+			if j == 0 && !utils.IsValueApplicable(act) {
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuGfxBusyInst, exportermetrics.GPUMetricField_GPU_GFX_ACTIVITY.String(),
+					labelsWithIndex, float64(math.MaxUint32))
+				break
+			} else if utils.IsValueApplicable(act) {
 				ga.m.gpuGfxBusyInst.With(labelsWithIndex).Set(float64(act))
 			}
 		}
+
+		if len(gpuUsage.VCNBusyInst) == 0 {
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVcnBusyInst, exportermetrics.GPUMetricField_GPU_VCN_ACTIVITY.String(),
+				labels, float64(math.MaxUint32))
+		}
 		for j, act := range gpuUsage.VCNBusyInst {
 			labelsWithIndex["xcc_index"] = fmt.Sprintf("%v", j)
-			if utils.IsValueApplicable(act) {
+			if j == 0 && !utils.IsValueApplicable(act) {
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVcnBusyInst, exportermetrics.GPUMetricField_GPU_VCN_ACTIVITY.String(),
+					labelsWithIndex, float64(math.MaxUint32))
+				break
+			} else if utils.IsValueApplicable(act) {
 				ga.m.gpuVcnBusyInst.With(labelsWithIndex).Set(float64(act))
 			}
 		}
+
+		if len(gpuUsage.JPEGBusyInst) == 0 {
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuJpegBusyInst, exportermetrics.GPUMetricField_GPU_JPEG_ACTIVITY.String(),
+				labels, float64(math.MaxUint32))
+		}
 		for j, act := range gpuUsage.JPEGBusyInst {
 			labelsWithIndex["xcc_index"] = fmt.Sprintf("%v", j)
-			if utils.IsValueApplicable(act) {
+			if j == 0 && !utils.IsValueApplicable(act) {
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuJpegBusyInst, exportermetrics.GPUMetricField_GPU_JPEG_ACTIVITY.String(),
+					labelsWithIndex, float64(math.MaxUint32))
+				break
+			} else if utils.IsValueApplicable(act) {
 				ga.m.gpuJpegBusyInst.With(labelsWithIndex).Set(float64(act))
 			}
 		}
@@ -1879,52 +1933,57 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 
 	volt := stats.Voltage
 	if volt != nil {
-		ga.fl.logWithValidateAndExport(ga.m.gpuVoltage, exportermetrics.GPUMetricField_GPU_VOLTAGE.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVoltage, exportermetrics.GPUMetricField_GPU_VOLTAGE.String(),
 			labels, volt.Voltage)
-		ga.fl.logWithValidateAndExport(ga.m.gpuGFXVoltage, exportermetrics.GPUMetricField_GPU_GFX_VOLTAGE.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuGFXVoltage, exportermetrics.GPUMetricField_GPU_GFX_VOLTAGE.String(),
 			labels, volt.GFXVoltage)
-		ga.fl.logWithValidateAndExport(ga.m.gpuMemVoltage, exportermetrics.GPUMetricField_GPU_MEMORY_VOLTAGE.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuMemVoltage, exportermetrics.GPUMetricField_GPU_MEMORY_VOLTAGE.String(),
 			labels, volt.MemoryVoltage)
 	}
 
 	// pcie status
 	pcieStatus := status.PCIeStatus
 	if pcieStatus != nil {
-		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeSpeed, exportermetrics.GPUMetricField_PCIE_SPEED.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPCIeSpeed, exportermetrics.GPUMetricField_PCIE_SPEED.String(),
 			labels, pcieStatus.Speed)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeMaxSpeed, exportermetrics.GPUMetricField_PCIE_MAX_SPEED.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPCIeMaxSpeed, exportermetrics.GPUMetricField_PCIE_MAX_SPEED.String(),
 			labels, pcieStatus.MaxSpeed)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeBandwidth, exportermetrics.GPUMetricField_PCIE_BANDWIDTH.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPCIeBandwidth, exportermetrics.GPUMetricField_PCIE_BANDWIDTH.String(),
 			labels, pcieStatus.Bandwidth)
 	}
 
 	// pcie stats
 	pcieStats := stats.PCIeStats
 	if pcieStats != nil {
-		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeReplayCount, exportermetrics.GPUMetricField_PCIE_REPLAY_COUNT.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPCIeReplayCount, exportermetrics.GPUMetricField_PCIE_REPLAY_COUNT.String(),
 			labels, pcieStats.ReplayCount)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeRecoveryCount, exportermetrics.GPUMetricField_PCIE_RECOVERY_COUNT.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPCIeRecoveryCount, exportermetrics.GPUMetricField_PCIE_RECOVERY_COUNT.String(),
 			labels, pcieStats.RecoveryCount)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeReplayRolloverCount, exportermetrics.GPUMetricField_PCIE_REPLAY_ROLLOVER_COUNT.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPCIeReplayRolloverCount, exportermetrics.GPUMetricField_PCIE_REPLAY_ROLLOVER_COUNT.String(),
 			labels, pcieStats.ReplayRolloverCount)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeNACKSentCount, exportermetrics.GPUMetricField_PCIE_NACK_SENT_COUNT.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPCIeNACKSentCount, exportermetrics.GPUMetricField_PCIE_NACK_SENT_COUNT.String(),
 			labels, pcieStats.NACKSentCount)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPCIeNACKReceivedCount, exportermetrics.GPUMetricField_PCIE_NACK_RECEIVED_COUNT.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPCIeNACKReceivedCount, exportermetrics.GPUMetricField_PCIE_NACK_RECEIVED_COUNT.String(),
 			labels, pcieStats.NACKReceivedCount)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPcieRx, exportermetrics.GPUMetricField_PCIE_RX.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPcieRx, exportermetrics.GPUMetricField_PCIE_RX.String(),
 			labels, pcieStats.RxBytes)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPcieTx, exportermetrics.GPUMetricField_PCIE_TX.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPcieTx, exportermetrics.GPUMetricField_PCIE_TX.String(),
 			labels, pcieStats.TxBytes)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPcieBidirBandwidth, exportermetrics.GPUMetricField_PCIE_BIDIRECTIONAL_BANDWIDTH.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPcieBidirBandwidth, exportermetrics.GPUMetricField_PCIE_BIDIRECTIONAL_BANDWIDTH.String(),
 			labels, pcieStats.BiDirBandwidth)
 	}
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuEnergyConsumed, exportermetrics.GPUMetricField_GPU_ENERGY_CONSUMED.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEnergyConsumed, exportermetrics.GPUMetricField_GPU_ENERGY_CONSUMED.String(),
 		labels, stats.EnergyConsumed)
 
 	// clock status
 	clockStatus := status.ClockStatus
 	if clockStatus != nil {
+		// no clock info available for partitioned gpu, no further filter is needed
+		if len(clockStatus) == 0 {
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuClock, exportermetrics.GPUMetricField_GPU_CLOCK.String(),
+				labels, float64(math.MaxUint32))
+		}
 		for j, clock := range clockStatus {
 			labelsWithIndex["clock_index"] = fmt.Sprintf("%v", j)
 			labelsWithIndex["clock_type"] = fmt.Sprintf("%v", clock.Type.String())
@@ -1934,145 +1993,149 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 		}
 		delete(labelsWithIndex, "clock_index")
 		delete(labelsWithIndex, "clock_type")
+	} else {
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuClock, exportermetrics.GPUMetricField_GPU_CLOCK.String(),
+			labels, float64(math.MaxUint32))
+
 	}
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuPowerUsage, exportermetrics.GPUMetricField_GPU_POWER_USAGE.String(), labels, stats.PowerUsage)
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPowerUsage, exportermetrics.GPUMetricField_GPU_POWER_USAGE.String(), labels, stats.PowerUsage)
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectTotal, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_TOTAL.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectTotal, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_TOTAL.String(),
 		labels, stats.TotalCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectTotal, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_TOTAL.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectTotal, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_TOTAL.String(),
 		labels, stats.TotalUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectSDMA, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_SDMA.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectSDMA, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_SDMA.String(),
 		labels, stats.SDMACorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectSDMA, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_SDMA.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectSDMA, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_SDMA.String(),
 		labels, stats.SDMAUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectGFX, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_GFX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectGFX, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_GFX.String(),
 		labels, stats.GFXCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectGFX, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_GFX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectGFX, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_GFX.String(),
 		labels, stats.GFXUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectMMHUB, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MMHUB.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectMMHUB, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MMHUB.String(),
 		labels, stats.MMHUBCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectMMHUB, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MMHUB.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectMMHUB, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MMHUB.String(),
 		labels, stats.MMHUBUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectATHUB, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_ATHUB.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectATHUB, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_ATHUB.String(),
 		labels, stats.ATHUBCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectATHUB, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_ATHUB.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectATHUB, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_ATHUB.String(),
 		labels, stats.ATHUBUncorrectableErrors)
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectBIF, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_BIF.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectBIF, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_BIF.String(),
 		labels, stats.BIFCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectBIF, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_BIF.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectBIF, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_BIF.String(),
 		labels, stats.BIFUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectHDP, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_HDP.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectHDP, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_HDP.String(),
 		labels, stats.HDPCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectHDP, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_HDP.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectHDP, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_HDP.String(),
 		labels, stats.HDPUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectXgmiWAFL, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_XGMI_WAFL.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectXgmiWAFL, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_XGMI_WAFL.String(),
 		labels, stats.XGMIWAFLCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectXgmiWAFL, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_XGMI_WAFL.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectXgmiWAFL, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_XGMI_WAFL.String(),
 		labels, stats.XGMIWAFLUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectDF, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_DF.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectDF, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_DF.String(),
 		labels, stats.DFCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectDF, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_DF.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectDF, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_DF.String(),
 		labels, stats.DFUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectSMN, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_SMN.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectSMN, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_SMN.String(),
 		labels, stats.SMNCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectSMN, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_SMN.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectSMN, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_SMN.String(),
 		labels, stats.SMNUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectSEM, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_SEM.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectSEM, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_SEM.String(),
 		labels, stats.SEMCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectSEM, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_SEM.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectSEM, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_SEM.String(),
 		labels, stats.SEMUncorrectableErrors)
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectMP0, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MP0.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectMP0, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MP0.String(),
 		labels, stats.MP0CorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectMP0, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MP0.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectMP0, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MP0.String(),
 		labels, stats.MP0UncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectMP1, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MP1.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectMP1, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MP1.String(),
 		labels, stats.MP1CorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectMP1, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MP1.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectMP1, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MP1.String(),
 		labels, stats.MP1UncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectFUSE, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_FUSE.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectFUSE, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_FUSE.String(),
 		labels, stats.FUSECorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectFUSE, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_FUSE.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectFUSE, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_FUSE.String(),
 		labels, stats.FUSEUncorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectUMC, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_UMC.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectUMC, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_UMC.String(),
 		labels, stats.UMCCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectUMC, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_UMC.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectUMC, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_UMC.String(),
 		labels, stats.UMCUncorrectableErrors)
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectMCA, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MCA.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectMCA, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MCA.String(),
 		labels, stats.MCACorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectMCA, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MCA.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectMCA, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MCA.String(),
 		labels, stats.MCAUncorrectableErrors)
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectVCN, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_VCN.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectVCN, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_VCN.String(),
 		labels, stats.VCNCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectVCN, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_VCN.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectVCN, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_VCN.String(),
 		labels, stats.VCNUncorrectableErrors)
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectJPEG, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_JPEG.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectJPEG, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_JPEG.String(),
 		labels, stats.JPEGCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectJPEG, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_JPEG.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectJPEG, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_JPEG.String(),
 		labels, stats.JPEGUncorrectableErrors)
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectIH, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_IH.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectIH, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_IH.String(),
 		labels, stats.IHCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectIH, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_IH.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectIH, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_IH.String(),
 		labels, stats.IHUncorrectableErrors)
 
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccCorrectMPIO, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MPIO.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccCorrectMPIO, exportermetrics.GPUMetricField_GPU_ECC_CORRECT_MPIO.String(),
 		labels, stats.MPIOCorrectableErrors)
-	ga.fl.logWithValidateAndExport(ga.m.gpuEccUncorrectMPIO, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MPIO.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuEccUncorrectMPIO, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MPIO.String(),
 		labels, stats.MPIOUncorrectableErrors)
 
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrNopTx0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_NOP_TX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrNopTx0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_NOP_TX.String(),
 		labels, stats.XGMINeighbor0TxNOPs)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrReqTx0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_REQ_TX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrReqTx0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_REQ_TX.String(),
 		labels, stats.XGMINeighbor0TxRequests)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrRespTx0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_RESP_TX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrRespTx0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_RESP_TX.String(),
 		labels, stats.XGMINeighbor0TxResponses)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrBeatsTx0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_BEATS_TX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrBeatsTx0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_BEATS_TX.String(),
 		labels, stats.XGMINeighbor0TXBeats)
 
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrNopTx1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_NOP_TX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrNopTx1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_NOP_TX.String(),
 		labels, stats.XGMINeighbor1TxNOPs)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrReqTx1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_REQ_TX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrReqTx1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_REQ_TX.String(),
 		labels, stats.XGMINeighbor1TxRequests)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrRespTx1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_RESP_TX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrRespTx1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_RESP_TX.String(),
 		labels, stats.XGMINeighbor1TxResponses)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrBeatsTx1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_BEATS_TX.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrBeatsTx1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_BEATS_TX.String(),
 		labels, stats.XGMINeighbor1TXBeats)
 
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrTxTput0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_TX_THRPUT.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrTxTput0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_TX_THRPUT.String(),
 		labels, stats.XGMINeighbor0TxThroughput)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrTxTput1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_TX_THRPUT.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrTxTput1, exportermetrics.GPUMetricField_GPU_XGMI_NBR_1_TX_THRPUT.String(),
 		labels, stats.XGMINeighbor1TxThroughput)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrTxTput2, exportermetrics.GPUMetricField_GPU_XGMI_NBR_2_TX_THRPUT.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrTxTput2, exportermetrics.GPUMetricField_GPU_XGMI_NBR_2_TX_THRPUT.String(),
 		labels, stats.XGMINeighbor2TxThroughput)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrTxTput3, exportermetrics.GPUMetricField_GPU_XGMI_NBR_3_TX_THRPUT.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrTxTput3, exportermetrics.GPUMetricField_GPU_XGMI_NBR_3_TX_THRPUT.String(),
 		labels, stats.XGMINeighbor3TxThroughput)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrTxTput4, exportermetrics.GPUMetricField_GPU_XGMI_NBR_4_TX_THRPUT.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrTxTput4, exportermetrics.GPUMetricField_GPU_XGMI_NBR_4_TX_THRPUT.String(),
 		labels, stats.XGMINeighbor4TxThroughput)
-	ga.fl.logWithValidateAndExport(ga.m.xgmiNbrTxTput5, exportermetrics.GPUMetricField_GPU_XGMI_NBR_5_TX_THRPUT.String(),
+	ga.fl.logWithValidateAndExport(gpuid, ga.m.xgmiNbrTxTput5, exportermetrics.GPUMetricField_GPU_XGMI_NBR_5_TX_THRPUT.String(),
 		labels, stats.XGMINeighbor5TxThroughput)
 
 	vramUsage := stats.VRAMUsage
 	vramStatus := status.GetVRAMStatus()
 	var totalVRAM, usedVRAM, freeVRAM float64
 	if vramUsage != nil {
-		ga.fl.logWithValidateAndExport(ga.m.gpuTotalVisibleVram, exportermetrics.GPUMetricField_GPU_TOTAL_VISIBLE_VRAM.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuTotalVisibleVram, exportermetrics.GPUMetricField_GPU_TOTAL_VISIBLE_VRAM.String(),
 			labels, vramUsage.TotalVisibleVRAM)
-		ga.fl.logWithValidateAndExport(ga.m.gpuUsedVisibleVram, exportermetrics.GPUMetricField_GPU_USED_VISIBLE_VRAM.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuUsedVisibleVram, exportermetrics.GPUMetricField_GPU_USED_VISIBLE_VRAM.String(),
 			labels, vramUsage.UsedVisibleVRAM)
-		ga.fl.logWithValidateAndExport(ga.m.gpuFreeVisibleVram, exportermetrics.GPUMetricField_GPU_FREE_VISIBLE_VRAM.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuFreeVisibleVram, exportermetrics.GPUMetricField_GPU_FREE_VISIBLE_VRAM.String(),
 			labels, vramUsage.FreeVisibleVRAM)
 
-		ga.fl.logWithValidateAndExport(ga.m.gpuTotalGTT, exportermetrics.GPUMetricField_GPU_TOTAL_GTT.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuTotalGTT, exportermetrics.GPUMetricField_GPU_TOTAL_GTT.String(),
 			labels, vramUsage.TotalGTT)
-		ga.fl.logWithValidateAndExport(ga.m.gpuUsedGTT, exportermetrics.GPUMetricField_GPU_USED_GTT.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuUsedGTT, exportermetrics.GPUMetricField_GPU_USED_GTT.String(),
 			labels, vramUsage.UsedGTT)
-		ga.fl.logWithValidateAndExport(ga.m.gpuFreeGTT, exportermetrics.GPUMetricField_GPU_FREE_GTT.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuFreeGTT, exportermetrics.GPUMetricField_GPU_FREE_GTT.String(),
 			labels, vramUsage.FreeGTT)
 	}
 	if vramStatus != nil {
@@ -2083,9 +2146,9 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 	}
 	freeVRAM = totalVRAM - usedVRAM
 	if totalVRAM != 0 {
-		ga.fl.logWithValidateAndExport(ga.m.gpuTotalVram, exportermetrics.GPUMetricField_GPU_TOTAL_VRAM.String(), labels, totalVRAM)
-		ga.fl.logWithValidateAndExport(ga.m.gpuUsedVram, exportermetrics.GPUMetricField_GPU_USED_VRAM.String(), labels, usedVRAM)
-		ga.fl.logWithValidateAndExport(ga.m.gpuFreeVram, exportermetrics.GPUMetricField_GPU_FREE_VRAM.String(), labels, freeVRAM)
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuTotalVram, exportermetrics.GPUMetricField_GPU_TOTAL_VRAM.String(), labels, totalVRAM)
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuUsedVram, exportermetrics.GPUMetricField_GPU_USED_VRAM.String(), labels, usedVRAM)
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuFreeVram, exportermetrics.GPUMetricField_GPU_FREE_VRAM.String(), labels, freeVRAM)
 	}
 	xgmiStats := stats.XGMILinkStats
 	if xgmiStats != nil {
@@ -2102,17 +2165,17 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 	}
 	violationStats := stats.ViolationStats
 	if violationStats != nil {
-		ga.fl.logWithValidateAndExport(ga.m.gpuCurrAccCtr, exportermetrics.GPUMetricField_GPU_VIOLATION_CURRENT_ACCUMULATED_COUNTER.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuCurrAccCtr, exportermetrics.GPUMetricField_GPU_VIOLATION_CURRENT_ACCUMULATED_COUNTER.String(),
 			labels, violationStats.CurrentAccumulatedCounter)
-		ga.fl.logWithValidateAndExport(ga.m.gpuProcHRA, exportermetrics.GPUMetricField_GPU_VIOLATION_PROCESSOR_HOT_RESIDENCY_ACCUMULATED.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuProcHRA, exportermetrics.GPUMetricField_GPU_VIOLATION_PROCESSOR_HOT_RESIDENCY_ACCUMULATED.String(),
 			labels, violationStats.ProcessorHotResidencyAccumulated)
-		ga.fl.logWithValidateAndExport(ga.m.gpuPPTRA, exportermetrics.GPUMetricField_GPU_VIOLATION_PPT_RESIDENCY_ACCUMULATED.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuPPTRA, exportermetrics.GPUMetricField_GPU_VIOLATION_PPT_RESIDENCY_ACCUMULATED.String(),
 			labels, violationStats.PPTResidencyAccumulated)
-		ga.fl.logWithValidateAndExport(ga.m.gpuSTRA, exportermetrics.GPUMetricField_GPU_VIOLATION_SOCKET_THERMAL_RESIDENCY_ACCUMULATED.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuSTRA, exportermetrics.GPUMetricField_GPU_VIOLATION_SOCKET_THERMAL_RESIDENCY_ACCUMULATED.String(),
 			labels, violationStats.SocketThermalResidencyAccumulated)
-		ga.fl.logWithValidateAndExport(ga.m.gpuVRTRA, exportermetrics.GPUMetricField_GPU_VIOLATION_VR_THERMAL_RESIDENCY_ACCUMULATED.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVRTRA, exportermetrics.GPUMetricField_GPU_VIOLATION_VR_THERMAL_RESIDENCY_ACCUMULATED.String(),
 			labels, violationStats.VRThermalResidencyAccumulated)
-		ga.fl.logWithValidateAndExport(ga.m.gpuHBMTRA, exportermetrics.GPUMetricField_GPU_VIOLATION_HBM_THERMAL_RESIDENCY_ACCUMULATED.String(),
+		ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuHBMTRA, exportermetrics.GPUMetricField_GPU_VIOLATION_HBM_THERMAL_RESIDENCY_ACCUMULATED.String(),
 			labels, violationStats.HBMThermalResidencyAccumulated)
 	}
 
@@ -2120,10 +2183,28 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 	if profMetrics == nil {
 		return
 	}
+
+	// Check if all enabled profiler fields are present in profMetrics
+	for profileFieldName, enabled := range exportFieldMap {
+		if !enabled {
+			continue
+		}
+		if meta, ok := fieldMetricsMap[profileFieldName]; ok {
+			if meta.Alias != "" {
+				if _, exists := profMetrics[meta.Alias]; !exists {
+					// mark missing field with max value
+					ga.fl.logWithValidateAndExport(gpuid, meta.Metric, profileFieldName,
+						map[string]string{}, float64(math.MaxUint32))
+				}
+			}
+		}
+	}
+
 	// map list entry to exporter fields rocprofilerclient/rocpclient.cpp
 	// (all_fields)
 	// case sensitive
 	for mkey, value := range profMetrics {
+
 		switch mkey {
 		case "GRBM_GUI_ACTIVE":
 			ga.m.gpuGrbmGuiActivity.With(labels).Set(value)
