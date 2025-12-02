@@ -1,14 +1,6 @@
 # Release Notes
 
-## nic-v1.0.0
-- **NIC Metrics Exporter for Prometheus**
-  - Real-time metrics exporter for AMD NICs.
-  - Supports both Docker and Debian installations.
-  - Collects metrics using nicctl, rdma, and ethtool, and works across hypervisor, VM, and bare-metal environments.
-  - Optimized RDMA stats, reducing the previously observed latency by multiple folds compared to the beta release.
-
 ## v1.5.0
-
 - **Kubevirt**
   - Exporter now supports Kubevirt deployments
     - New exporter with SR-IOV support for hypervisor environments is now available
@@ -52,7 +44,7 @@
      [here](./configuration/metricslist.md#clock-metrics)
 
 ### Platform Support
-ROCm 7.0 MI2xx, MI3xx
+ROCm X.X.X MI2xx, MI3xx
 
 ## v1.4.1
 
@@ -72,7 +64,14 @@ ROCm 7.0 MI2xx, MI3xx
 - **_Note_** Profiler metrics are prefixed by `gpu_prof_` in [metrics list](./configuration/metricslist.md)
 
 ### Platform Support
-ROCm 7.0 MI2xx, MI3xx; Kubernetes 1.34+ (required only for DRA beta feature)
+ROCm 7.1.1 MI2xx, MI3xx; Kubernetes 1.34+ (required only for DRA beta feature)
+
+## nic-v1.0.0
+- **NIC Metrics Exporter for Prometheus**
+  - Real-time metrics exporter for AMD NICs.
+  - Supports both Docker and Debian installations.
+  - Collects metrics using nicctl, rdma, and ethtool, and works across hypervisor, VM, and bare-metal environments.
+  - Optimized RDMA stats, reducing the previously observed latency by multiple folds compared to the beta release.
 
 ## v1.4.0
 

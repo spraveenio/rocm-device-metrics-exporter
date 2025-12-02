@@ -101,14 +101,14 @@ BUILD_DIR := $(DOCS_DIR)/_build
 HTML_DIR := $(BUILD_DIR)/html
 
 # library branch to build amdsmi libraries for gpuagent
-AMDSMI_BRANCH ?= rocm-7.0.0
-AMDSMI_COMMIT ?= 37d158a
+AMDSMI_BRANCH ?= rocm-7.1.1
+AMDSMI_COMMIT ?= 021c61f
 GIMSMI_BRANCH ?= mainline
 GIMSMI_COMMIT ?= mainline/8.3.0.K
 GPUAGENT_BRANCH ?= main
-GPUAGENT_COMMIT ?= 6e5d3a5
+GPUAGENT_COMMIT ?= a5b135c
 
-ROCM_VERSION ?= 7.0
+ROCM_VERSION ?= 7.1.1
 
 export ${GOROOT}
 export ${GOPATH}
