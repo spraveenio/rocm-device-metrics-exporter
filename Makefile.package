@@ -302,4 +302,6 @@ nic-debpkg:
 		$(TOP_DIR)/bin/amdnic-exporter_22.04_amd64.deb
 	@cp -vf $(TOP_DIR)/bin/amdnic-exporter_$(DEBIAN_VERSION)_amd64.deb \
 		$(TOP_DIR)/bin/amdnic-exporter_24.04_amd64.deb
-	@rm $(TOP_DIR)/bin/amdnic-exporter_$(DEBIAN_VERSION)_amd64.deb
+
+nic-debpkg-clean:
+	rm -rf ${TOP_DIR}/bin/amdnic-exporter*.deb
