@@ -19,9 +19,10 @@ package gpuagent
 import (
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/logger"
 	"github.com/ROCm/device-metrics-exporter/pkg/exporter/utils"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type fieldLogger struct {
@@ -36,43 +37,51 @@ func NewFieldLogger() *fieldLogger {
 	}
 }
 
-func (fl *fieldLogger) checkUnsupportedFields(fieldName string) bool {
+func (fl *fieldLogger) checkUnsupportedFields(gpuid, fieldName string) bool {
 	fl.RLock()
 	defer fl.RUnlock()
 	if fl.unsupportedFieldMap == nil {
 		return false
 	}
-	_, exists := fl.unsupportedFieldMap[fieldName]
+	key := gpuid + "-" + fieldName
+	_, exists := fl.unsupportedFieldMap[key]
 	return exists
 }
 
 // logUnsupportedField logs the unsupported field name
 // and adds it to the map of unsupported fields
 // to avoid logging it again
-func (fl *fieldLogger) logUnsupportedField(fieldName string) {
+func (fl *fieldLogger) logUnsupportedField(gpuid, fieldName string) {
 	fl.Lock()
 	defer fl.Unlock()
 	if fl.unsupportedFieldMap == nil {
 		fl.unsupportedFieldMap = make(map[string]bool)
 	}
-	if _, exists := fl.unsupportedFieldMap[fieldName]; !exists {
-		logger.Log.Printf("Platform doesn't support field name: %s", fieldName)
-		fl.unsupportedFieldMap[fieldName] = true
+	key := gpuid + "-" + fieldName
+	if _, exists := fl.unsupportedFieldMap[key]; !exists {
+		logger.Log.Printf("GPU %v Platform doesn't support field name: %s", gpuid, fieldName)
+		fl.unsupportedFieldMap[key] = true
 	}
 }
 
-func (fl *fieldLogger) logWithValidateAndExport(metrics prometheus.GaugeVec, fieldName string,
+func (fl *fieldLogger) logWithValidateAndExport(gpuid string, metrics prometheus.GaugeVec, fieldName string,
 	labels map[string]string, value interface{}) {
 
-	if fl.checkUnsupportedFields(fieldName) {
+	if fl.checkUnsupportedFields(gpuid, fieldName) {
 		return
 	}
 	err := utils.ValidateAndExport(metrics, fieldName, labels, value)
 	if err != utils.ErrorNone {
 		if err == utils.ErrorNotApplicable {
-			fl.logUnsupportedField(fieldName)
+			fl.logUnsupportedField(gpuid, fieldName)
 		} else {
 			logger.Log.Printf("Failed to export metric %s: %v", fieldName, err)
 		}
 	}
+}
+
+func (fl *fieldLogger) Reset() {
+	fl.Lock()
+	defer fl.Unlock()
+	fl.unsupportedFieldMap = make(map[string]bool)
 }

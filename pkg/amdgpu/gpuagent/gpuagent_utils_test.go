@@ -2,6 +2,7 @@ package gpuagent
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -31,21 +32,21 @@ func TestCheckUnsupportedFields(t *testing.T) {
 	fl := NewFieldLogger()
 
 	// Test with empty map
-	exists := fl.checkUnsupportedFields("test_field")
+	exists := fl.checkUnsupportedFields("0", "test_field")
 	if exists {
 		t.Error("checkUnsupportedFields should return false for non-existent field")
 	}
 
 	// Add a field manually and test
-	fl.unsupportedFieldMap["existing_field"] = true
-	exists = fl.checkUnsupportedFields("existing_field")
+	fl.unsupportedFieldMap["0-existing_field"] = true
+	exists = fl.checkUnsupportedFields("0", "existing_field")
 	if !exists {
 		t.Error("checkUnsupportedFields should return true for existing field")
 	}
 
 	// Test with nil map
 	fl.unsupportedFieldMap = nil
-	exists = fl.checkUnsupportedFields("any_field")
+	exists = fl.checkUnsupportedFields("0", "any_field")
 	if exists {
 		t.Error("checkUnsupportedFields should return false when map is nil")
 	}
@@ -59,9 +60,9 @@ func TestLogUnsupportedField(t *testing.T) {
 	fl := NewFieldLogger()
 
 	// Test logging a new unsupported field
-	fl.logUnsupportedField("test_field")
+	fl.logUnsupportedField("0", "test_field")
 
-	if !fl.unsupportedFieldMap["test_field"] {
+	if !fl.unsupportedFieldMap["0-test_field"] {
 		t.Error("Field should be marked as unsupported")
 	}
 
@@ -72,7 +73,7 @@ func TestLogUnsupportedField(t *testing.T) {
 
 	// Test logging the same field again (should not log twice)
 	buf.Reset()
-	fl.logUnsupportedField("test_field")
+	fl.logUnsupportedField("0", "test_field")
 
 	output = buf.String()
 	if output != "" {
@@ -82,13 +83,13 @@ func TestLogUnsupportedField(t *testing.T) {
 	// Test with nil map
 	fl.unsupportedFieldMap = nil
 	buf.Reset()
-	fl.logUnsupportedField("new_field")
+	fl.logUnsupportedField("0", "new_field")
 
 	if fl.unsupportedFieldMap == nil {
 		t.Error("unsupportedFieldMap should be initialized")
 	}
 
-	if !fl.unsupportedFieldMap["new_field"] {
+	if !fl.unsupportedFieldMap["0-new_field"] {
 		t.Error("Field should be marked as unsupported after map initialization")
 	}
 }
@@ -117,7 +118,7 @@ func TestLogWithValidateAndExport(t *testing.T) {
 	// Test with unsupported field (should not call ValidateAndExport)
 	fl.unsupportedFieldMap["unsupported_field"] = true
 	buf.Reset()
-	fl.logWithValidateAndExport(*testMetric, "unsupported_field", labels, 123.45)
+	fl.logWithValidateAndExport("0", *testMetric, "unsupported_field", labels, 123.45)
 
 	output := buf.String()
 	if output != "" {
@@ -126,13 +127,13 @@ func TestLogWithValidateAndExport(t *testing.T) {
 
 	// Test with valid field and value
 	buf.Reset()
-	fl.logWithValidateAndExport(*testMetric, "supported_field", labels, 123.45)
+	fl.logWithValidateAndExport("0", *testMetric, "supported_field", labels, 123.45)
 
 	// Since we can't easily mock utils.ValidateAndExport, we'll test the logging behavior
 	// when it would return errors by testing the method exists and can be called
 
 	// Verify the field wasn't marked as unsupported for valid case
-	if fl.checkUnsupportedFields("supported_field") {
+	if fl.checkUnsupportedFields("0", "supported_field") {
 		t.Error("Valid field should not be marked as unsupported")
 	}
 }
@@ -145,14 +146,16 @@ func TestFieldLoggerConcurrency(t *testing.T) {
 
 	go func() {
 		for i := 0; i < 100; i++ {
-			fl.logUnsupportedField("field1")
+			gpu_id := fmt.Sprintf("%d", i)
+			fl.logUnsupportedField(gpu_id, "field1")
 		}
 		done <- true
 	}()
 
 	go func() {
 		for i := 0; i < 100; i++ {
-			fl.checkUnsupportedFields("field1")
+			gpu_id := fmt.Sprintf("%d", i)
+			fl.checkUnsupportedFields(gpu_id, "field1")
 		}
 		done <- true
 	}()
@@ -161,7 +164,7 @@ func TestFieldLoggerConcurrency(t *testing.T) {
 	<-done
 	<-done
 
-	if !fl.checkUnsupportedFields("field1") {
+	if !fl.checkUnsupportedFields("0", "field1") {
 		t.Error("Field1 should be marked as unsupported after concurrent operations")
 	}
 }
