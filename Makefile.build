@@ -3,6 +3,7 @@
 WORK_DIR := /usr/src/github.com/ROCm/device-metrics-exporter/
 SMILIB_CONTAINER_WORKDIR := ${WORK_DIR}
 AMDMSMI_SRC_DIR := $(TOP_DIR)/
+AMDSMI_PATCH_DIR := $(TOP_DIR)/patch/amdsmi/
 AMDSMI_BUILD_DIR := $(TOP_DIR)/tools/smilib-builderimage/
 GPUAGENT_SRC_DIR := $(TOP_DIR)/gpuagent/
 GPUAGENT_BUILD_DIR := $(TOP_DIR)/tools/gpuagent-builderimage/
