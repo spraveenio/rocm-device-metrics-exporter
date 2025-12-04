@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 dir=/usr/src/github.com/ROCm/device-metrics-exporter/libamdsmi
+patchdir=/usr/src/github.com/ROCm/device-metrics-exporter/patch/amdsmi/
 exporteroutdir=$dir/build/exporterout
 
 cd /usr/src/github.com/ROCm/device-metrics-exporter/libamdsmi
@@ -12,6 +13,23 @@ if [ -z $COMMIT ]; then
     echo "commit set to $COMMIT"
     git reset --hard $COMMIT
 fi
+
+if [ -d "$patchdir" ]; then
+    echo "Applying patches from $patchdir"
+    for patch in "$patchdir"/*.patch; do
+        if [ -f "$patch" ]; then
+            echo "Applying patch: $patch"
+            git apply --check "$patch" 2>/dev/null && git apply "$patch" || echo "Patch already applied or not applicable, skipping: $patch"
+            if [ $? -ne 0 ]; then
+                echo "Failed to apply patch: $patch"
+                exit 1
+            fi
+        fi
+    done
+else
+    echo "No patch directory found at $patchdir, skipping patches"
+fi
+
 rm -rf build 2>&1 || true
 mkdir build
 cd build

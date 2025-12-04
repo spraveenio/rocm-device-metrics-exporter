@@ -1,27 +1,27 @@
 assets:
   - name    : gpuagent_mock.bin.gz
-    version : a5b135cac7c (private)
+    version : c39f77a (private)
     repo    : ROCm/gpu-agent
     branch  : main
 
   - name    : gpuagent_static.bin.gz
-    version : a5b135cac7c (private)
+    version : c39f77a (private)
     repo    : ROCm/gpu-agent
     branch  : main
 
   - name    : gpuctl.gobin
-    version : a5b135cac7c (private)
+    version : c39f77a (private)
     repo    : ROCm/gpu-agent
     branch  : main
 
   - name    : gpuagent_sriov_static.bin.gz
-    version : a5b135cac7c (private)
+    version : c39f77a  (private)
     repo    : ROCm/gpu-agent
     branch  : main
 
   - name    : amd_smi_lib
     version : 021c61f
-    branch  : rocm-7.1.1
+    branch  : rocm-7.1.1 (with patch applied from patch/amdsmi/)
 
   - name    : rocprofiler
     version : 7.1.1
