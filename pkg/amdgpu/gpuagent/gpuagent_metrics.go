@@ -1521,6 +1521,11 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	if err != nil {
 		logger.Log.Printf("Error listing workloads: %v", err)
 	}
+	pmetrics, err := ga.getProfilerMetrics()
+	if err != nil {
+		//continue as this may not be available at this time
+		pmetrics = nil
+	}
 
 	k8PodLabelsMap, err = ga.FetchPodLabelsForNode()
 	nonGpuLabels := ga.populateLabelsFromGPU(nil, nil, nil)
@@ -1531,8 +1536,16 @@ func (ga *GPUAgentClient) UpdateStaticMetrics() error {
 	newGPUState := ga.processEccErrorMetrics(resp.Response, wls)
 	_ = ga.updateNewHealthState(newGPUState)
 	for _, gpu := range resp.Response {
-		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, nil)
+		var gpuProfMetrics map[string]float64
+		// if available use the data
+		if pmetrics != nil {
+			gpuid := getGPUNodeID(gpu)
+			//nolint
+			gpuProfMetrics, _ = pmetrics[gpuid]
+		}
+		ga.updateGPUInfoToMetrics(wls, gpu, partitionMap, gpuProfMetrics)
 	}
+	ga.fl.SetFilterDone()
 	return nil
 }
 
