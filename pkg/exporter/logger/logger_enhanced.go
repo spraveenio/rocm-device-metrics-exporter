@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -34,6 +35,7 @@ type EnhancedLogger struct {
 	Log           *log.Logger        // Standard logger for backward compatibility
 	logrus        *logrus.Logger     // Enhanced logger
 	logger        *lumberjack.Logger // Lumberjack logger for log rotation
+	logFile       *os.File           // Log file handle when rotation is disabled
 	currentLevel  logrus.Level       // Current log level
 	mu            sync.RWMutex       // Mutex for thread-safe operations
 	isConsoleMode bool               // Whether logging to console
@@ -72,6 +74,17 @@ func (e *EnhancedLogger) SetOutput(output io.Writer) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
+	// Close existing log file or logger if any
+	if e.logFile != nil {
+		e.logFile.Close()
+		e.logFile = nil
+	}
+	if e.logger != nil {
+		e.logger.Close()
+		e.logger = nil
+	}
+
+	// Set new output
 	e.logrus.SetOutput(output)
 }
 
@@ -94,12 +107,37 @@ func (e *EnhancedLogger) GetLogLevel() string {
 }
 
 // SetLogRotation configures log rotation settings
-func (e *EnhancedLogger) SetLogRotation(maxSize, maxBackups, maxAge int) error {
+func (e *EnhancedLogger) SetLogRotation(maxSize, maxBackups, maxAge int, disable bool) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	if e.isConsoleMode {
 		return fmt.Errorf("log rotation not supported in console mode")
+	}
+
+	// Close existing log file if any
+	if e.logFile != nil {
+		e.logFile.Close()
+		e.logFile = nil
+	}
+
+	if e.logger != nil {
+		e.logger.Close()
+		e.logger = nil
+	}
+
+	if disable {
+		// Disable log rotation by setting output to a file without rotation
+		logPath := GetLogFilePath()
+		outfile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to open log file: %w", err)
+		}
+		e.logFile = outfile
+		e.logrus.SetOutput(e.logFile)
+		e.logger = nil
+		e.logrus.Info("Log rotation disabled")
+		return nil
 	}
 
 	logRotator := &lumberjack.Logger{
@@ -110,6 +148,7 @@ func (e *EnhancedLogger) SetLogRotation(maxSize, maxBackups, maxAge int) error {
 		Compress:   true,             // Whether to compress old log files
 		LocalTime:  true,             // Use local time for timestamps in rotated filenames
 	}
+
 	// apply new log rotator
 	e.logger = logRotator
 	e.logrus.SetOutput(e.logger)
@@ -252,18 +291,31 @@ func (e *EnhancedLogger) Println(args ...interface{}) {
 
 // Close closes the logger and any open file handles
 func (e *EnhancedLogger) Close() error {
-	// nolint:errcheck
-	// no resources to close currently
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.logFile != nil {
+		err := e.logFile.Close()
+		e.logFile = nil
+		return err
+	}
+
+	if e.logger != nil {
+		err := e.logger.Close()
+		e.logger = nil
+		return err
+	}
 	return nil
 }
 
 // DefaultLogConfig returns a default log configuration
 func DefaultLogConfig() *exportermetrics.LoggingConfig {
 	return &exportermetrics.LoggingConfig{
-		Level:         exportermetrics.LogLevel_INFO.String(),
-		MaxFileSizeMB: 10, // 10MB
-		MaxBackups:    3,
-		MaxAgeDays:    7, // 7 days
+		Level:              exportermetrics.LogLevel_INFO.String(),
+		MaxFileSizeMB:      10,    // 10MB
+		MaxBackups:         3,     // 3 backups
+		MaxAgeDays:         7,     // 7 days
+		LogRotationDisable: false, // rotation enabled by default
 	}
 }
 
@@ -274,7 +326,7 @@ func (e *EnhancedLogger) ConfigureFromConfig(config *exportermetrics.LoggingConf
 
 	// Configure log rotation if not in console mode (this method has its own locking)
 	if !e.isConsoleMode {
-		return e.SetLogRotation(int(config.MaxFileSizeMB), int(config.MaxBackups), int(config.MaxAgeDays))
+		return e.SetLogRotation(int(config.MaxFileSizeMB), int(config.MaxBackups), int(config.MaxAgeDays), config.LogRotationDisable)
 	}
 
 	return nil

@@ -365,6 +365,10 @@ message LoggingConfig {
     // max age of log files in days
     // 0 implies default is 7 days
     uint32 MaxAgeDays = 4;
+
+    // disable log rotation
+    // if true, log rotation is disabled
+    bool LogRotationDisable = 5;
 }
 
 message CommonConfig {

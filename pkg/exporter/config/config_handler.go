@@ -125,6 +125,8 @@ func (c *ConfigHandler) GetLoggerConfig() *exportermetrics.LoggingConfig {
 			if loggerSettings.GetMaxAgeDays() != 0 {
 				loggerConfig.MaxAgeDays = loggerSettings.GetMaxAgeDays()
 			}
+			// set log rotation disable flag
+			loggerConfig.LogRotationDisable = loggerSettings.GetLogRotationDisable()
 		}
 	}
 	return loggerConfig
