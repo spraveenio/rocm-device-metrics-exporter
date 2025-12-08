@@ -1840,13 +1840,13 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 			labels, tempStats.MemoryTemperature)
 
 		if len(tempStats.HBMTemperature) == 0 {
-			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuMemoryTemp, exportermetrics.GPUMetricField_GPU_HBM_TEMPERATURE.String(),
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuHBMTemp, exportermetrics.GPUMetricField_GPU_HBM_TEMPERATURE.String(),
 				labels, float64(math.MaxUint32))
 		}
 		for j, temp := range tempStats.HBMTemperature {
 			labelsWithIndex["hbm_index"] = fmt.Sprintf("%v", j)
 			if j == 0 && !utils.IsValueApplicable(temp) {
-				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuMemoryTemp, exportermetrics.GPUMetricField_GPU_HBM_TEMPERATURE.String(),
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuHBMTemp, exportermetrics.GPUMetricField_GPU_HBM_TEMPERATURE.String(),
 					labelsWithIndex, float64(math.MaxUint32))
 				break
 			} else if utils.IsValueApplicable(temp) {
@@ -1898,13 +1898,13 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 		delete(labelsWithIndex, "jpeg_index")
 
 		if len(gpuUsage.GFXBusyInst) == 0 {
-			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuGfxBusyInst, exportermetrics.GPUMetricField_GPU_GFX_ACTIVITY.String(),
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuGfxBusyInst, exportermetrics.GPUMetricField_GPU_GFX_BUSY_INSTANTANEOUS.String(),
 				labels, float64(math.MaxUint32))
 		}
 		for j, act := range gpuUsage.GFXBusyInst {
 			labelsWithIndex["xcc_index"] = fmt.Sprintf("%v", j)
 			if j == 0 && !utils.IsValueApplicable(act) {
-				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuGfxBusyInst, exportermetrics.GPUMetricField_GPU_GFX_ACTIVITY.String(),
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuGfxBusyInst, exportermetrics.GPUMetricField_GPU_GFX_BUSY_INSTANTANEOUS.String(),
 					labelsWithIndex, float64(math.MaxUint32))
 				break
 			} else if utils.IsValueApplicable(act) {
@@ -1913,13 +1913,13 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 		}
 
 		if len(gpuUsage.VCNBusyInst) == 0 {
-			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVcnBusyInst, exportermetrics.GPUMetricField_GPU_VCN_ACTIVITY.String(),
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVcnBusyInst, exportermetrics.GPUMetricField_GPU_VCN_BUSY_INSTANTANEOUS.String(),
 				labels, float64(math.MaxUint32))
 		}
 		for j, act := range gpuUsage.VCNBusyInst {
 			labelsWithIndex["xcc_index"] = fmt.Sprintf("%v", j)
 			if j == 0 && !utils.IsValueApplicable(act) {
-				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVcnBusyInst, exportermetrics.GPUMetricField_GPU_VCN_ACTIVITY.String(),
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuVcnBusyInst, exportermetrics.GPUMetricField_GPU_VCN_BUSY_INSTANTANEOUS.String(),
 					labelsWithIndex, float64(math.MaxUint32))
 				break
 			} else if utils.IsValueApplicable(act) {
@@ -1928,13 +1928,13 @@ func (ga *GPUAgentClient) updateGPUInfoToMetrics(
 		}
 
 		if len(gpuUsage.JPEGBusyInst) == 0 {
-			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuJpegBusyInst, exportermetrics.GPUMetricField_GPU_JPEG_ACTIVITY.String(),
+			ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuJpegBusyInst, exportermetrics.GPUMetricField_GPU_JPEG_BUSY_INSTANTANEOUS.String(),
 				labels, float64(math.MaxUint32))
 		}
 		for j, act := range gpuUsage.JPEGBusyInst {
 			labelsWithIndex["xcc_index"] = fmt.Sprintf("%v", j)
 			if j == 0 && !utils.IsValueApplicable(act) {
-				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuJpegBusyInst, exportermetrics.GPUMetricField_GPU_JPEG_ACTIVITY.String(),
+				ga.fl.logWithValidateAndExport(gpuid, ga.m.gpuJpegBusyInst, exportermetrics.GPUMetricField_GPU_JPEG_BUSY_INSTANTANEOUS.String(),
 					labelsWithIndex, float64(math.MaxUint32))
 				break
 			} else if utils.IsValueApplicable(act) {
