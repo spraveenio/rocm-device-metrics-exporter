@@ -449,3 +449,162 @@ func TestLogRotation(t *testing.T) {
 		t.Error("Expected main log file to contain post-rotation messages")
 	}
 }
+
+func TestLogRotationDisable(t *testing.T) {
+	defer cleanup()
+
+	// Create temporary directory for log files
+	tmpDir, err := os.MkdirTemp("", "logger_rotation_disable_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	SetLogDir(tmpDir)
+	SetLogFile("disable_test.log")
+
+	// Initialize with file logging
+	Init(false)
+
+	if Log == nil {
+		t.Error("Expected Log to be initialized")
+		return
+	}
+
+	// Test with log rotation disabled
+	err = Log.SetLogRotation(10, 3, 7, true)
+	if err != nil {
+		t.Fatalf("Failed to configure logger with rotation disabled: %v", err)
+	}
+
+	// Write some log messages
+	for i := 0; i < 10; i++ {
+		Log.Infof("Log message with rotation disabled %d", i)
+	}
+
+	// Verify that the main log file exists and contains messages
+	logPath := GetLogFilePath()
+	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+		t.Fatalf("Expected log file to exist at %s", logPath)
+	}
+
+	// Check that the log file contains messages
+	content, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	if !strings.Contains(string(content), "Log message with rotation disabled") {
+		t.Error("Expected log file to contain messages")
+	}
+
+	// Verify that logger.logger is nil when rotation is disabled
+	if Log.logger != nil {
+		t.Error("Expected logger.logger to be nil when rotation is disabled")
+	}
+
+	// Test with log rotation enabled
+	err = Log.SetLogRotation(10, 3, 7, false)
+	if err != nil {
+		t.Fatalf("Failed to configure logger with rotation enabled: %v", err)
+	}
+
+	// Write more log messages after enabling rotation
+	for i := 0; i < 5; i++ {
+		Log.Infof("Log message with rotation enabled %d", i)
+	}
+
+	// Verify that logger.logger is not nil when rotation is enabled
+	if Log.logger == nil {
+		t.Error("Expected logger.logger to not be nil when rotation is enabled")
+	}
+
+	// Verify the log file contains messages with rotation enabled
+	content, err = os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	if !strings.Contains(string(content), "Log message with rotation enabled") {
+		t.Error("Expected log file to contain post-enable messages")
+	}
+}
+
+func TestConfigureFromConfigWithLogRotationDisable(t *testing.T) {
+	defer cleanup()
+
+	// Create temporary directory for log files
+	tmpDir, err := os.MkdirTemp("", "logger_config_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	SetLogDir(tmpDir)
+	SetLogFile("config_test.log")
+
+	// Initialize with file logging
+	Init(false)
+
+	if Log == nil {
+		t.Error("Expected Log to be initialized")
+		return
+	}
+
+	// Create a config with LogRotationDisable set to true
+	config := DefaultLogConfig()
+	config.LogRotationDisable = true
+	config.Level = "INFO"
+	config.MaxFileSizeMB = 5
+	config.MaxBackups = 2
+	config.MaxAgeDays = 3
+
+	// Configure logger with the config
+	err = Log.ConfigureFromConfig(config)
+	if err != nil {
+		t.Fatalf("Failed to configure logger: %v", err)
+	}
+
+	// Write some log messages
+	Log.Info("Test message with config")
+
+	// Verify that logger.logger is nil when rotation is disabled
+	if Log.logger != nil {
+		t.Error("Expected logger.logger to be nil when rotation is disabled via config")
+	}
+
+	// Verify the log file contains the message
+	logPath := GetLogFilePath()
+	content, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	if !strings.Contains(string(content), "Test message with config") {
+		t.Error("Expected log file to contain test message")
+	}
+
+	// Now test with rotation enabled
+	config.LogRotationDisable = false
+	err = Log.ConfigureFromConfig(config)
+	if err != nil {
+		t.Fatalf("Failed to configure logger with rotation enabled: %v", err)
+	}
+
+	// Verify that logger.logger is not nil when rotation is enabled
+	if Log.logger == nil {
+		t.Error("Expected logger.logger to not be nil when rotation is enabled via config")
+	}
+
+	Log.Info("Test message with rotation enabled")
+
+	// Verify the log file contains the new message
+	content, err = os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	if !strings.Contains(string(content), "Test message with rotation enabled") {
+		t.Error("Expected log file to contain message after enabling rotation")
+	}
+}

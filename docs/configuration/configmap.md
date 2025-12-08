@@ -20,6 +20,7 @@ When deploying AMD Device Metrics Exporter on Kubernetes, a `ConfigMap` is deplo
     - `MaxSizeMB`: Maximum size in megabytes of the log file before it gets rotated. Default is `10` MB.
     - `MaxBackups`: Maximum number of old log files to retain. Default is `3`.
     - `MaxAgeDays`: Maximum number of days to retain old log files. Default is `7` days.
+    - `LogRotationDisable`: Boolean flag to disable log rotation. If set to `true`, log rotation is disabled and logs will be written to a single file without rotation. Default is `false`.
 - `NICConfig`:
   - `Fields`: An array of strings specifying what metrics field to be exported. Detailed list of fields can be found [here](metricslist.md)
   - `Labels`: `NIC_SERIAL_NUMBER`, `NIC_UUID`, `NIC_HOSTNAME` are always set and cannot be removed. Workload related labels such as `NIC_POD`, `NIC_NAMESPACE`, and `NIC_CONTAINER` are dynamically added to the LIF when there is an associated workload.  Labels supported are available in the provided example `configmap.yml`.
