@@ -26,6 +26,9 @@ Each Debian package release of the Standalone Metrics Exporter is dependent on a
    * - amdgpu-exporter-1.4.0
      - ROCm 7.0.x
      - 6.14.x
+   * - amdgpu-exporter-1.4.1
+     - ROCm 7.1.x
+     - 6.16.x
 
 Installation
 ===================
@@ -50,14 +53,14 @@ Step 2: Install AMDGPU Driver
 ------------------------------
 
 .. note::
-   For the most up-to-date information on installing dkms drivers please see the `ROCm Install Quick Start <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/quick-start.html>`_ page. The below instructions are the most current instructions as of ROCm 7.0.rc1.
+   For the most up-to-date information on installing dkms drivers please see the `ROCm Install Quick Start <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/quick-start.html>`_ page. The below instructions are the most current instructions as of ROCm 7.1.1.
 
-1. Download the driver from the Radeon repository (`repo.radeon.com <https://repo.radeon.com/amdgpu-install>`_) for your operating system. For example if you want to get the latest ROCm 7.0.0 drivers for Ubuntu 22.04 you would run the following command:
+1. Download the driver from the Radeon repository (`repo.radeon.com <https://repo.radeon.com/amdgpu-install>`_) for your operating system. For example if you want to get the latest ROCm 7.1.1 drivers for Ubuntu 22.04 you would run the following command:
 
    .. code-block:: bash
 
-      wget https://repo.radeon.com/amdgpu-install/7.0/ubuntu/jammy/amdgpu-install_7.0.70000-1_all.deb
-      sudo apt install ./amdgpu-install_7.0.70000-1_all.deb
+      wget https://repo.radeon.com/amdgpu-install/7.1.1/ubuntu/jammy/amdgpu-install_7.1.1.70101-1_all.deb
+      sudo apt install ./amdgpu-install_7.1.1.70101-1_all.deb
       sudo apt update
 
    Please note that the above url will be different depending on what version of the drivers you will be installing and type of Operating System you are using.
@@ -100,13 +103,13 @@ Step 3: Install the APT Prerequisites for Metrics Exporter
 
          .. code-block:: bash
 
-            deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.4.0 jammy main
+            deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.4.1 jammy main
 
       .. tab-item:: ubuntu 24.04
 
          .. code-block:: bash
 
-            deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.4.0 noble main
+            deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/device-metrics-exporter/apt/1.4.1 noble main
 
 
 3. Update the package list again:

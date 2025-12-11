@@ -20,6 +20,7 @@ For Kubernetes environments, a Helm chart is provided for easy deployment.
 platform: k8s
 nodeSelector: {} # Optional: Add custom nodeSelector
 tolerations: []  # Optional: Add custom tolerations
+podAnnotations: {} # Optional: Add custom pod annotations
 kubelet:
   podResourceAPISocketPath: /var/lib/kubelet/pod-resources
 image:
@@ -27,8 +28,17 @@ image:
   tag: v1.4.1
   pullPolicy: Always
 configMap: "" # Optional: Add custom configuration
+# Resource requests and limits for the exporter pod
+resources:
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+  requests:
+    cpu: "500m"
+    memory: "512M"
 service:
   type: ClusterIP  # or NodePort
+  annotations: {} # Optional: Add custom service annotations
   ClusterIP:
     port: 5000
 # ServiceMonitor configuration for Prometheus Operator integration
@@ -52,9 +62,7 @@ chmod 700 get_helm.sh
 # Install Helm Charts
 helm repo add exporter https://rocm.github.io/device-metrics-exporter
 helm repo update
-helm install exporter \
-  https://github.com/ROCm/device-metrics-exporter/releases/download/v1.4.0/device-metrics-exporter-charts-v1.4.0.tgz \
-  -n mynamespace -f values.yaml --create-namespace
+helm install exporter exporter/device-metrics-exporter-charts --version v1.4.1 --namespace kube-amd-gpu --create-namespace -f values.yaml
 ```
 
 ## Enabling DRA (Beta)
