@@ -187,6 +187,22 @@ func (ga *GPUAgentGPUClient) isProfilerEnabled() bool {
 }
 
 func (ga *GPUAgentGPUClient) getMetricsAll() error {
+	// Start fetching profiler metrics in a goroutine to run in parallel with GPU metrics
+	type profilerResult struct {
+		metrics map[string]map[string]float64
+		err     error
+	}
+	profilerChan := make(chan profilerResult, 1)
+
+	go func() {
+		pmetrics, err := ga.getProfilerMetrics()
+		if err != nil {
+			//continue as this may not be available at this time
+			pmetrics = nil
+		}
+		profilerChan <- profilerResult{metrics: pmetrics, err: err}
+	}()
+
 	// send the req to gpuclient
 	resp, partitionMap, err := ga.getGPUs()
 	if err != nil {
@@ -202,11 +218,11 @@ func (ga *GPUAgentGPUClient) getMetricsAll() error {
 		cper = nil
 	}
 	wls, _ := ga.gpuHandler.ListWorkloads()
-	pmetrics, err := ga.getProfilerMetrics()
-	if err != nil {
-		//continue as this may not be available at this time
-		pmetrics = nil
-	}
+
+	// Wait for profiler metrics to complete
+	profResult := <-profilerChan
+	pmetrics := profResult.metrics
+
 	ga.k8PodLabelsMap, err = ga.FetchPodLabelsForNode()
 	if err != nil {
 		logger.Errorf("FetchPodLabelsForNode failed with err : %v", err)
