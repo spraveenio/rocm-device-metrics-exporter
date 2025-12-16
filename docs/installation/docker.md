@@ -13,11 +13,13 @@ This page explains how to install AMD Device Metrics Exporter using Docker.
 The Device Metrics Exporter container is hosted on Docker Hub at [rocm/device-metrics-exporter](https://hub.docker.com/r/rocm/device-metrics-exporter).
 
 - Start the container:
+- Security priviledge `SYS_ADMIN` required if profiler metrics are enabled
 
 ```bash
 docker run -d \
   --device=/dev/dri \
   --device=/dev/kfd \
+  --cap-add=SYS_ADMIN \
   -p 5000:5000 \
   --name device-metrics-exporter \
   rocm/device-metrics-exporter:v1.4.1
