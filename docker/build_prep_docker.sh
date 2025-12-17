@@ -73,11 +73,3 @@ ln -f $TOP_DIR/bin/metricsclient $TOP_DIR/docker/metricsclient
 ln -f $TOP_DIR/bin/amdgpuhealth $TOP_DIR/docker/amdgpuhealth
 ln -f $TOP_DIR/tools/techsupport/metrics-exporter-ts.sh $TOP_DIR/docker/metrics-exporter-ts.sh
 cp $TOP_DIR/LICENSE $TOP_DIR/docker/LICENSE
-
-# Copy AMD SMI library from assets
-if [ -f $TOP_DIR/assets/amd_smi_lib/x86_64/$OS/lib/libamd_smi.so.25.4 ]; then
-    echo "Copying AMD SMI library from assets to docker"
-    cp -vf $TOP_DIR/assets/amd_smi_lib/x86_64/$OS/lib/libamd_smi.so.25.4 $TOP_DIR/docker/
-else
-    echo "Warning: AMD SMI library not found at $TOP_DIR/assets/amd_smi_lib/x86_64/RHEL9/lib/libamd_smi.so.25.4"
-fi
