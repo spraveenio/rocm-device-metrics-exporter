@@ -1,6 +1,6 @@
 module github.com/ROCm/device-metrics-exporter
 
-go 1.24.6
+go 1.25.5
 
 require (
 	github.com/alta/protopatch v0.5.3
@@ -15,6 +15,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.62.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
@@ -220,4 +221,4 @@ replace golang.org/x/net v0.29.0 => golang.org/x/net v0.36.0
 
 replace github.com/golang-jwt/jwt/v5 v5.2.1 => github.com/golang-jwt/jwt/v5 v5.2.2
 
-replace github.com/go-viper/mapstructure/v2 v2.2.1 => github.com/go-viper/mapstructure/v2 v2.3.0
+replace github.com/go-viper/mapstructure/v2 v2.2.1 => github.com/go-viper/mapstructure/v2 v2.4.0

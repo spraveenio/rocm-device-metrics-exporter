@@ -1,21 +1,21 @@
 assets:
   - name    : gpuagent_mock.bin.gz
-    version : a5b135cac7c (private)
+    version : 8506ea7
     repo    : ROCm/gpu-agent
     branch  : main
 
   - name    : gpuagent_static.bin.gz
-    version : a5b135cac7c (private)
+    version : 8506ea7
     repo    : ROCm/gpu-agent
     branch  : main
 
   - name    : gpuctl.gobin
-    version : a5b135ca
+    version : 8506ea7
     repo    : ROCm/gpu-agent
     branch  : main
 
   - name    : gpuagent_sriov_static.bin.gz
-    version : a5b135cac7c (private)
+    version : 8506ea7
     repo    : ROCm/gpu-agent
     branch  : main
 
