@@ -28,7 +28,7 @@ monitor:
     nic: false     # Monitor NIC resources (enable for network metrics)
 image:
   repository: docker.io/rocm/device-metrics-exporter
-  tag: v1.5.0
+  tag: v1.4.2
   pullPolicy: Always
 configMap: "" # Optional: Add custom configuration
 service:

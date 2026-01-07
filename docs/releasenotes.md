@@ -1,22 +1,6 @@
 # Release Notes
 
-## nic-v1.0.0
-- **NIC Metrics Exporter for Prometheus**
-  - Real-time metrics exporter for AMD NICs.
-  - Supports both Docker and Debian installations.
-  - Collects metrics using nicctl, rdma, and ethtool, and works across hypervisor, VM, and bare-metal environments.
-  - Optimized RDMA stats, reducing the previously observed latency by multiple folds compared to the beta release.
-
-## v1.5.0
-- **Kubevirt**
-  - Exporter now supports Kubevirt deployments
-    - New exporter with SR-IOV support for hypervisor environments is now available
-      - Legacy exporter remains applicable for existing deployments:
-        1. Baremetal passthrough
-        2. Guest VM
-
-- **Slinky**
-  - Slinky job reporting is now supported, with labels providing both Kubernetes and Slurm job information
+## v1.4.2
 
 - **New Label**
   - `KFD_PROCESS_ID` label will  now report the process ID using the
@@ -52,6 +36,13 @@
 
 ### Platform Support
 ROCm X.X.X MI2xx, MI3xx
+
+## nic-v1.0.0
+- **NIC Metrics Exporter for Prometheus**
+  - Real-time metrics exporter for AMD NICs.
+  - Supports both Docker and Debian installations.
+  - Collects metrics using nicctl, rdma, and ethtool, and works across hypervisor, VM, and bare-metal environments.
+  - Optimized RDMA stats, reducing the previously observed latency by multiple folds compared to the beta release.
 
 ## v1.4.1
 
