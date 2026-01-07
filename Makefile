@@ -137,7 +137,7 @@ UBUNTU_LIBDIR = UBUNTU24
 endif
 
 # set version and run `make update-version` to all docs
-PROJECT_VERSION ?= v1.5.0
+PROJECT_VERSION ?= v1.4.2
 HELM_CHARTS_VERSION ?= $(PROJECT_VERSION)
 NIC_BUILD ?= 0
 
