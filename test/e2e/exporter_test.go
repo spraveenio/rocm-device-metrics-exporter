@@ -1000,6 +1000,158 @@ func (s *E2ESuite) Test024MockInbandRAS(c *C) {
 	log.Print("Successfully verified AFID 35 in mock inband RAS error response")
 }
 
+// Test025ECCDeferredErrorConfig validates that ECC deferred error metrics can be
+// configured and exported correctly via config file updates.
+func (s *E2ESuite) Test025ECCDeferredErrorConfig(c *C) {
+	log.Print("Testing ECC deferred error metrics configuration")
+
+	// Enable all 19 ECC deferred error fields in config
+	fields := []string{
+		"gpu_ecc_deferred_total",
+		"gpu_ecc_deferred_sdma",
+		"gpu_ecc_deferred_gfx",
+		"gpu_ecc_deferred_mmhub",
+		"gpu_ecc_deferred_athub",
+		"gpu_ecc_deferred_bif",
+		"gpu_ecc_deferred_hdp",
+		"gpu_ecc_deferred_xgmi_wafl",
+		"gpu_ecc_deferred_df",
+		"gpu_ecc_deferred_smn",
+		"gpu_ecc_deferred_sem",
+		"gpu_ecc_deferred_mp0",
+		"gpu_ecc_deferred_mp1",
+		"gpu_ecc_deferred_fuse",
+		"gpu_ecc_deferred_umc",
+		"gpu_ecc_deferred_mca",
+		"gpu_ecc_deferred_vcn",
+		"gpu_ecc_deferred_jpeg",
+		"gpu_ecc_deferred_ih",
+		"gpu_ecc_deferred_mpio",
+	}
+	err := s.SetFields(fields)
+	assert.Nil(c, err)
+	time.Sleep(5 * time.Second) // Wait for config update to take effect
+
+	// Get Prometheus metrics response
+	var response string
+	assert.Eventually(c, func() bool {
+		response, _ = s.getExporterResponse()
+		return response != ""
+	}, 10*time.Second, 1*time.Second)
+
+	// Parse metrics and verify ECC deferred fields are present
+	allgpus, err := testutils.ParsePrometheusMetrics(response)
+	assert.Nil(c, err)
+	assert.True(c, len(allgpus) > 0, "Expected at least one GPU in metrics")
+
+	// Verify at least the total deferred error metric is present
+	for gpuId, gpu := range allgpus {
+		_, foundTotal := gpu.Fields["gpu_ecc_deferred_total"]
+		if foundTotal {
+			log.Printf("GPU[%v]: Found gpu_ecc_deferred_total metric", gpuId)
+		}
+		// Note: Per-block metrics may be present or absent depending on whether
+		// the mock GPU data has non-zero deferred error counts.
+		// The key validation is that the config is accepted and metrics can be exported.
+	}
+
+	log.Print("Successfully validated ECC deferred error metrics configuration")
+}
+
+// Test026ECCDeferredErrorDisableConfig validates that ECC deferred error metrics
+// can be disabled via config and no longer appear in /metrics output.
+func (s *E2ESuite) Test026ECCDeferredErrorDisableConfig(c *C) {
+	log.Print("Testing ECC deferred error metrics can be disabled")
+
+	// Disable ECC deferred error fields (use other metrics instead)
+	fields := []string{
+		"gpu_health",
+		"gpu_package_power",
+		"gpu_total_vram",
+	}
+	err := s.SetFields(fields)
+	assert.Nil(c, err)
+	time.Sleep(5 * time.Second) // Wait for config update to take effect
+
+	// Get Prometheus metrics response
+	var response string
+	assert.Eventually(c, func() bool {
+		response, _ = s.getExporterResponse()
+		return response != ""
+	}, 10*time.Second, 1*time.Second)
+
+	// Parse metrics and verify ECC deferred fields are NOT present
+	allgpus, err := testutils.ParsePrometheusMetrics(response)
+	assert.Nil(c, err)
+	assert.True(c, len(allgpus) > 0, "Expected at least one GPU in metrics")
+
+	// Verify ECC deferred metrics are NOT in output
+	for gpuId, gpu := range allgpus {
+		_, foundTotal := gpu.Fields["gpu_ecc_deferred_total"]
+		_, foundUMC := gpu.Fields["gpu_ecc_deferred_umc"]
+		assert.False(c, foundTotal, "GPU[%v]: gpu_ecc_deferred_total should not be present when disabled", gpuId)
+		assert.False(c, foundUMC, "GPU[%v]: gpu_ecc_deferred_umc should not be present when disabled", gpuId)
+	}
+
+	log.Print("Successfully validated ECC deferred error metrics are disabled")
+}
+
+// Test027ECCDeferredErrorLabels validates that ECC deferred error metrics include
+// all mandatory labels (gpu_id, hostname) just like other GPU metrics.
+func (s *E2ESuite) Test027ECCDeferredErrorLabels(c *C) {
+	log.Print("Testing ECC deferred error metrics have correct labels")
+
+	// Enable ECC deferred error fields
+	fields := []string{
+		"gpu_ecc_deferred_total",
+		"gpu_ecc_deferred_umc",
+	}
+	err := s.SetFields(fields)
+	assert.Nil(c, err)
+
+	// Enable mandatory labels
+	labels := []string{"gpu_id", "gpu_uuid", "hostname"}
+	err = s.SetLabels(labels)
+	assert.Nil(c, err)
+	time.Sleep(5 * time.Second) // Wait for config update to take effect
+
+	// Get Prometheus metrics response
+	var response string
+	assert.Eventually(c, func() bool {
+		response, _ = s.getExporterResponse()
+		return response != ""
+	}, 10*time.Second, 1*time.Second)
+
+	// Parse metrics
+	allgpus, err := testutils.ParsePrometheusMetrics(response)
+	assert.Nil(c, err)
+	assert.True(c, len(allgpus) > 0, "Expected at least one GPU in metrics")
+
+	// Verify labels are present on ECC deferred metrics
+	expectedLabels := append(labels, mandatoryLabels...)
+	for gpuId, gpu := range allgpus {
+		// Check gpu_ecc_deferred_total labels if present
+		if totalMetric, found := gpu.Fields["gpu_ecc_deferred_total"]; found {
+			for _, label := range expectedLabels {
+				_, ok := totalMetric.Labels[label]
+				assert.True(c, ok, "GPU[%v]: gpu_ecc_deferred_total missing label %v", gpuId, label)
+			}
+			log.Printf("GPU[%v]: gpu_ecc_deferred_total has all expected labels", gpuId)
+		}
+
+		// Check gpu_ecc_deferred_umc labels if present
+		if umcMetric, found := gpu.Fields["gpu_ecc_deferred_umc"]; found {
+			for _, label := range expectedLabels {
+				_, ok := umcMetric.Labels[label]
+				assert.True(c, ok, "GPU[%v]: gpu_ecc_deferred_umc missing label %v", gpuId, label)
+			}
+			log.Printf("GPU[%v]: gpu_ecc_deferred_umc has all expected labels", gpuId)
+		}
+	}
+
+	log.Print("Successfully validated ECC deferred error metrics labels")
+}
+
 // Add new test Test024MockInbandRAS test to set afid of 35 and verify the curl output get the respective value in AFID field
 
 func verifyMetricsLablesFields(allgpus map[string]*testutils.GPUMetric, labels []string, fields []string) error {

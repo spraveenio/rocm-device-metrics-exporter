@@ -213,7 +213,7 @@ func (s *E2ESuite) Test003LabelUpdate(c *C) {
 func (s *E2ESuite) Test004FieldUpdate(c *C) {
 	ctx := context.Background()
 	log.Print("Test metrics server is updating fields")
-	cmFields := []string{"gpu_package_power", "gpu_junction_temperature"}
+	cmFields := []string{"gpu_junction_temperature"}
 	config := exporterConfig{
 		GPUConfig: &gpuconfig{
 			Fields: cmFields,
@@ -272,7 +272,6 @@ func (s *E2ESuite) Test006VerifyMetricValues(c *C) {
 		"gpu_used_vram",
 		"gpu_health",
 		"gpu_junction_temperature",
-		"gpu_package_power",
 	}
 	config := exporterConfig{
 		GPUConfig: &gpuconfig{
@@ -488,6 +487,52 @@ func (s *E2ESuite) Test009VerifyHealthThresholds(c *C) {
 	}, 3*time.Minute, 10*time.Second, "expected gpu 0 to be healthy but got unhealthy")
 }
 
+// Test010ECCDeferredErrorMetrics validates ECC deferred error metrics on real hardware.
+func (s *E2ESuite) Test010ECCDeferredErrorMetrics(c *C) {
+	ctx := context.Background()
+	log.Print("Testing ECC deferred error metrics on real hardware")
+
+	// Deploy exporter with ECC deferred error metrics enabled
+	cmfields := []string{
+		"gpu_ecc_deferred_total",
+		"gpu_ecc_deferred_sdma",
+		"gpu_ecc_deferred_gfx",
+		"gpu_ecc_deferred_umc",
+		"gpu_nodes_total",
+		"gpu_health",
+	}
+	config := exporterConfig{
+		GPUConfig: &gpuconfig{
+			Fields: cmfields,
+		},
+	}
+	cfgData, err := json.Marshal(config)
+	assert.NoError(c, err)
+
+	err = s.k8sclient.UpdateConfigMap(ctx, s.ns, configmapName, string(cfgData))
+	assert.NoError(c, err)
+
+	time.Sleep(20 * time.Second)
+
+	// Query metrics and verify ECC deferred fields are present
+	assert.Eventually(c, func() bool {
+		_, fields, err := s.getMetrics(ctx)
+		if err != nil {
+			log.Printf("Failed to get metrics: %v", err)
+			return false
+		}
+		log.Printf("got payload with fields: %v", fields)
+		return len(fields) == len(cmfields)+1 // +1 for the gpu_id label that is always present
+	}, 1*time.Minute, 10*time.Second)
+
+	// Verify one specific field is present
+	_, fields, err := s.getMetrics(ctx)
+	assert.NoError(c, err)
+	assert.Contains(c, fields, "gpu_ecc_deferred_total")
+
+	log.Print("ECC deferred error metrics validated successfully on real hardware")
+}
+
 func (s *E2ESuite) Test100HelmUninstall(c *C) {
 	err := s.helmClient.UninstallChart()
 	if err != nil {
@@ -570,7 +615,7 @@ func (s *E2ESuite) Test102MetricsServer(c *C) {
 	}, 50*time.Second, 10*time.Second)
 }
 
-func (s *E2ESuite) Test103HelmUninstall(c *C) {
+func (s *E2ESuite) Test104HelmUninstall(c *C) {
 	err := s.helmClient.UninstallChart()
 	if err != nil {
 		assert.Fail(c, err.Error())

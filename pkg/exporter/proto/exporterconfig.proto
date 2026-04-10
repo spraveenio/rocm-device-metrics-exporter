@@ -204,6 +204,28 @@ enum GPUMetricField {
     GPU_PROCESS_CU_OCCUPANCY     = 120;
     GPU_VRAM_MAX_BANDWIDTH       = 121;
 
+    // Deferred ECC error metrics
+    GPU_ECC_DEFERRED_TOTAL       = 122;
+    GPU_ECC_DEFERRED_SDMA        = 123;
+    GPU_ECC_DEFERRED_GFX         = 124;
+    GPU_ECC_DEFERRED_MMHUB       = 125;
+    GPU_ECC_DEFERRED_ATHUB       = 126;
+    GPU_ECC_DEFERRED_BIF         = 127;
+    GPU_ECC_DEFERRED_HDP         = 128;
+    GPU_ECC_DEFERRED_XGMI_WAFL   = 129;
+    GPU_ECC_DEFERRED_DF          = 130;
+    GPU_ECC_DEFERRED_SMN         = 131;
+    GPU_ECC_DEFERRED_SEM         = 132;
+    GPU_ECC_DEFERRED_MP0         = 133;
+    GPU_ECC_DEFERRED_MP1         = 134;
+    GPU_ECC_DEFERRED_FUSE        = 135;
+    GPU_ECC_DEFERRED_UMC         = 136;
+    GPU_ECC_DEFERRED_MCA         = 137;
+    GPU_ECC_DEFERRED_VCN         = 138;
+    GPU_ECC_DEFERRED_JPEG        = 139;
+    GPU_ECC_DEFERRED_IH          = 140;
+    GPU_ECC_DEFERRED_MPIO        = 141;
+
     // Profiler Metrics (reserving 801 to 1200)
     GPU_PROF_GRBM_GUI_ACTIVE                                 = 801;
     GPU_PROF_SQ_WAVES                                        = 802;

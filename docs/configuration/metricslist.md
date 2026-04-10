@@ -155,44 +155,64 @@ The following document contains a full list of GPU Metrics that are available us
 |------------|-----------|----------------------------------------------|--------------------------------------|
 | &check;    | &check;   | GPU_ECC_CORRECT_TOTAL `[MI2xx, MI3xx]`       | Total Correctable ECC error count    |
 | &check;    | &check;   | GPU_ECC_UNCORRECT_TOTAL `[MI2xx, MI3xx]`     | Total Uncorrectable ECC error count  |
+| &check;    | &check;   | GPU_ECC_DEFERRED_TOTAL `[MI2xx, MI3xx]`      | Total Deferred ECC error count       |
 | &check;    | &check;   | GPU_ECC_CORRECT_SDMA `[MI2xx, MI3xx]`        | Correctable ECC error in SDMA        |
 | &check;    | &check;   | GPU_ECC_UNCORRECT_SDMA `[MI2xx, MI3xx]`      | Uncorrectable ECC error in SDMA      |
+| &check;    | &check;   | GPU_ECC_DEFERRED_SDMA `[MI2xx, MI3xx]`       | Deferred ECC error in SDMA           |
 | &check;    | &check;   | GPU_ECC_CORRECT_GFX `[MI2xx, MI3xx]`         | Correctable ECC error in GFX         |
 | &check;    | &check;   | GPU_ECC_UNCORRECT_GFX `[MI2xx, MI3xx]`       | Uncorrectable ECC error in GFX       |
+| &check;    | &check;   | GPU_ECC_DEFERRED_GFX `[MI2xx, MI3xx]`        | Deferred ECC error in GFX            |
 | &check;    | &check;   | GPU_ECC_CORRECT_MMHUB `[MI2xx, MI3xx]`       | Correctable ECC error in MMHUB       |
 | &check;    | &check;   | GPU_ECC_UNCORRECT_MMHUB `[MI2xx, MI3xx]`     | Uncorrectable ECC error in MMHUB     |
+| &check;    | &check;   | GPU_ECC_DEFERRED_MMHUB `[MI2xx, MI3xx]`      | Deferred ECC error in MMHUB          |
 | &cross;    | &check;   | GPU_ECC_CORRECT_ATHUB `[MI2xx, MI3xx]`       | Correctable ECC error in ATHUB       |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_ATHUB `[MI2xx, MI3xx]`     | Uncorrectable ECC error in ATHUB     |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_ATHUB `[MI2xx, MI3xx]`      | Deferred ECC error in ATHUB          |
 | &check;    | &check;   | GPU_ECC_CORRECT_BIF `[MI2xx, MI3xx]`         | Correctable ECC error in BIF         |
 | &check;    | &check;   | GPU_ECC_UNCORRECT_BIF `[MI2xx, MI3xx]`       | Uncorrectable ECC error in BIF       |
+| &check;    | &check;   | GPU_ECC_DEFERRED_BIF `[MI2xx, MI3xx]`        | Deferred ECC error in BIF            |
 | &cross;    | &check;   | GPU_ECC_CORRECT_HDP `[MI2xx, MI3xx]`         | Correctable ECC error in HDP         |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_HDP `[MI2xx, MI3xx]`       | Uncorrectable ECC error in HDP       |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_HDP `[MI2xx, MI3xx]`        | Deferred ECC error in HDP            |
 | &check;    | &check;   | GPU_ECC_CORRECT_XGMI_WAFL `[MI2xx, MI3xx]`   | Correctable ECC error in XGMI WAFL   |
 | &check;    | &check;   | GPU_ECC_UNCORRECT_XGMI_WAFL `[MI2xx, MI3xx]` | Uncorrectable ECC error in XGMI WAFL |
+| &check;    | &check;   | GPU_ECC_DEFERRED_XGMI_WAFL `[MI2xx, MI3xx]`  | Deferred ECC error in XGMI WAFL      |
 | &cross;    | &check;   | GPU_ECC_CORRECT_DF `[MI2xx, MI3xx]`          | Correctable ECC error in DF          |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_DF `[MI2xx, MI3xx]`        | Uncorrectable ECC error in DF        |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_DF `[MI2xx, MI3xx]`         | Deferred ECC error in DF             |
 | &cross;    | &check;   | GPU_ECC_CORRECT_SMN `[MI2xx, MI3xx]`         | Correctable ECC error in SMN         |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_SMN `[MI2xx, MI3xx]`       | Uncorrectable ECC error in SMN       |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_SMN `[MI2xx, MI3xx]`        | Deferred ECC error in SMN            |
 | &cross;    | &check;   | GPU_ECC_CORRECT_SEM `[MI2xx, MI3xx]`         | Correctable ECC error in SEM         |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_SEM `[MI2xx, MI3xx]`       | Uncorrectable ECC error in SEM       |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_SEM `[MI2xx, MI3xx]`        | Deferred ECC error in SEM            |
 | &cross;    | &check;   | GPU_ECC_CORRECT_MP0 `[MI2xx, MI3xx]`         | Correctable ECC error in MP0         |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_MP0 `[MI2xx, MI3xx]`       | Uncorrectable ECC error in MP0       |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_MP0 `[MI2xx, MI3xx]`        | Deferred ECC error in MP0            |
 | &cross;    | &check;   | GPU_ECC_CORRECT_MP1 `[MI2xx, MI3xx]`         | Correctable ECC error in MP1         |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_MP1 `[MI2xx, MI3xx]`       | Uncorrectable ECC error in MP1       |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_MP1 `[MI2xx, MI3xx]`        | Deferred ECC error in MP1            |
 | &cross;    | &check;   | GPU_ECC_CORRECT_FUSE `[MI2xx, MI3xx]`        | Correctable ECC error in FUSE        |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_FUSE `[MI2xx, MI3xx]`      | Uncorrectable ECC error in FUSE      |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_FUSE `[MI2xx, MI3xx]`       | Deferred ECC error in FUSE           |
 | &check;    | &check;   | GPU_ECC_CORRECT_UMC `[MI2xx, MI3xx]`         | Correctable ECC error in UMC         |
 | &check;    | &check;   | GPU_ECC_UNCORRECT_UMC `[MI2xx, MI3xx]`       | Uncorrectable ECC error in UMC       |
+| &check;    | &check;   | GPU_ECC_DEFERRED_UMC `[MI2xx, MI3xx]`        | Deferred ECC error in UMC            |
 | &cross;    | &check;   | GPU_ECC_CORRECT_MCA `[MI2xx, MI3xx]`         | Correctable ECC error in MCA         |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_MCA `[MI2xx, MI3xx]`       | Uncorrectable ECC error in MCA       |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_MCA `[MI2xx, MI3xx]`        | Deferred ECC error in MCA            |
 | &cross;    | &check;   | GPU_ECC_CORRECT_VCN `[MI2xx, MI3xx]`         | Correctable ECC error in VCN         |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_VCN `[MI2xx, MI3xx]`       | Uncorrectable ECC error in VCN       |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_VCN `[MI2xx, MI3xx]`        | Deferred ECC error in VCN            |
 | &cross;    | &check;   | GPU_ECC_CORRECT_JPEG `[MI2xx, MI3xx]`        | Correctable ECC error in JPEG        |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_JPEG `[MI2xx, MI3xx]`      | Uncorrectable ECC error in JPEG      |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_JPEG `[MI2xx, MI3xx]`       | Deferred ECC error in JPEG           |
 | &cross;    | &check;   | GPU_ECC_CORRECT_IH `[MI2xx, MI3xx]`          | Correctable ECC error in IH          |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_IH `[MI2xx, MI3xx]`        | Uncorrectable ECC error in IH        |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_IH `[MI2xx, MI3xx]`         | Deferred ECC error in IH             |
 | &cross;    | &check;   | GPU_ECC_CORRECT_MPIO `[MI2xx, MI3xx]`        | Correctable ECC error in MPIO        |
 | &cross;    | &check;   | GPU_ECC_UNCORRECT_MPIO `[MI2xx, MI3xx]`      | Uncorrectable ECC error in MPIO      |
+| &cross;    | &check;   | GPU_ECC_DEFERRED_MPIO `[MI2xx, MI3xx]`       | Deferred ECC error in MPIO           |
 
 ### XGMI Link Metrics
 

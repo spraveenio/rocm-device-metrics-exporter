@@ -475,7 +475,7 @@ docs: dep-docs
 clean-docs:
 	rm -rf $(BUILD_DIR)
 
-DOCS_MARKDOWNLINTCONFIG ?= docs/.markdownlint.yaml
+DOCS_MARKDOWNLINTCONFIG ?= docs/.markdownlint-cli2.yaml
 DOCS_MD_GLOB ?= "**/*.md"
 DOCS_SPELLCHECK_CONFIG ?= .spellcheck.yaml
 

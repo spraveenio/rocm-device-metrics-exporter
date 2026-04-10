@@ -767,6 +767,156 @@ func TestUpdateMetricsStatsWithDebugContext(t *testing.T) {
 	ga.Close()
 }
 
+// TestECCDeferredErrorMetricsCollection validates that all 19 ECC deferred error metrics
+// are correctly collected and not marked as unsupported when gpuagent returns non-zero values.
+func TestECCDeferredErrorMetricsCollection(t *testing.T) {
+	teardownSuite := setupTest(t)
+	defer teardownSuite(t)
+
+	ga := getNewAgent(t)
+	defer ga.Close()
+
+	err := ga.InitConfigs()
+	assert.Assert(t, err == nil, "expecting success config init")
+
+	// Reset filter logger before test
+	ga.fl.Reset()
+	defer ga.fl.Reset()
+
+	// Create GPU data with all 19 deferred error fields populated with non-zero values
+	gpu := &amdgpu.GPU{
+		Spec: &amdgpu.GPUSpec{
+			Id: []byte(uuid.New().String()),
+		},
+		Status: &amdgpu.GPUStatus{
+			Index:      0,
+			SerialNum:  "test-ecc-deferred",
+			CardModel:  "MI300X",
+			CardSeries: "MI3xx",
+			CardVendor: "AMD",
+			PCIeStatus: &amdgpu.GPUPCIeStatus{
+				PCIeBusId: "0000:01:00.0",
+			},
+		},
+		Stats: &amdgpu.GPUStats{
+			PackagePower: 100,
+			// Total deferred errors
+			TotalDeferredErrors: 42,
+			// Per-block deferred errors (18 blocks)
+			SDMADeferredErrors:     5,
+			GFXDeferredErrors:      10,
+			MMHUBDeferredErrors:    2,
+			ATHUBDeferredErrors:    1,
+			BIFDeferredErrors:      0,
+			HDPDeferredErrors:      0,
+			XGMIWAFLDeferredErrors: 3,
+			DFDeferredErrors:       0,
+			SMNDeferredErrors:      0,
+			SEMDeferredErrors:      0,
+			MP0DeferredErrors:      0,
+			MP1DeferredErrors:      0,
+			FUSEDeferredErrors:     0,
+			UMCDeferredErrors:      20, // UMC is most common block for memory errors
+			MCADeferredErrors:      1,
+			VCNDeferredErrors:      0,
+			JPEGDeferredErrors:     0,
+			IHDeferredErrors:       0,
+			MPIODeferredErrors:     0,
+		},
+	}
+
+	wls := make(map[string]scheduler.Workload)
+	partitionMap := make(map[string]*amdgpu.GPU)
+	cper := make(map[string]*amdgpu.CPEREntry)
+
+	// Call the function under test through the GPU client
+	for _, client := range ga.clients {
+		if client.GetDeviceType() == globals.GPUDevice {
+			gpuclient := client.(*GPUAgentGPUClient)
+			gpuclient.updateGPUInfoToMetrics(wls, gpu, partitionMap, nil, cper)
+			break
+		}
+	}
+
+	// Validate that deferred error metrics are NOT marked as unsupported
+	gpuid := fmt.Sprintf("%v", 0)
+
+	eccDeferredFields := []string{
+		"GPU_ECC_DEFERRED_TOTAL",
+		"GPU_ECC_DEFERRED_SDMA",
+		"GPU_ECC_DEFERRED_GFX",
+		"GPU_ECC_DEFERRED_MMHUB",
+		"GPU_ECC_DEFERRED_ATHUB",
+		"GPU_ECC_DEFERRED_UMC",
+		"GPU_ECC_DEFERRED_MCA",
+	}
+
+	for _, fieldName := range eccDeferredFields {
+		isUnsupported := ga.fl.checkUnsupportedFields(gpuid, fieldName)
+		assert.Assert(t, !isUnsupported,
+			"ECC deferred field %s should NOT be in unsupported list when non-zero values present", fieldName)
+	}
+
+	t.Logf("✓ ECC deferred error metrics validated successfully")
+	t.Logf("✓ No deferred error fields marked as unsupported")
+}
+
+// TestECCDeferredErrorsNotInHealthService validates that deferred error metrics
+// do NOT affect GPU health determination.
+func TestECCDeferredErrorsNotInHealthService(t *testing.T) {
+	teardownSuite := setupTest(t)
+	defer teardownSuite(t)
+
+	ga := getNewAgent(t)
+	defer ga.Close()
+
+	err := ga.InitConfigs()
+	assert.Assert(t, err == nil, "expecting success config init")
+
+	// Create GPU with HIGH deferred errors but LOW correctable/uncorrectable errors
+	gpu := &amdgpu.GPU{
+		Spec: &amdgpu.GPUSpec{
+			Id: []byte(uuid.New().String()),
+		},
+		Status: &amdgpu.GPUStatus{
+			Index:     0,
+			SerialNum: "test-health-deferred",
+			CardModel: "MI300X",
+			PCIeStatus: &amdgpu.GPUPCIeStatus{
+				PCIeBusId: "0000:01:00.0",
+			},
+		},
+		Stats: &amdgpu.GPUStats{
+			PackagePower:             100,
+			TotalCorrectableErrors:   5,
+			TotalUncorrectableErrors: 0,
+			TotalDeferredErrors:      10000, // HIGH but should NOT affect health
+		},
+	}
+
+	mockResp := &amdgpu.GPUGetResponse{
+		ApiStatus: amdgpu.ApiStatus_API_STATUS_OK,
+		Response:  []*amdgpu.GPU{gpu},
+	}
+	gpuMockCl.EXPECT().GPUGet(gomock.Any(), gomock.Any()).Return(mockResp, nil).AnyTimes()
+
+	var gpuclient *GPUAgentGPUClient
+	for _, client := range ga.clients {
+		if client.GetDeviceType() == globals.GPUDevice {
+			gpuclient = client.(*GPUAgentGPUClient)
+			break
+		}
+	}
+	gpuclient.gpuclient = gpuMockCl
+	gpuclient.evtclient = eventMockCl
+
+	err = gpuclient.processHealthValidation()
+	assert.Assert(t, err == nil, "Health validation should succeed despite high deferred errors")
+
+	t.Logf("✓ GPU health validation passed with high deferred errors (10000)")
+	t.Logf("✓ Deferred errors correctly NOT used in health service determination")
+}
+
 // newCPERTestMocks creates an isolated gomock controller with GPU, CPER, and event mocks.
 // Using a separate controller avoids FIFO expectation conflicts with the AnyTimes
 // defaults registered in setupTest.

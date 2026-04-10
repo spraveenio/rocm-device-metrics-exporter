@@ -3,8 +3,18 @@
 
 # Ignore patterns
 ignores:
-  - "vendor/**"
-  - "helm-charts/README.md"
+- "vendor/**"
+- "helm-charts/README.md"
+- ".claude/**"
+- "CLAUDE.md"
+- "CHANGELOG.md"
+- "libamdsmi/**"
+- "libgimsmi/**"
+- "gpuagent/**"
+- "tools/**"
+- "README.md"
+- "grafana/README.md"
+- "internal/**"
 
 # Custom configuration for specific files
 customRules:

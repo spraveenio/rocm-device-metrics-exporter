@@ -165,6 +165,28 @@ type GpuMetrics struct {
 	gpuEccCorrectMPIO   prometheus.GaugeVec
 	gpuEccUncorrectMPIO prometheus.GaugeVec
 
+	// ECC Deferred Errors
+	gpuEccDeferredTotal    prometheus.GaugeVec
+	gpuEccDeferredSDMA     prometheus.GaugeVec
+	gpuEccDeferredGFX      prometheus.GaugeVec
+	gpuEccDeferredMMHUB    prometheus.GaugeVec
+	gpuEccDeferredATHUB    prometheus.GaugeVec
+	gpuEccDeferredBIF      prometheus.GaugeVec
+	gpuEccDeferredHDP      prometheus.GaugeVec
+	gpuEccDeferredXgmiWAFL prometheus.GaugeVec
+	gpuEccDeferredDF       prometheus.GaugeVec
+	gpuEccDeferredSMN      prometheus.GaugeVec
+	gpuEccDeferredSEM      prometheus.GaugeVec
+	gpuEccDeferredMP0      prometheus.GaugeVec
+	gpuEccDeferredMP1      prometheus.GaugeVec
+	gpuEccDeferredFUSE     prometheus.GaugeVec
+	gpuEccDeferredUMC      prometheus.GaugeVec
+	gpuEccDeferredMCA      prometheus.GaugeVec
+	gpuEccDeferredVCN      prometheus.GaugeVec
+	gpuEccDeferredJPEG     prometheus.GaugeVec
+	gpuEccDeferredIH       prometheus.GaugeVec
+	gpuEccDeferredMPIO     prometheus.GaugeVec
+
 	gpuHealth prometheus.GaugeVec
 
 	gpuXgmiLinkStatsRx prometheus.GaugeVec
@@ -614,8 +636,28 @@ func (ga *GPUAgentGPUClient) initFieldMetricsMap() {
 		exportermetrics.GPUMetricField_PCIE_TX.String():                      FieldMeta{Metric: ga.metrics.gpuPcieTx},
 		exportermetrics.GPUMetricField_PCIE_BIDIRECTIONAL_BANDWIDTH.String(): FieldMeta{Metric: ga.metrics.gpuPcieBidirBandwidth},
 		exportermetrics.GPUMetricField_GPU_AFID_ERRORS.String():              FieldMeta{Metric: ga.metrics.gpuAfidErrors},
+		// ECC deferred errors
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_TOTAL.String():     FieldMeta{Metric: ga.metrics.gpuEccDeferredTotal},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_SDMA.String():      FieldMeta{Metric: ga.metrics.gpuEccDeferredSDMA},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_GFX.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredGFX},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MMHUB.String():     FieldMeta{Metric: ga.metrics.gpuEccDeferredMMHUB},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_ATHUB.String():     FieldMeta{Metric: ga.metrics.gpuEccDeferredATHUB},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_BIF.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredBIF},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_HDP.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredHDP},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_XGMI_WAFL.String(): FieldMeta{Metric: ga.metrics.gpuEccDeferredXgmiWAFL},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_DF.String():        FieldMeta{Metric: ga.metrics.gpuEccDeferredDF},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_SMN.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredSMN},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_SEM.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredSEM},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MP0.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredMP0},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MP1.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredMP1},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_FUSE.String():      FieldMeta{Metric: ga.metrics.gpuEccDeferredFUSE},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_UMC.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredUMC},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MCA.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredMCA},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_VCN.String():       FieldMeta{Metric: ga.metrics.gpuEccDeferredVCN},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_JPEG.String():      FieldMeta{Metric: ga.metrics.gpuEccDeferredJPEG},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_IH.String():        FieldMeta{Metric: ga.metrics.gpuEccDeferredIH},
+		exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MPIO.String():      FieldMeta{Metric: ga.metrics.gpuEccDeferredMPIO},
 
-		exportermetrics.GPUMetricField_GPU_PROCESS_CU_OCCUPANCY.String(): FieldMeta{Metric: ga.metrics.gpuProcessCuOcc},
 		// profiler entries
 		exportermetrics.GPUMetricField_GPU_PROF_GRBM_GUI_ACTIVE.String():                    FieldMeta{Metric: ga.metrics.gpuGrbmGuiActivity, Alias: "GRBM_GUI_ACTIVE"},
 		exportermetrics.GPUMetricField_GPU_PROF_SQ_WAVES.String():                           FieldMeta{Metric: ga.metrics.gpuSqWaves, Alias: "SQ_WAVES"},
@@ -669,6 +711,7 @@ func (ga *GPUAgentGPUClient) initFieldMetricsMap() {
 		exportermetrics.GPUMetricField_GPU_PROF_OCCUPANCY_PER_ACTIVE_CU.String():            FieldMeta{Metric: ga.metrics.gpuOccPerActiveCU, Alias: "MeanOccupancyPerActiveCU"},
 		exportermetrics.GPUMetricField_GPU_PROF_OCCUPANCY_PER_CU.String():                   FieldMeta{Metric: ga.metrics.gpuMeanOccPerCU, Alias: "MeanOccupancyPerCU"},
 		exportermetrics.GPUMetricField_GPU_PROF_SIMD_UTILIZATION.String():                   FieldMeta{Metric: ga.metrics.gpuSimdActive, Alias: "SIMD_UTILIZATION"},
+		exportermetrics.GPUMetricField_GPU_PROCESS_CU_OCCUPANCY.String():                    FieldMeta{Metric: ga.metrics.gpuProcessCuOcc},
 	}
 	logger.Log.Printf("Total GPU fields supported : %+v", len(ga.fieldMetricsMap))
 
@@ -1180,6 +1223,106 @@ func (ga *GPUAgentGPUClient) initPrometheusMetrics() {
 		gpuEccUncorrectMPIO: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "gpu_ecc_uncorrect_mpio",
 			Help: "Uncorrectable error count in MPIO block",
+		},
+			labels),
+		gpuEccDeferredTotal: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_total",
+			Help: "Total accumulated deferred ECC errors across all GPU blocks",
+		},
+			labels),
+		gpuEccDeferredSDMA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_sdma",
+			Help: "Accumulated deferred ECC errors in SDMA block",
+		},
+			labels),
+		gpuEccDeferredGFX: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_gfx",
+			Help: "Accumulated deferred ECC errors in GFX block",
+		},
+			labels),
+		gpuEccDeferredMMHUB: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_mmhub",
+			Help: "Accumulated deferred ECC errors in MMHUB block",
+		},
+			labels),
+		gpuEccDeferredATHUB: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_athub",
+			Help: "Accumulated deferred ECC errors in ATHUB block",
+		},
+			labels),
+		gpuEccDeferredBIF: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_bif",
+			Help: "Accumulated deferred ECC errors in BIF block",
+		},
+			labels),
+		gpuEccDeferredHDP: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_hdp",
+			Help: "Accumulated deferred ECC errors in HDP block",
+		},
+			labels),
+		gpuEccDeferredXgmiWAFL: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_xgmi_wafl",
+			Help: "Accumulated deferred ECC errors in XGMI WAFL block",
+		},
+			labels),
+		gpuEccDeferredDF: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_df",
+			Help: "Accumulated deferred ECC errors in DF block",
+		},
+			labels),
+		gpuEccDeferredSMN: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_smn",
+			Help: "Accumulated deferred ECC errors in SMN block",
+		},
+			labels),
+		gpuEccDeferredSEM: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_sem",
+			Help: "Accumulated deferred ECC errors in SEM block",
+		},
+			labels),
+		gpuEccDeferredMP0: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_mp0",
+			Help: "Accumulated deferred ECC errors in MP0 block",
+		},
+			labels),
+		gpuEccDeferredMP1: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_mp1",
+			Help: "Accumulated deferred ECC errors in MP1 block",
+		},
+			labels),
+		gpuEccDeferredFUSE: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_fuse",
+			Help: "Accumulated deferred ECC errors in FUSE block",
+		},
+			labels),
+		gpuEccDeferredUMC: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_umc",
+			Help: "Accumulated deferred ECC errors in UMC block",
+		},
+			labels),
+		gpuEccDeferredMCA: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_mca",
+			Help: "Accumulated deferred ECC errors in MCA block",
+		},
+			labels),
+		gpuEccDeferredVCN: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_vcn",
+			Help: "Accumulated deferred ECC errors in VCN block",
+		},
+			labels),
+		gpuEccDeferredJPEG: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_jpeg",
+			Help: "Accumulated deferred ECC errors in JPEG block",
+		},
+			labels),
+		gpuEccDeferredIH: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_ih",
+			Help: "Accumulated deferred ECC errors in IH block",
+		},
+			labels),
+		gpuEccDeferredMPIO: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "gpu_ecc_deferred_mpio",
+			Help: "Accumulated deferred ECC errors in MPIO block",
 		},
 			labels),
 		gpuHealth: *prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -2342,6 +2485,48 @@ func (ga *GPUAgentGPUClient) updateGPUInfoToMetrics(
 		labels, stats.MPIOCorrectableErrors)
 	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccUncorrectMPIO, exportermetrics.GPUMetricField_GPU_ECC_UNCORRECT_MPIO.String(),
 		labels, stats.MPIOUncorrectableErrors)
+
+	// Deferred ECC Errors
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredTotal, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_TOTAL.String(),
+		labels, stats.TotalDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredSDMA, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_SDMA.String(),
+		labels, stats.SDMADeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredGFX, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_GFX.String(),
+		labels, stats.GFXDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredMMHUB, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MMHUB.String(),
+		labels, stats.MMHUBDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredATHUB, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_ATHUB.String(),
+		labels, stats.ATHUBDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredBIF, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_BIF.String(),
+		labels, stats.BIFDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredHDP, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_HDP.String(),
+		labels, stats.HDPDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredXgmiWAFL, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_XGMI_WAFL.String(),
+		labels, stats.XGMIWAFLDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredDF, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_DF.String(),
+		labels, stats.DFDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredSMN, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_SMN.String(),
+		labels, stats.SMNDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredSEM, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_SEM.String(),
+		labels, stats.SEMDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredMP0, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MP0.String(),
+		labels, stats.MP0DeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredMP1, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MP1.String(),
+		labels, stats.MP1DeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredFUSE, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_FUSE.String(),
+		labels, stats.FUSEDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredUMC, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_UMC.String(),
+		labels, stats.UMCDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredMCA, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MCA.String(),
+		labels, stats.MCADeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredVCN, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_VCN.String(),
+		labels, stats.VCNDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredJPEG, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_JPEG.String(),
+		labels, stats.JPEGDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredIH, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_IH.String(),
+		labels, stats.IHDeferredErrors)
+	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.gpuEccDeferredMPIO, exportermetrics.GPUMetricField_GPU_ECC_DEFERRED_MPIO.String(),
+		labels, stats.MPIODeferredErrors)
 
 	ga.fl.logWithValidateAndExport(gpuid, ga.metrics.xgmiNbrNopTx0, exportermetrics.GPUMetricField_GPU_XGMI_NBR_0_NOP_TX.String(),
 		labels, stats.XGMINeighbor0TxNOPs)

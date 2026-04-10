@@ -165,6 +165,24 @@ enum GPUVirtualizationMode {
   GPU_VIRTUALIZATION_MODE_PASSTHROUGH = 4;
 }
 
+// GPU power cap type
+enum GPUPowerCapType {
+  // unknown/invalid power cap type
+  GPU_POWER_CAP_TYPE_NONE = 0;
+  // PPT0 power cap; lower limit, filtered input
+  GPU_POWER_CAP_TYPE_PPT0 = 1;
+  // PPT1 power cap; higher limit, raw input
+  GPU_POWER_CAP_TYPE_PPT1 = 2;
+}
+
+// GPU power cap
+message GPUPowerCap {
+  // GPU power cap type
+  GPUPowerCapType Type     = 1;
+  // max package power (in Watts) GPU can consume
+  uint64          PowerCap = 2;
+}
+
 // config specification of physical GPU
 message GPUSpec {
   // uuid identifying the GPU
@@ -174,8 +192,8 @@ message GPUSpec {
   GPUAdminState                   AdminState           = 2;
   // GPU clock overdrive level (as percentage)
   uint32                          OverDriveLevel       = 3;
-  // max package power (in Watts) GPU can consume (i.e power cap)
-  uint64                          GPUPowerCap          = 4;
+  // max package power (in Watts) GPU can consume per sensor (i.e power cap)
+  repeated GPUPowerCap            GPUPowerCap          = 4;
   // GPU performance level
   GPUPerformanceLevel             PerformanceLevel     = 5;
   // GPU clock speed/frequency setting
@@ -733,6 +751,46 @@ message GPUStats {
   repeated GPUXGMILinkStats  XGMILinkStats               = 67;
   // GPU violation statistics
   GPUViolationStats          ViolationStats              = 68;
+  // Total deferred errors across all blocks
+  uint64                     TotalDeferredErrors         = 69;
+  // SDMA deferred errors
+  uint64                     SDMADeferredErrors          = 70;
+  // GFX deferred errors
+  uint64                     GFXDeferredErrors           = 71;
+  // MMHUB deferred errors
+  uint64                     MMHUBDeferredErrors         = 72;
+  // ATHUB deferred errors
+  uint64                     ATHUBDeferredErrors         = 73;
+  // BIF deferred errors
+  uint64                     BIFDeferredErrors           = 74;
+  // HDP deferred errors
+  uint64                     HDPDeferredErrors           = 75;
+  // XGMI WAFL deferred errors
+  uint64                     XGMIWAFLDeferredErrors      = 76;
+  // DF deferred errors
+  uint64                     DFDeferredErrors            = 77;
+  // SMN deferred errors
+  uint64                     SMNDeferredErrors           = 78;
+  // SEM deferred errors
+  uint64                     SEMDeferredErrors           = 79;
+  // MP0 deferred errors
+  uint64                     MP0DeferredErrors           = 80;
+  // MP1 deferred errors
+  uint64                     MP1DeferredErrors           = 81;
+  // FUSE deferred errors
+  uint64                     FUSEDeferredErrors          = 82;
+  // UMC deferred errors
+  uint64                     UMCDeferredErrors           = 83;
+  // MCA deferred errors
+  uint64                     MCADeferredErrors           = 84;
+  // VCN deferred errors
+  uint64                     VCNDeferredErrors           = 85;
+  // JPEG deferred errors
+  uint64                     JPEGDeferredErrors          = 86;
+  // IH deferred errors
+  uint64                     IHDeferredErrors            = 87;
+  // MPIO deferred errors
+  uint64                     MPIODeferredErrors          = 88;
 }
 
 // GPU captures config, operational status and stat of GPU object

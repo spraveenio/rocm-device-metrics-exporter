@@ -8,6 +8,7 @@
 
 - **New Metrics**
   - `GPU_PROCESS_CU_OCCUPANCY` to report Compute Unit occupancy for each process using the GPU, with `process_id` label to differentiate between processes
+  - `GPU_ECC_DEFERRED_*` for each ECC supported block
 
 - **Profiler Configuration Enhancement**
   - `SamplingInterval` to set sampling window for the profiler metrics
