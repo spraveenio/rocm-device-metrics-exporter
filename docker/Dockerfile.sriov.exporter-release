@@ -32,11 +32,16 @@ RUN microdnf clean all && \
 RUN pip install PyYAML
 
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/amd/bin/:
+ENV GPUAGENT_EVENTS_DISABLE=1
 RUN mkdir -p /home/amd/bin/
 RUN mkdir -p /home/amd/lib/
 RUN mkdir -p /home/amd/tools/
 
 ADD ./libgim_amd_smi.so /home/amd/lib/libgim_amd_smi.so
+RUN ln -s /home/amd/lib/libgim_amd_smi.so /home/amd/lib/libamdsmi.so
+RUN echo /home/amd/lib > /etc/ld.so.conf.d/amd-gim.conf && ldconfig
+ENV LD_LIBRARY_PATH=/home/amd/lib:${LD_LIBRARY_PATH}
+
 ADD ./amdsmi.h /usr/include/amdsmi.h
 ADD ./gpuagent /home/amd/bin/gpuagent
 ADD ./gpuctl /home/amd/bin/gpuctl

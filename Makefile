@@ -111,7 +111,7 @@ HTML_DIR := $(BUILD_DIR)/html
 AMDSMI_BRANCH ?= release/rocm-rel-7.2
 AMDSMI_COMMIT ?= 91c1f54
 GIMSMI_BRANCH ?= mainline
-GIMSMI_COMMIT ?= mainline/8.3.0.K
+GIMSMI_COMMIT ?= mainline/8.7.0.K
 GPUAGENT_BRANCH ?= main
 GPUAGENT_COMMIT ?= 534af3b
 
