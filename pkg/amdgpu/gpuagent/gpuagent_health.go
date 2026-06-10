@@ -45,6 +45,65 @@ func (ga *GPUAgentGPUClient) getHealthThreshholds() *exportermetrics.GPUHealthTh
 	return &exportermetrics.GPUHealthThresholds{}
 }
 
+// getCperHealthMaxAge returns how long a fatal CPER record remains actionable for health.
+func (ga *GPUAgentGPUClient) getCperHealthMaxAge() time.Duration {
+	return ga.gpuHandler.mh.GetRunConfig().GetGPUCperMaxAge()
+}
+
+func (ga *GPUAgentGPUClient) isFatalCPERActionable(record *amdgpu.CPEREntry, maxAge time.Duration) bool {
+	if record.Severity != amdgpu.CPERSeverity_CPER_SEVERITY_FATAL {
+		return false
+	}
+	if maxAge == 0 {
+		return true
+	}
+	recordTS, ok := parseCPERRecordTimestamp(record)
+	if !ok {
+		// Without a timestamp we cannot prove the record is stale; treat as actionable.
+		return true
+	}
+	age := time.Since(recordTS)
+	if age > maxAge {
+		logger.Debugf("ignoring stale fatal CPER RecordId=%v age=%v maxAge=%v TimeStamp=%v",
+			record.RecordId, age.Round(time.Second), maxAge, record.GetTimestamp())
+		return false
+	}
+	return true
+}
+
+func (ga *GPUAgentGPUClient) applyCPERHealthChecks(
+	gpuUUIDMap map[string]string,
+	newGPUState map[string]*metricssvc.GPUState,
+	gpuCper *amdgpu.GPUCPERGetResponse,
+	cperErr error,
+) {
+	if cperErr != nil {
+		logger.Errorf("skipping CPER health checks: cache read failed: %v", cperErr)
+		return
+	}
+	if gpuCper == nil {
+		logger.Errorf("skipping CPER health checks: CPER cache not populated yet")
+		return
+	}
+	if gpuCper.ApiStatus != 0 {
+		logger.Errorf("skipping CPER health checks: CPER ApiStatus=%v", gpuCper.ApiStatus)
+		return
+	}
+	maxAge := ga.getCperHealthMaxAge()
+	unhealthy := strings.ToLower(metricssvc.GPUHealth_UNHEALTHY.String())
+
+	for gpuuid, record := range latestCPERPerGPU(gpuCper) {
+		if !ga.isFatalCPERActionable(record, maxAge) {
+			continue
+		}
+		if gpuid, ok := gpuUUIDMap[gpuuid]; ok {
+			newGPUState[gpuid].Health = unhealthy
+		} else {
+			logger.Errorf("ignoring latest fatal CPER RecordId=%v: unknown GPU UUID %v", record.RecordId, gpuuid)
+		}
+	}
+}
+
 // returns list of
 func (ga *GPUAgentGPUClient) processEccErrorMetrics(gpus []*amdgpu.GPU, wls map[string]scheduler.Workload) map[string]*metricssvc.GPUState {
 
@@ -209,25 +268,6 @@ func (ga *GPUAgentGPUClient) processHealthValidation() error {
 			}
 		}
 	}
-	cperErrCheck := func(c *amdgpu.GPUCPEREntry) {
-		uuid, _ := uuid.FromBytes(c.GPU)
-		gpuuid := uuid.String()
-		for _, record := range c.CPEREntry {
-			ts := record.GetTimestamp()
-			logger.Debugf("gpuuid=%v TimeStamp=%v RecordId=%v Severity=%v Revision=%v CreatorId=%v",
-				gpuuid, ts, record.RecordId, record.Severity.String(), record.Revision, record.CreatorId)
-			logger.Debugf("NotificationType=%v AFID=%+v", record.NotificationType.String(), record.AFId)
-			if record.Severity == amdgpu.CPERSeverity_CPER_SEVERITY_FATAL {
-				if gpuid, ok := gpuUUIDMap[gpuuid]; ok {
-					newGPUState[gpuid].Health = strings.ToLower(metricssvc.GPUHealth_UNHEALTHY.String())
-					logger.Log.Printf("gpuid[%v] is set to unhealthy for cper[%+v]", gpuid, c)
-				} else {
-					logger.Log.Printf("ignoring invalid gpuid[%v] is set to unhealthy for cper[%+v]", gpuuid, c)
-				}
-			}
-		}
-	}
-
 	gpumetrics, _, err = ga.getGPUs()
 	if err != nil || (gpumetrics != nil && gpumetrics.ApiStatus != 0) {
 		errOccured = true
@@ -268,14 +308,7 @@ func (ga *GPUAgentGPUClient) processHealthValidation() error {
 			}
 		}
 		gpuCper, err = ga.cacheCperRead()
-		if err != nil || gpuCper == nil || gpuCper.ApiStatus != 0 {
-			logger.Debugf("gpuagent get cper failed %v", err)
-		} else {
-			// business logic for health detection
-			for _, cper := range gpuCper.CPER {
-				cperErrCheck(cper)
-			}
-		}
+		ga.applyCPERHealthChecks(gpuUUIDMap, newGPUState, gpuCper, err)
 	}
 
 ret:
