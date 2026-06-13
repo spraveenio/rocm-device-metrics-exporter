@@ -36,4 +36,4 @@ jobs:
             bash -c "source ~/.bashrc && \
               git config --global --add safe.directory /usr/src/github.com/ROCm/device-metrics-exporter && \
               make gen amdexporter amdtestrunner && \
-              make -C docker TOP_DIR=/usr/src/github.com/ROCm/device-metrics-exporter"
+              make docker TOP_DIR=/usr/src/github.com/ROCm/device-metrics-exporter"
