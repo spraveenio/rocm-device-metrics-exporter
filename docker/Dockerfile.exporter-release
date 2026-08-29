@@ -5,25 +5,17 @@ ARG GPUAGENT_BUILDER_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.8
 ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.8
 
 # ---------------------------------------------------------------------------
-# Stage 1: build gpuagent from source (cloned, not vendored as a submodule).
-# Shallow-clones ROCm/gpu-agent at GPUAGENT_COMMIT + recursive shallow submodules,
-# injects the therock-tarball amdsmi (libamd_smi.so + amdsmi.h), applies repo
-# patches, and compiles. Runtime stage COPYs the resulting binaries.
-# See docs-internal/knowledge/plans/2026-06-16-gpuagent-source-build-in-docker.md
+# gpuagent build, split into cache-independent stages:
+#   gpuagent-toolchain — ubi9 + build tools + go; keyed on toolchain/GO_VERSION.
+#   gpuagent-libs      — clone @GPUAGENT_COMMIT + third-party libs; keyed on commit.
+#   gpuagent-build     — amdsmi inject + patches + link; keyed on ROCM_COMMIT.
+# A ROCm tarball bump rebuilds only gpuagent-build; toolchain+libs restore cached.
 # ---------------------------------------------------------------------------
-FROM ${GPUAGENT_BUILDER_BASE_IMAGE} AS gpuagent-build
+FROM ${GPUAGENT_BUILDER_BASE_IMAGE} AS gpuagent-toolchain
 
-ARG GPUAGENT_REPO=https://github.com/ROCm/gpu-agent.git
-# full 40-char SHA required for shallow fetch-by-SHA
-ARG GPUAGENT_COMMIT=1d816bfe2b42c4e8d46eee2d85c6a97f86de6640
-# 0 = use pre-staged amdsmi from build context (default, no download)
-# 1 = re-extract amdsmi from the (~10GB) ROCm therock tarball
-ARG AMDSMI_FROM_TARBALL=0
-ARG ROCM_TARBALL_URL=
 ARG GO_VERSION=1.25.13
 ARG GO_SHA256=39042a078ea9ceebe3ecda4a7188f0f5b96e14a071d27923ba7f40b456e85ae3
 
-# build toolchain (full ubi9 has dnf/yum) + go
 RUN dnf install -y --allowerasing \
         git gcc gcc-c++ make automake libtool curl unzip which cmake autoconf \
         glibc-static libstdc++-static wget tar gzip findutils \
@@ -35,19 +27,37 @@ RUN wget -q https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz \
 ENV PATH=/usr/local/go/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-
-# gpuagent's build hardcodes ABS_DIR=/usr/src/github.com/ROCm/gpu-agent/sw, so the
-# source MUST live at this exact path for BLD_DIR (=ABS_DIR/nic/build) to resolve.
+# ABS_DIR is hardcoded in gpuagent's build; source must live at this exact path.
 ENV GPUAGENT_SRC=/usr/src/github.com/ROCm/gpu-agent
 
-# shallow clone of the pinned commit + recursive shallow submodules over HTTPS
-# (some third-party submodules use git@ URLs -> rewrite to https; no creds needed)
+FROM gpuagent-toolchain AS gpuagent-libs
+
+ARG GPUAGENT_REPO=https://github.com/ROCm/gpu-agent.git
+# full 40-char SHA required for shallow fetch-by-SHA
+ARG GPUAGENT_COMMIT=1d816bfe2b42c4e8d46eee2d85c6a97f86de6640
+
+# shallow clone of the pinned commit + recursive shallow submodules; some submodules
+# use git@ URLs -> rewrite to https (no creds needed)
 RUN git config --global url."https://github.com/".insteadOf "git@github.com:" \
     && mkdir -p ${GPUAGENT_SRC} && cd ${GPUAGENT_SRC} && git init -q \
     && git remote add origin ${GPUAGENT_REPO} \
     && git fetch --depth 1 origin ${GPUAGENT_COMMIT} \
     && git checkout -q FETCH_HEAD \
     && git submodule update --init --recursive --depth 1
+
+# third-party libs (protobuf/abseil/grpc/zeromq/libev/boost), pinned in the repo and
+# independent of amdsmi. ranlib stays with the build so cached .a keep the symbol index.
+RUN cd ${GPUAGENT_SRC} \
+    && make gopkglist \
+    && make -C sw/nic/gpuagent build-libs \
+    && find sw/nic/build -name '*.a' -exec ranlib {} \;
+
+FROM gpuagent-libs AS gpuagent-build
+
+# 0 = pre-staged amdsmi from build context (default); 1 = extract from therock tarball
+ARG AMDSMI_FROM_TARBALL=0
+ARG ROCM_COMMIT=
+ARG ROCM_TARBALL_URL=
 
 # amdsmi for the gpuagent build: default from build context (pre-staged from
 # assets/), optionally refreshed from the therock tarball when AMDSMI_FROM_TARBALL=1
@@ -79,7 +89,7 @@ RUN --mount=type=bind,from=rocm-tarball,source=therock.tar.gz,target=/tmp/rocm.t
     fi
 
 # inject amdsmi into the cloned vendor tree (derive SO version dynamically, fix symlinks)
-RUN set -e; vendor=${GPUAGENT_SRC}/sw/nic/third-party/rocm/amd_smi_lib; \
+RUN set -e; echo "amdsmi inject for ROCM_COMMIT=${ROCM_COMMIT}"; vendor=${GPUAGENT_SRC}/sw/nic/third-party/rocm/amd_smi_lib; \
     so_full=$(basename $(ls /tmp/amdsmi/libamd_smi.so.*.*.* | head -1)); \
     so_ver=${so_full#libamd_smi.so.}; so_maj=${so_ver%%.*}; \
     echo "Injecting amdsmi SO ${so_ver} (major ${so_maj})"; \
@@ -98,17 +108,13 @@ RUN if ls /patches/*.patch >/dev/null 2>&1; then \
         for p in /patches/*.patch; do echo "applying $p"; git -C ${GPUAGENT_SRC} apply "$p"; done; \
     fi
 
-# install the go protoc plugins (protoc-gen-gogofast etc.) into $GOPATH/bin,
-# build third-party libs, ranlib the static archives (they ship without a symbol
-# index, which the RHEL9 ld requires), then build the gpuagent binaries.
+# Layer 3: link gpuagent against the injected amdsmi. Reruns when amdsmi (ROCM_COMMIT)
+# changes; third-party libs from layer 1 are stamp-guarded and not recompiled.
 # Strip the (unstripped, ~84MB) C++ gpuagent binaries to shed debug symbols
 # before they are COPYed into the runtime image (matches the old asset flow).
 # LD_LIBRARY_PATH prepend lets ld resolve the rocm_sysdeps netlink DT_NEEDEDs.
 RUN cd ${GPUAGENT_SRC} \
     && export LD_LIBRARY_PATH=${GPUAGENT_SRC}/sw/nic/third-party/rocm/amd_smi_lib/x86_64/lib:$LD_LIBRARY_PATH \
-    && make gopkglist \
-    && make -C sw/nic/gpuagent build-libs \
-    && find sw/nic/build -name '*.a' -exec ranlib {} \; \
     && make -j$(nproc) -C sw/nic/gpuagent all \
     && strip sw/nic/build/x86_64/sim/bin/gpuagent \
              sw/nic/build/x86_64/sim/bin/gpuagent_gim \

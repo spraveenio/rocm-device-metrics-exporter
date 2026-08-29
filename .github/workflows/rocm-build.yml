@@ -1,7 +1,7 @@
 name: DME Build
 
 # Builds DME + test-runner images and .deb packages against a ROCm tarball.
-# Job graph: resolve → build-dme + build-test-runner → publish → validate → results
+# Job graph: resolve → gpuagent-build → build-dme + build-test-runner → publish → validate → results
 # Triggers: nightly (cron), PR (path-filtered), pre-release (workflow_dispatch)
 
 on:
@@ -200,10 +200,56 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # Builds DME exporter image, SR-IOV image, and .deb packages.
+  # Builds the four gpuagent binaries ONCE on the host with buildx type=gha cache.
+  # On an unchanged GPUAGENT_COMMIT this is a full layer-cache hit (~3-5m vs ~35m).
+  gpuagent-build:
+    name: Build gpuagent (cached)
+    needs: resolve
+    if: needs.resolve.outputs.build_needed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Exports ACTIONS_RUNTIME_TOKEN + cache URLs; without it raw buildx silently skips gha cache.
+      - name: Expose GitHub Actions runtime for buildx gha cache
+        uses: crazy-max/ghaction-github-runtime@v3
+
+      - name: Build gpuagent binaries (buildx, gha cache)
+        env:
+          ROCM_TARBALL_URL: ${{ needs.resolve.outputs.rocm_tarball_url }}
+        run: |
+          # ROCM_COMMIT is not set here: gpuagent-build-buildx depends on
+          # $(ROCM_COMMIT_FILE) (extracted from the fetched tarball), so make
+          # populates it and passes --build-arg ROCM_COMMIT=... automatically.
+          # Explicit stable scope: without it buildx derives a per-run scope that misses across runs.
+          make gpuagent-build-buildx \
+            AMDSMI_FROM_TARBALL=1 \
+            ROCM_TARBALL_URL="${ROCM_TARBALL_URL}" \
+            CACHE_FROM='--cache-from type=gha,scope=gpuagent' \
+            CACHE_TO='--cache-to type=gha,mode=max,scope=gpuagent'
+
+      - name: Stage binaries for upload
+        run: |
+          mkdir -p gpuagent-bins
+          cp build/gpuagent/gpuagent build/gpuagent/gpuctl \
+             build/gpuagent/gpuagent_mock build/gpuagent/gpuagent_gim gpuagent-bins/
+          ls -l gpuagent-bins
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gpuagent-bins-${{ needs.resolve.outputs.image_tag }}
+          retention-days: 1
+          path: gpuagent-bins/
+
+  # Builds DME exporter image and SR-IOV image from the pre-built gpuagent-bins artifact.
   build-dme:
     name: Build DME
-    needs: resolve
+    needs: [resolve, gpuagent-build]
     if: needs.resolve.outputs.build_needed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 180
@@ -242,6 +288,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Download gpuagent binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: gpuagent-bins-${{ needs.resolve.outputs.image_tag }}
+          path: build/gpuagent
+
+      - name: Mark gpuagent prestaged
+        run: |
+          chmod +x build/gpuagent/gpuagent build/gpuagent/gpuctl \
+                   build/gpuagent/gpuagent_mock build/gpuagent/gpuagent_gim
+          touch build/gpuagent/.stamp
+
       - name: Build DME artifacts inside dev container
         env:
           IMAGE_TAG:        ${{ needs.resolve.outputs.image_tag }}
@@ -254,13 +312,14 @@ jobs:
             -e "HOST_TOP_DIR=${{ github.workspace }}" \
             -e "ROCM_TARBALL_URL=${ROCM_TARBALL_URL}" \
             -e "EXPORTER_IMAGE_TAG=${IMAGE_TAG}" \
+            -e "GPUAGENT_PRESTAGED=1" \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}:${WORKSPACE}" \
             -w "${WORKSPACE}" \
             "${DEV_IMAGE_TAG}" \
             bash -c "source ~/.bashrc && \
               git config --global --add safe.directory ${WORKSPACE} && \
-              make docker TOP_DIR=${WORKSPACE}"
+              make docker GPUAGENT_PRESTAGED=1 TOP_DIR=${WORKSPACE}"
 
       - name: Upload DME artifacts
         env:

@@ -197,6 +197,7 @@ export ROCM_TARBALL_DIR
 export AMDSMI_FROM_TARBALL
 export AMDSMI_FROM_TARBALL
 export GPUAGENT_FROM_SOURCE
+export GPUAGENT_PRESTAGED
 
 ASSETS_PATH :=${TOP_DIR}/assets
 
@@ -380,6 +381,15 @@ $(ROCM_COMMIT_FILE): $(ROCM_TARBALL_PATH)
 gpuagent-build: $(GPUAGENT_BUILD_STAMP)
 
 $(GPUAGENT_BUILD_STAMP): $(ROCM_TARBALL_DEP)
+ifeq ($(GPUAGENT_PRESTAGED),1)
+	@echo "GPUAGENT_PRESTAGED=1 — using pre-staged binaries in $(GPUAGENT_BUILD_DIR)"
+	@for b in gpuagent gpuctl gpuagent_mock gpuagent_gim; do \
+		if [ ! -s "$(GPUAGENT_BUILD_DIR)/$$b" ]; then \
+			echo "ERROR: GPUAGENT_PRESTAGED=1 but $(GPUAGENT_BUILD_DIR)/$$b is missing"; exit 1; \
+		fi; \
+	done
+	@touch $@
+else
 	@echo "Building shared gpuagent binaries from source (GPUAGENT_FROM_SOURCE=1, AMDSMI_FROM_TARBALL=$(AMDSMI_FROM_TARBALL))"
 	# Stage the amdsmi header/lib + gpuagent patches the gpuagent-build stage
 	# COPYs from the docker/ build context. In tarball mode the stage overrides
@@ -417,6 +427,39 @@ $(GPUAGENT_BUILD_STAMP): $(ROCM_TARBALL_DEP)
 	  done; \
 	  docker rm -f $$cid
 	@touch $@
+endif
+
+# Host-side gpuagent build using buildx so --cache-to type=gha works (the classic
+# in-container docker build cannot write the gha cache). Produces the same four
+# binaries in $(GPUAGENT_BUILD_DIR) that the in-make producer emits, so downstream
+# jobs consume them via GPUAGENT_PRESTAGED=1. CACHE_FROM/CACHE_TO are passed by CI.
+.PHONY: gpuagent-build-buildx
+gpuagent-build-buildx: $(ROCM_TARBALL_DEP) $(ROCM_COMMIT_FILE)
+	@mkdir -p $(TOP_DIR)/docker/patch-gpuagent
+	@cp -vfL $(ASSETS_PATH)/amd_smi_lib/x86_64/RHEL9/lib/amdsmi.h $(TOP_DIR)/docker/amdsmi.h
+	@cp -vfL $(ASSETS_PATH)/amd_smi_lib/x86_64/RHEL9/lib/libamd_smi.so.*.*.* $(TOP_DIR)/docker/
+	@cp -vfL $(ASSETS_PATH)/amd_smi_lib/x86_64/RHEL9/lib/librocm_sysdeps_*.so* $(TOP_DIR)/docker/ 2>/dev/null || true
+	@if ls $(TOP_DIR)/patch/gpuagent/*.patch >/dev/null 2>&1; then \
+		cp -vf $(TOP_DIR)/patch/gpuagent/*.patch $(TOP_DIR)/docker/patch-gpuagent/; \
+	fi
+	docker buildx build --target gpuagent-build \
+		$(if $(GPUAGENT_BUILDER_BASE_IMAGE),--build-arg GPUAGENT_BUILDER_BASE_IMAGE=$(GPUAGENT_BUILDER_BASE_IMAGE)) \
+		$(if $(GPUAGENT_REPO),--build-arg GPUAGENT_REPO=$(GPUAGENT_REPO)) \
+		$(if $(GPUAGENT_COMMIT),--build-arg GPUAGENT_COMMIT=$(GPUAGENT_COMMIT)) \
+		--build-arg AMDSMI_FROM_TARBALL=$(AMDSMI_FROM_TARBALL) \
+		$(if $(ROCM_COMMIT),--build-arg ROCM_COMMIT=$(ROCM_COMMIT)) \
+		$(if $(filter 1,$(AMDSMI_FROM_TARBALL)),--build-context rocm-tarball=$(ROCM_TARBALL_DIR)) \
+		$(CACHE_FROM) $(CACHE_TO) \
+		--load -t $(GPUAGENT_STAGED_IMAGE) $(TOP_DIR)/docker -f $(TOP_DIR)/docker/Dockerfile.exporter-release
+	@mkdir -p $(GPUAGENT_BUILD_DIR)
+	@cid=$$(docker create $(GPUAGENT_STAGED_IMAGE)); \
+	  for b in gpuagent gpuctl gpuagent_mock gpuagent_gim; do \
+	    echo "extracting $$b -> $(GPUAGENT_BUILD_DIR)/$$b"; \
+	    docker cp $$cid:$(GPUAGENT_STAGE_BIN)/$$b $(GPUAGENT_BUILD_DIR)/$$b; \
+	  done; \
+	  docker rm -f $$cid
+	@touch $(GPUAGENT_BUILD_DIR)/.stamp
+	@ls -l $(GPUAGENT_BUILD_DIR)
 
 include Makefile.build
 include Makefile.compile
