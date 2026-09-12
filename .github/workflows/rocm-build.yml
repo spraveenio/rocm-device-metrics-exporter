@@ -70,7 +70,7 @@ jobs:
   resolve:
     name: Resolve
     needs: read-version
-    uses: ROCm/common-infra-operator/.github/workflows/rocm-resolve.yml@71da675c5fba3328eb470e13a0fc9ad1401f5456
+    uses: ROCm/common-infra-operator/.github/workflows/rocm-resolve.yml@d322879bf9fcd790a8ab92aed150874c52a957ed
     with:
       component: dme
       version: ${{ needs.read-version.outputs.version }}
@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Free up runner disk space
-        uses: ROCm/common-infra-operator/.github/actions/free-disk-space@71da675c5fba3328eb470e13a0fc9ad1401f5456
+        uses: ROCm/common-infra-operator/.github/actions/free-disk-space@d322879bf9fcd790a8ab92aed150874c52a957ed
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -179,7 +179,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Free up runner disk space
-        uses: ROCm/common-infra-operator/.github/actions/free-disk-space@71da675c5fba3328eb470e13a0fc9ad1401f5456
+        uses: ROCm/common-infra-operator/.github/actions/free-disk-space@d322879bf9fcd790a8ab92aed150874c52a957ed
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -275,7 +275,7 @@ jobs:
       && needs.build-dme.result == 'success'
       && needs.build-test-runner.result == 'success'
       && needs.build-helm.result == 'success'
-    uses: ROCm/common-infra-operator/.github/workflows/rocm-publish.yml@71da675c5fba3328eb470e13a0fc9ad1401f5456
+    uses: ROCm/common-infra-operator/.github/workflows/rocm-publish.yml@d322879bf9fcd790a8ab92aed150874c52a957ed
     with:
       component: dme
       image_tag: ${{ needs.resolve.outputs.image_tag }}
@@ -307,7 +307,7 @@ jobs:
       && needs.build-test-runner.result == 'success'
       && needs.build-helm.result == 'success'
       && (needs.publish.result == 'success' || needs.publish.result == 'skipped')
-    uses: ROCm/common-infra-operator/.github/workflows/rocm-orchestrator.yml@71da675c5fba3328eb470e13a0fc9ad1401f5456
+    uses: ROCm/common-infra-operator/.github/workflows/rocm-orchestrator.yml@d322879bf9fcd790a8ab92aed150874c52a957ed
     with:
       component: dme
       scenario: ${{ needs.resolve.outputs.scenario }}
