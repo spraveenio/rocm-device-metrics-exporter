@@ -2,9 +2,15 @@ name: CI Build
 
 # Parallel PR build gate. One `producers` job builds the shared assets ONCE
 # (ROCm tarball + gpuagent + rocprofiler), then a matrix fans the 8 artifact
-# units out across runners. Producers are cached across runs (keyed on the
-# pinned gpuagent commit / ROCm version), so an unchanged build skips the
-# ~31 min gpuagent build. This only parallelizes `make docker`; the make targets
+# units out across runners (2 images + 2 rpm + 4 deb), sharing the producers via
+# a run-scoped artifact.
+#
+# Caches are RESTORE-ONLY here: PR-triggered workflows must not write caches
+# (cache-poisoning), so these keys are read-only. Once a trusted main/scheduled
+# build populates them (keyed on the pinned gpuagent commit / ROCm version), PR
+# runs reuse them and skip the ~31 min gpuagent build; until then producers build
+# fresh each run and the win is the fan-out. The cross-run cache WRITE belongs in
+# the DME pipeline port. This only parallelizes `make docker`; the make targets
 # and the DME publish pipeline (_build-dme.yml) are untouched.
 
 on:
@@ -19,7 +25,6 @@ concurrency:
 
 permissions:
   contents: read
-  actions: write
 
 env:
   DEV_IMAGE_TAG: docker.io/rocm/device-metrics-exporter-build:v1.10
@@ -36,6 +41,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Free up runner disk space
         uses: ROCm/common-infra-operator/.github/actions/free-disk-space@9c6a249c7abb8bda28b2940dbb536e22e56f3dce
@@ -59,19 +66,19 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Restore ROCm tarball cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: build/rocm-tarball
           key: rocm-tarball-v1-${{ steps.vars.outputs.rocm_version }}
 
       - name: Restore gpuagent producer cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: build/gpuagent
           key: gpuagent-v1-${{ steps.vars.outputs.gpuagent_commit }}
 
       - name: Restore rocprofiler producer cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: build/rocprofiler
           key: rocprofiler-v1-${{ steps.vars.outputs.rocm_version }}-${{ hashFiles('rocprofilerclient/**') }}
@@ -136,6 +143,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Free up runner disk space
         uses: ROCm/common-infra-operator/.github/actions/free-disk-space@9c6a249c7abb8bda28b2940dbb536e22e56f3dce
@@ -159,7 +168,7 @@ jobs:
           path: build
 
       - name: Restore ROCm tarball cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: build/rocm-tarball
           key: rocm-tarball-v1-${{ needs.producers.outputs.rocm_version }}
