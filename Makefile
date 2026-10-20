@@ -612,6 +612,13 @@ docker-image: gen amdexporter $(GPUAGENT_PRODUCER_DEP) $(ROCPROFILER_PRODUCER_DE
 	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
 	${MAKE} -C docker docker-sriov-save TOP_DIR=$(CURDIR)
 
+# non-SR-IOV exporter image only, saved as tar.gz. Mirrors docker-image-sriov so a
+# single CI fan-out leg builds just this image.
+.PHONY: docker-image-nonsriov
+docker-image-nonsriov: gen amdexporter $(GPUAGENT_PRODUCER_DEP) $(ROCPROFILER_PRODUCER_DEP)
+	${MAKE} -C docker TOP_DIR=$(CURDIR) HOURLY_TAG_LABEL=$(HOURLY_TAG_LABEL) AMDSMI_FROM_TARBALL=$(AMDSMI_FROM_TARBALL) GPUAGENT_FROM_SOURCE=$(GPUAGENT_FROM_SOURCE) GPUAGENT_BUILD_DIR=$(GPUAGENT_BUILD_DIR) ROCPROFILER_BUILD_DIR=$(ROCPROFILER_BUILD_DIR) ROCM_TARBALL_URL=$(ROCM_TARBALL_URL) docker-nonsriov
+	${MAKE} -C docker docker-save TOP_DIR=$(CURDIR)
+
 # SR-IOV exporter image only, saved as tar.gz
 .PHONY: docker-image-sriov
 docker-image-sriov: gen amdexporter $(GPUAGENT_PRODUCER_DEP)
@@ -644,6 +651,45 @@ docker: docker-image docker-pkgs
 
 .PHONY: docker-sriov
 docker-sriov: docker-image-sriov docker-pkgs-sriov
+
+# ---------------------------------------------------------------------------
+# CI parallel fan-out legs. Each target builds exactly ONE artifact unit so a
+# GitHub Actions matrix can build them concurrently. They assume the shared
+# producers (build/gpuagent/, build/rocprofiler/) and the ROCm tarball
+# (build/rocm-tarball/) are already present with up-to-date stamps (restored
+# from cache/artifact by CI), so the producer prerequisites are satisfied
+# WITHOUT rebuilding. amdexporter/gen are rebuilt per leg (cheap, CGO-static).
+# SR-IOV packages ship gpuagent_gim + gim libs only (no rocprofiler/proflib), so
+# their legs skip libcopy-assets. Additive only: `make docker` and the DME
+# pipeline are unchanged.
+# ---------------------------------------------------------------------------
+.PHONY: ci-image-nonsriov ci-image-sriov
+ci-image-nonsriov: docker-image-nonsriov
+ci-image-sriov: docker-image-sriov
+
+.PHONY: ci-rpm
+ci-rpm: gen
+	${MAKE} libcopy-assets-RHEL9 rpmpkg
+
+.PHONY: ci-rpm-sriov
+ci-rpm-sriov: gen
+	${MAKE} rpmpkg-sriov
+
+.PHONY: ci-deb-2204
+ci-deb-2204: gen
+	${MAKE} libcopy-assets-UBUNTU22 debpkg
+
+.PHONY: ci-deb-2404
+ci-deb-2404: gen
+	${MAKE} UBUNTU_VERSION=noble libcopy-assets-UBUNTU24 debpkg
+
+.PHONY: ci-deb-sriov-2204
+ci-deb-sriov-2204: gen
+	${MAKE} debpkg-sriov
+
+.PHONY: ci-deb-sriov-2404
+ci-deb-sriov-2404: gen
+	${MAKE} UBUNTU_VERSION=noble debpkg-sriov
 
 .PHONY: docker-ainic
 docker-ainic: gen amdexporter
