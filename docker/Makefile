@@ -55,6 +55,32 @@ docker:
 	@docker build --build-arg BASE_IMAGE=$(EXPORTER_SRIOV_BASE_IMAGE) -t $(EXPORTER_SRIOV_IMAGE) --label HOURLY_TAG=$(HOURLY_TAG_LABEL) . -f Dockerfile.sriov.exporter-release
 	@TOP_DIR=$(TOP_DIR) ./build_post_docker.sh
 
+# non-SR-IOV exporter image ONLY, saved separately. This is the first half of the
+# `docker` target (the non-SR-IOV build) factored out so a single CI fan-out leg
+# can build just this image in parallel with the SR-IOV image and the packages.
+# `docker` is left intact (still builds both); this target duplicates the
+# non-SR-IOV recipe rather than refactoring the shared target.
+.PHONY: docker-nonsriov
+docker-nonsriov:
+	@echo "building amd exporter container (non-SR-IOV)"
+	@echo "HOURLY_TAG : $(HOURLY_TAG_LABEL)"
+	@TOP_DIR=$(TOP_DIR) OS=RHEL9 GPUAGENT_FROM_SOURCE=$(GPUAGENT_FROM_SOURCE) GPUAGENT_BUILD_DIR=$(GPUAGENT_BUILD_DIR) ROCPROFILER_BUILD_DIR=$(ROCPROFILER_BUILD_DIR) ./build_prep_docker.sh
+	docker pull $(RHEL_BASE_MIN_IMAGE)
+	$(if $(GPUAGENT_BUILDER_BASE_IMAGE),docker pull $(GPUAGENT_BUILDER_BASE_IMAGE))
+	@DOCKER_BUILDKIT=1 docker build --build-arg BASE_IMAGE=$(RHEL_BASE_MIN_IMAGE) \
+		--build-arg ROCM_VERSION=$(ROCM_VERSION) \
+		$(if $(ROCM_COMMIT),--build-arg ROCM_COMMIT=$(ROCM_COMMIT)) \
+		$(if $(GPUAGENT_BUILDER_BASE_IMAGE),--build-arg GPUAGENT_BUILDER_BASE_IMAGE=$(GPUAGENT_BUILDER_BASE_IMAGE)) \
+		$(if $(GPUAGENT_REPO),--build-arg GPUAGENT_REPO=$(GPUAGENT_REPO)) \
+		$(if $(GPUAGENT_COMMIT),--build-arg GPUAGENT_COMMIT=$(GPUAGENT_COMMIT)) \
+		--build-arg AMDSMI_FROM_TARBALL=$(if $(AMDSMI_FROM_TARBALL),$(AMDSMI_FROM_TARBALL),0) \
+		$(if $(ROCM_TARBALL_URL),--build-arg ROCM_TARBALL_URL=$(ROCM_TARBALL_URL)) \
+		$(if $(filter 1,$(AMDSMI_FROM_TARBALL)),--build-context rocm-tarball=$(ROCM_TARBALL_DIR)) \
+		-t $(EXPORTER_IMAGE) \
+		--label HOURLY_TAG=$(HOURLY_TAG_LABEL) \
+		. -f Dockerfile.exporter-release
+	@TOP_DIR=$(TOP_DIR) ./build_post_docker.sh
+
 .PHONY: docker-mock
 docker-mock:
 	@echo "building amd exporter mock container"

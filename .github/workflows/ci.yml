@@ -1,40 +1,97 @@
 name: CI Build
 
+# Parallel PR build gate. One `producers` job builds the shared assets ONCE
+# (ROCm tarball + gpuagent + rocprofiler), then a matrix fans the 8 artifact
+# units out across runners (2 images + 2 rpm + 4 deb), sharing the producers via
+# a run-scoped artifact.
+#
+# Producer/tarball caches (keyed on the pinned gpuagent commit / ROCm version)
+# are RESTORED on every run but only SAVED on trusted, non-PR events (push to
+# main, workflow_dispatch). PR runs must not write caches (cache-poisoning), so
+# a PR can only READ a cache that a trusted build already populated. Once main
+# has built the producers, every PR restores them and skips the ~31 min gpuagent
+# build; on a cold key the producers build fresh and the win is the fan-out.
+# This only parallelizes `make docker`; the make targets and the DME publish
+# pipeline (_build-dme.yml) are untouched.
+
 on:
   pull_request:
     branches:
       - '**'
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
   group: ci-build-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
+env:
+  DEV_IMAGE_TAG: docker.io/rocm/device-metrics-exporter-build:v1.10
+  WORKSPACE: /usr/src/github.com/ROCm/device-metrics-exporter
+
 jobs:
-  build:
-    name: Build
+
+  producers:
+    name: Producers (tarball + gpuagent + rocprofiler)
     runs-on: ubuntu-24.04
     timeout-minutes: 120
-    permissions:
-      contents: read
-
+    outputs:
+      rocm_version: ${{ steps.vars.outputs.rocm_version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Free up runner disk space
+        uses: ROCm/common-infra-operator/.github/actions/free-disk-space@9c6a249c7abb8bda28b2940dbb536e22e56f3dce
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Read build pins from Makefile
+        id: vars
+        run: |
+          echo "rocm_version=$(grep -m1 'ROCM_VERSION ?=' Makefile | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
+          echo "gpuagent_commit=$(grep -m1 'GPUAGENT_COMMIT ?=' Makefile | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
 
       - name: Build dev container
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: tools/base-image
           load: true
-          tags: docker.io/rocm/device-metrics-exporter-build:v1.10
+          tags: ${{ env.DEV_IMAGE_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build inside dev container
+      - name: Restore ROCm tarball cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/rocm-tarball
+          key: rocm-tarball-v1-${{ steps.vars.outputs.rocm_version }}
+
+      - name: Restore gpuagent producer cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/gpuagent
+          key: gpuagent-v1-${{ steps.vars.outputs.gpuagent_commit }}
+
+      - name: Restore rocprofiler producer cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/rocprofiler
+          key: rocprofiler-v1-${{ steps.vars.outputs.rocm_version }}-${{ hashFiles('rocprofilerclient/**') }}
+
+      # rocm-tarball-fetch downloads only if missing (cache miss). When the
+      # gpuagent/rocprofiler caches hit, touch their stamps newer than the tarball
+      # so make treats the producers as up-to-date and skips the rebuild. On a
+      # cache miss the bins are absent, nothing is touched, and the producers build.
+      - name: Build shared producers inside dev container
         run: |
           docker run --rm --privileged \
             -e CI=true \
@@ -42,10 +99,130 @@ jobs:
             -e "BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)" \
             -e "HOST_TOP_DIR=${{ github.workspace }}" \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            -v "${{ github.workspace }}:/usr/src/github.com/ROCm/device-metrics-exporter" \
-            -w /usr/src/github.com/ROCm/device-metrics-exporter \
-            docker.io/rocm/device-metrics-exporter-build:v1.10 \
+            -v "${{ github.workspace }}:${WORKSPACE}" \
+            -w "${WORKSPACE}" \
+            "${DEV_IMAGE_TAG}" \
             bash -c "source ~/.bashrc && \
-              git config --global --add safe.directory /usr/src/github.com/ROCm/device-metrics-exporter && \
-              make gen amdexporter amdtestrunner && \
-              make docker TOP_DIR=/usr/src/github.com/ROCm/device-metrics-exporter"
+              git config --global --add safe.directory ${WORKSPACE} && \
+              make rocm-tarball-fetch TOP_DIR=${WORKSPACE} && \
+              if [ -f build/gpuagent/gpuagent ]; then touch build/rocm-tarball/* build/gpuagent/* && touch build/gpuagent/.stamp; fi && \
+              if [ -f build/rocprofiler/rocpctl ]; then touch build/rocprofiler/* && touch build/rocprofiler/.stamp; fi && \
+              make gen amdtestrunner gpuagent-build rocprofiler-build-producer TOP_DIR=${WORKSPACE}"
+
+      # Save the producers ONLY on trusted, non-PR events so a PR can never write
+      # (poison) a cache that a later trusted build would consume. success()
+      # guards against caching a partial/failed build.
+      - name: Save ROCm tarball cache
+        if: ${{ success() && github.event_name != 'pull_request' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/rocm-tarball
+          key: rocm-tarball-v1-${{ steps.vars.outputs.rocm_version }}
+
+      - name: Save gpuagent producer cache
+        if: ${{ success() && github.event_name != 'pull_request' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/gpuagent
+          key: gpuagent-v1-${{ steps.vars.outputs.gpuagent_commit }}
+
+      - name: Save rocprofiler producer cache
+        if: ${{ success() && github.event_name != 'pull_request' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/rocprofiler
+          key: rocprofiler-v1-${{ steps.vars.outputs.rocm_version }}-${{ hashFiles('rocprofilerclient/**') }}
+
+      - name: Upload producer binaries
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dme-producers
+          retention-days: 1
+          include-hidden-files: true
+          path: |
+            build/gpuagent
+            build/rocprofiler
+
+  build:
+    name: Build ${{ matrix.leg }}
+    needs: producers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: ci-image-nonsriov
+            needs_tarball: "1"
+          - leg: ci-image-sriov
+            needs_tarball: "0"
+          - leg: ci-rpm
+            needs_tarball: "1"
+          - leg: ci-rpm-sriov
+            needs_tarball: "0"
+          - leg: ci-deb-2204
+            needs_tarball: "1"
+          - leg: ci-deb-2404
+            needs_tarball: "1"
+          - leg: ci-deb-sriov-2204
+            needs_tarball: "0"
+          - leg: ci-deb-sriov-2404
+            needs_tarball: "0"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Free up runner disk space
+        uses: ROCm/common-infra-operator/.github/actions/free-disk-space@9c6a249c7abb8bda28b2940dbb536e22e56f3dce
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Build dev container
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: tools/base-image
+          load: true
+          tags: ${{ env.DEV_IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Download producer binaries
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dme-producers
+          path: build
+
+      - name: Restore ROCm tarball cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/rocm-tarball
+          key: rocm-tarball-v1-${{ needs.producers.outputs.rocm_version }}
+
+      # Fetch the tarball only for legs that consume it (non-SR-IOV image + the
+      # non-SR-IOV packages' libcopy-assets). Then touch the restored producer
+      # stamps newer than the tarball so the leg's make never rebuilds gpuagent/
+      # rocprofiler. SR-IOV legs ship gim libs only and need neither.
+      - name: Build ${{ matrix.leg }} inside dev container
+        env:
+          LEG:           ${{ matrix.leg }}
+          NEEDS_TARBALL: ${{ matrix.needs_tarball }}
+        run: |
+          docker run --rm --privileged \
+            -e CI=true \
+            -e "GIT_COMMIT=$(git rev-list -1 HEAD --abbrev-commit)" \
+            -e "BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)" \
+            -e "HOST_TOP_DIR=${{ github.workspace }}" \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}:${WORKSPACE}" \
+            -w "${WORKSPACE}" \
+            "${DEV_IMAGE_TAG}" \
+            bash -c "source ~/.bashrc && \
+              git config --global --add safe.directory ${WORKSPACE} && \
+              if [ \"${NEEDS_TARBALL}\" = \"1\" ]; then make rocm-tarball-fetch TOP_DIR=${WORKSPACE}; fi && \
+              if [ -f build/rocm-tarball/therock.tar.gz ]; then touch build/rocm-tarball/*; fi && \
+              if [ -f build/gpuagent/gpuagent ]; then touch build/gpuagent/* && touch build/gpuagent/.stamp; fi && \
+              if [ -f build/rocprofiler/rocpctl ]; then touch build/rocprofiler/* && touch build/rocprofiler/.stamp; fi && \
+              make ${LEG} TOP_DIR=${WORKSPACE}"
