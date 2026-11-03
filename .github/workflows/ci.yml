@@ -11,6 +11,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pdfshrink:
+    name: pdfshrink (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux + cross-build
+            os: ubuntu-24.04
+            cross: true
+          - name: macOS M1 (arm64)
+            os: macos-14
+            cross: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/pdfshrink/go.mod
+          cache-dependency-path: tools/pdfshrink/go.sum
+
+      - name: Vet and test
+        run: make pdfshrink-test
+
+      - name: Build all platforms
+        if: matrix.cross
+        run: make pdfshrink
+
+      - name: Build and smoke-test native darwin/arm64 binary
+        if: ${{ !matrix.cross }}
+        run: |
+          test "$(uname -m)" = arm64
+          make pdfshrink PDFSHRINK_PLATFORMS=darwin/arm64
+          file bin/pdfshrink/pdfshrink-darwin-arm64 | grep -q arm64
+          bin/pdfshrink/pdfshrink-darwin-arm64 -h 2>&1 | grep -q -- -size
+
+      - name: Upload binaries
+        if: matrix.cross
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdfshrink-binaries
+          path: bin/pdfshrink/
+          retention-days: 14
+
   build:
     name: Build
     runs-on: ubuntu-24.04

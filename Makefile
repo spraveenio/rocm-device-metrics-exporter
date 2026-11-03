@@ -589,6 +589,23 @@ metricsclient:
 	@echo "building metrics client"
 	CGO_ENABLED=0 go build -C tools/metricsclient -o $(CURDIR)/bin/metricsclient
 
+# pdfshrink is a standalone module (own go.mod, not vendored); cross-compiled
+# for Linux and macOS, including darwin/arm64 (Apple Silicon M1+).
+PDFSHRINK_PLATFORMS ?= linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
+.PHONY: pdfshrink pdfshrink-test
+pdfshrink:
+	@echo "building pdfshrink for $(PDFSHRINK_PLATFORMS)"
+	@for p in $(PDFSHRINK_PLATFORMS); do \
+		os=$${p%/*}; arch=$${p#*/}; ext=; [ "$$os" = windows ] && ext=.exe; \
+		echo "  $$os/$$arch"; \
+		GOFLAGS=-mod=mod CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -C tools/pdfshrink -trimpath -ldflags "-s -w" \
+			-o $(CURDIR)/bin/pdfshrink/pdfshrink-$$os-$$arch$$ext . || exit 1; \
+	done
+
+pdfshrink-test:
+	GOFLAGS=-mod=mod go -C tools/pdfshrink vet ./...
+	GOFLAGS=-mod=mod go -C tools/pdfshrink test -v ./...
+
 amdgpuhealth:
 	@echo "building amd gpu health util"
 	CGO_ENABLED=0 go build -C tools/amd-gpu-health -o $(CURDIR)/bin/amdgpuhealth
